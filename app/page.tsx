@@ -1,30 +1,20 @@
-"use client"
+import { NextResponse } from "next/server";
 
-import { AuthProvider, useAuth } from "@/contexts/auth-context"
-import { LoginForm } from "@/components/login-form"
-import TradingDashboard from "../trading-dashboard"
+const DERIV_API_URL = "https://api.deriv.com/prediction"; // Replace with actual endpoint as needed
+const API_TOKEN = process.env.DERIV_API_TOKEN ?? "RKjICBWa7Jw1vKx"; // Use env var for production!
 
-function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth()
+export async function POST(request: Request) {
+  const requestBody = await request.json();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    )
-  }
+  const derivRes = await fetch(DERIV_API_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
 
-  return isAuthenticated ? <TradingDashboard /> : <LoginForm />
-}
-
-export default function Page() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  )
+  const data = await derivRes.json();
+  return NextResponse.json(data, { status: derivRes.status });
 }
