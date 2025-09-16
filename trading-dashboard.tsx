@@ -69,12 +69,22 @@ export default function TradingDashboard() {
       <div className="max-w-6xl mx-auto p-4 space-y-4">
         <Tabs defaultValue="trading" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-slate-800/90">
-            <TabsTrigger value="trading">Trading</TabsTrigger>
-            <TabsTrigger value="analysis">Analysis</TabsTrigger>
-            <TabsTrigger value="backtesting" disabled={!canBacktest}>
+            <TabsTrigger value="trading" className="text-slate-100 data-[state=active]:text-slate-900">
+              Trading
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="text-slate-100 data-[state=active]:text-slate-900">
+              Analysis
+            </TabsTrigger>
+            <TabsTrigger
+              value="backtesting"
+              disabled={!canBacktest}
+              className="text-slate-100 data-[state=active]:text-slate-900 disabled:text-slate-400"
+            >
               Backtesting {!canBacktest && <Lock className="h-3 w-3 ml-1" />}
             </TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="account" className="text-slate-100 data-[state=active]:text-slate-900">
+              Account
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="trading" className="space-y-4">
@@ -120,7 +130,7 @@ export default function TradingDashboard() {
                           size="sm"
                           variant="ghost"
                           onClick={reconnect}
-                          className="text-xs text-slate-400 hover:text-white"
+                          className="text-xs text-slate-200 hover:text-white"
                         >
                           <RefreshCw className="h-3 w-3 mr-1" />
                           Retry
@@ -132,7 +142,7 @@ export default function TradingDashboard() {
 
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="text-sm text-slate-300 mb-2 block">Select market (Volatility indices)</label>
+                    <label className="text-sm text-slate-100 mb-2 block">Select market (Volatility indices)</label>
                     <Select value={selectedMarket} onValueChange={setSelectedMarket}>
                       <SelectTrigger className="bg-slate-700 border-slate-600">
                         <SelectValue placeholder="-- choose market --" />
@@ -177,7 +187,7 @@ export default function TradingDashboard() {
                   {lastTick && (
                     <div className="bg-slate-700/50 p-3 rounded-lg">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-300">Last digit:</span>
+                        <span className="text-sm text-slate-100">Last digit:</span>
                         <div className="flex items-center gap-2">
                           <span className="text-2xl font-bold text-green-400">{lastTick.digit}</span>
                           {lastTick.digit > 4 ? (
@@ -187,14 +197,14 @@ export default function TradingDashboard() {
                           )}
                         </div>
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">Quote: {lastTick.quote.toFixed(5)}</div>
-                      <div className="text-xs text-slate-400 mt-1">
+                      <div className="text-xs text-slate-200 mt-1">Quote: {lastTick.quote.toFixed(5)}</div>
+                      <div className="text-xs text-slate-200 mt-1">
                         Type: {lastTick.digit % 2 === 0 ? "Even" : "Odd"} | {lastTick.digit > 4 ? "Over" : "Under"} 4.5
                       </div>
                     </div>
                   )}
 
-                  <div className="text-xs text-slate-400 space-y-1">
+                  <div className="text-xs text-slate-200 space-y-1">
                     <div>Status: {status}</div>
                     <div>Buffer: {ticksBuffer.length} ticks</div>
                     <div>Plan: {user?.subscription}</div>
@@ -214,9 +224,9 @@ export default function TradingDashboard() {
             ) : (
               <Card className="bg-slate-800/90 border-slate-700 text-white">
                 <CardContent className="text-center py-12">
-                  <Lock className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+                  <Lock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                   <h3 className="text-xl font-semibold mb-2">Backtesting Locked</h3>
-                  <p className="text-slate-400 mb-4">
+                  <p className="text-slate-200 mb-4">
                     Upgrade to Premium or Enterprise to access backtesting features.
                   </p>
                   <Button className="bg-blue-600 hover:bg-blue-700">Upgrade Now</Button>

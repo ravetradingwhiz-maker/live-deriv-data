@@ -53,7 +53,7 @@ export function PredictionButtons({
 
   return (
     <div className="space-y-3">
-      <div className="text-sm font-medium text-slate-300 mb-2">AI Prediction Tools</div>
+      <div className="text-sm font-medium text-slate-100 mb-2">AI Prediction Tools</div>
       <div className="grid grid-cols-1 gap-2">
         {predictionTypes.map((type) => {
           const Icon = type.icon
@@ -78,7 +78,7 @@ export function PredictionButtons({
       </div>
 
       {/* Session Info */}
-      <div className="bg-slate-700/30 p-2 rounded text-xs text-slate-400">
+      <div className="bg-slate-700/30 p-2 rounded text-xs text-slate-200">
         <div className="flex justify-between">
           <span>Session Runs:</span>
           <span>{runsThisSession}</span>
