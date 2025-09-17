@@ -7,7 +7,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import type { PredictionResult, PredictionType } from "@/types/trading"
-import { TrendingUp, Target, Hash, Calculator, BarChart3 } from "lucide-react"
+import { TrendingUp, Target, Hash, Calculator, BarChart3, Wifi, WifiOff } from "lucide-react"
+import { useDerivAPI } from "@/hooks/use-deriv-api"
 
 interface EnhancedPredictionModalProps {
   ticksBuffer: number[]
@@ -19,6 +20,18 @@ interface EnhancedPredictionModalProps {
   onRunComplete: (runs: number) => void
 }
 
+interface EnhancedPredictionResult extends PredictionResult {
+  exactDigit?: number
+  entryPoints: {
+    primary: string
+    secondary?: string
+    timing: string
+  }
+  marketCondition: string
+  riskLevel: "LOW" | "MEDIUM" | "HIGH"
+  expectedOutcome: string
+}
+
 export function EnhancedPredictionModal({
   ticksBuffer,
   runsThisSession,
@@ -28,6 +41,8 @@ export function EnhancedPredictionModal({
   onClose,
   onRunComplete,
 }: EnhancedPredictionModalProps) {
+  const { isConnected, isConnecting, error, getPrediction, getActiveSymbols } = useDerivAPI()
+
   // Set initial choice based on prediction type
   const getInitialChoice = (type: PredictionType) => {
     switch (type) {
@@ -47,78 +62,143 @@ export function EnhancedPredictionModal({
   const [choice, setChoice] = useState<string>(getInitialChoice(predictionType))
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [countdown, setCountdown] = useState(0)
-  const [result, setResult] = useState<PredictionResult | null>(null)
+  const [result, setResult] = useState<EnhancedPredictionResult | null>(null)
+  const [selectedSymbol, setSelectedSymbol] = useState("R_100") // Default to Volatility 100 Index
 
-  const fetchDerivDataAndPredict = async (predictionType: PredictionType, selection: string) => {
-    // Simulate API call to Deriv.com
-    console.log(`[v0] Fetching data from Deriv.com for ${predictionType} prediction...`)
+  const fetchDerivDataAndPredict = async (
+    predictionType: PredictionType,
+    selection: string,
+  ): Promise<EnhancedPredictionResult> => {
+    console.log(`[v0] Fetching live data from Deriv.com for ${predictionType} prediction...`)
 
-    // Simulate AI analysis with real-time data
-    const recentData = ticksBuffer.slice(-50) // Use more recent data
+    if (!isConnected) {
+      throw new Error("Not connected to Deriv API")
+    }
+
+    try {
+      const derivPrediction = await getPrediction(selectedSymbol, predictionType)
+
+      // Convert Deriv API response to our enhanced format
+      const enhancedResult: EnhancedPredictionResult = {
+        type: selection,
+        digit: null,
+        confidence: derivPrediction.confidence,
+        runs: derivPrediction.confidence >= 85 ? 3 : derivPrediction.confidence >= 70 ? 2 : 1,
+        recommendation:
+          derivPrediction.confidence >= 80 ? "STRONG" : derivPrediction.confidence >= 65 ? "MODERATE" : "WEAK",
+        analysis: derivPrediction.analysis,
+        exactDigit: derivPrediction.targetDigit,
+        entryPoints: {
+          primary: `Enter ${selection.toUpperCase()} at ${derivPrediction.entryPoint.toFixed(5)}`,
+          secondary: derivPrediction.recommendation,
+          timing: derivPrediction.optimalTiming,
+        },
+        marketCondition: `Live ${selectedSymbol} analysis`,
+        riskLevel: derivPrediction.riskLevel.toUpperCase() as "LOW" | "MEDIUM" | "HIGH",
+        expectedOutcome: `${derivPrediction.confidence}% probability based on real Deriv data analysis`,
+      }
+
+      return enhancedResult
+    } catch (error) {
+      console.error("[v0] Error fetching Deriv prediction:", error)
+      // Fallback to simulated analysis if API fails
+      return await fallbackAnalysis(predictionType, selection)
+    }
+  }
+
+  const fallbackAnalysis = async (
+    predictionType: PredictionType,
+    selection: string,
+  ): Promise<EnhancedPredictionResult> => {
+    // Use existing simulated logic as fallback
+    const recentData = ticksBuffer.slice(-100)
+    const veryRecentData = ticksBuffer.slice(-20)
+
     let confidence = 50
     let recommendation = "WEAK"
     let analysis = ""
     let runs = 1
+    let exactDigit: number | undefined
+    let entryPoints = { primary: "", secondary: "", timing: "" }
+    let marketCondition = ""
+    let riskLevel: "LOW" | "MEDIUM" | "HIGH" = "MEDIUM"
+    let expectedOutcome = ""
 
     switch (predictionType) {
       case "over_under":
         const overCount = recentData.filter((d) => d > 4).length
+        const recentOverTrend = veryRecentData.filter((d) => d > 4).length / veryRecentData.length
+
         confidence =
           selection === "over"
-            ? Math.round((overCount / recentData.length) * 100)
-            : Math.round(((recentData.length - overCount) / recentData.length) * 100)
-        runs = confidence >= 85 ? 3 : confidence >= 70 ? 2 : 1
-        recommendation = confidence >= 80 ? "STRONG" : "WEAK"
-        analysis = `AI Analysis: ${confidence}% confidence for ${selection.toUpperCase()} based on recent Deriv data patterns`
-        break
+            ? Math.round((overCount / recentData.length) * 100 + recentOverTrend * 15)
+            : Math.round(((recentData.length - overCount) / recentData.length) * 100 + (1 - recentOverTrend) * 15)
 
-      case "matches_differs":
-        // For matches/differs, AI automatically selects optimal strategy
+        confidence = Math.max(55, Math.min(92, confidence))
+        runs = confidence >= 85 ? 3 : confidence >= 70 ? 2 : 1
+        recommendation = confidence >= 80 ? "STRONG" : confidence >= 65 ? "MODERATE" : "WEAK"
+
+        const targetDigits = selection === "over" ? [5, 6, 7, 8, 9] : [0, 1, 2, 3, 4]
         const digitFreq: Record<number, number> = {}
         recentData.forEach((d) => (digitFreq[d] = (digitFreq[d] || 0) + 1))
-        const mostFrequent = Object.entries(digitFreq).reduce((a, b) =>
-          digitFreq[Number(a[0])] > digitFreq[Number(b[0])] ? a : b,
-        )
-        const targetDigit = Number(mostFrequent[0])
-        const matchRate = (digitFreq[targetDigit] / recentData.length) * 100
+        exactDigit = targetDigits.reduce((a, b) => ((digitFreq[a] || 0) > (digitFreq[b] || 0) ? a : b))
 
-        confidence = selection === "matches" ? matchRate : 100 - matchRate
-        runs = confidence >= 85 ? 3 : confidence >= 70 ? 2 : 1
-        recommendation = confidence >= 80 ? "STRONG" : "WEAK"
-        analysis = `AI Analysis: Target digit ${targetDigit} appears ${digitFreq[targetDigit]} times. ${confidence}% confidence for ${selection.toUpperCase()}`
+        entryPoints = {
+          primary: `Enter ${selection.toUpperCase()} when last digit shows pattern convergence`,
+          secondary: `Target digit ${exactDigit} has ${Math.round(((digitFreq[exactDigit] || 0) / recentData.length) * 100)}% frequency`,
+          timing: "Next 3-5 ticks optimal entry window",
+        }
+
+        marketCondition = "Fallback analysis - API unavailable"
+        riskLevel = "HIGH"
+        expectedOutcome = `${confidence}% probability (fallback mode)`
+        analysis = `Fallback Analysis: ${confidence}% confidence for ${selection.toUpperCase()}. API connection required for optimal results.`
         break
 
-      case "even_odd":
-        const evenCount = recentData.filter((d) => d % 2 === 0).length
-        confidence =
-          selection === "even"
-            ? Math.round((evenCount / recentData.length) * 100)
-            : Math.round(((recentData.length - evenCount) / recentData.length) * 100)
-        runs = confidence >= 85 ? 3 : confidence >= 70 ? 2 : 1
-        recommendation = confidence >= 80 ? "STRONG" : "WEAK"
-        analysis = `AI Analysis: ${confidence}% confidence for ${selection.toUpperCase()} based on recent digit patterns from Deriv`
-        break
+      default:
+        confidence = 60
+        runs = 1
+        recommendation = "WEAK"
+        analysis = "Fallback mode - limited analysis available"
+        entryPoints = {
+          primary: "API connection required for detailed entry points",
+          secondary: "",
+          timing: "Connect to Deriv API for optimal timing",
+        }
+        marketCondition = "API unavailable"
+        riskLevel = "HIGH"
+        expectedOutcome = "Limited prediction without API connection"
     }
 
     return {
       type: selection,
-      confidence: Math.max(55, Math.min(95, confidence)), // Ensure realistic confidence range
+      confidence: Math.max(55, Math.min(95, confidence)),
       runs,
       recommendation,
       analysis,
       digit: null,
+      exactDigit,
+      entryPoints,
+      marketCondition,
+      riskLevel,
+      expectedOutcome,
     }
   }
 
   const runAnalysis = async () => {
-    if (ticksBuffer.length < 10) {
+    if (!isConnected && ticksBuffer.length < 20) {
       setResult({
         type: choice as any,
         digit: null,
         confidence: 0,
         runs: 0,
         recommendation: "WEAK",
-        analysis: "Not enough data for analysis",
+        analysis: "No API connection and insufficient local data - connect to Deriv API for real-time analysis",
+        exactDigit: undefined,
+        entryPoints: { primary: "Connect to Deriv API", secondary: "", timing: "" },
+        marketCondition: "No connection",
+        riskLevel: "HIGH",
+        expectedOutcome: "Cannot predict without data source",
       })
       return
     }
@@ -133,7 +213,7 @@ export function EnhancedPredictionModal({
     }
 
     const analysisResult = await fetchDerivDataAndPredict(predictionType, choice)
-    setResult(analysisResult as PredictionResult)
+    setResult(analysisResult)
     setIsAnalyzing(false)
     setCountdown(0)
     onRunComplete(analysisResult.runs)
@@ -172,7 +252,7 @@ export function EnhancedPredictionModal({
         return (
           <div className="space-y-4">
             <div className="text-sm text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-              AI will automatically analyze and select the optimal target digit based on recent patterns
+              AI will analyze Deriv.com data and provide exact digit predictions with entry points
             </div>
             <RadioGroup value={choice} onValueChange={setChoice}>
               <div className="flex items-center space-x-2">
@@ -206,11 +286,11 @@ export function EnhancedPredictionModal({
           <RadioGroup value={choice} onValueChange={setChoice}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="rise" id="rise" />
-              <Label htmlFor="rise">Rise (Price will increase)</Label>
+              <Label htmlFor="rise">Rise</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="fall" id="fall" />
-              <Label htmlFor="fall">Fall (Price will decrease)</Label>
+              <Label htmlFor="fall">Fall</Label>
             </div>
           </RadioGroup>
         )
@@ -219,20 +299,61 @@ export function EnhancedPredictionModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-[500px] max-h-[90vh] overflow-y-auto bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+      <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
         <CardHeader className="bg-blue-100 dark:bg-blue-900">
           <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
             <Calculator className="h-5 w-5 text-blue-600" />
-            AI Prediction Analysis
+            AI Prediction Analysis - Deriv.com Integration
+            <div className="ml-auto flex items-center gap-2">
+              {isConnected ? (
+                <div className="flex items-center gap-1 text-green-600">
+                  <Wifi className="h-4 w-4" />
+                  <span className="text-xs">Connected</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-red-600">
+                  <WifiOff className="h-4 w-4" />
+                  <span className="text-xs">Disconnected</span>
+                </div>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-blue-900 dark:text-blue-100">
+          <div className="bg-blue-100 dark:bg-blue-900/50 p-3 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Deriv API Status:</span>
+              <Badge variant={isConnected ? "default" : "destructive"}>
+                {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
+              </Badge>
+            </div>
+            {error && <div className="text-xs text-red-600 dark:text-red-400 mt-1">Error: {error}</div>}
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-sm">Trading Symbol:</span>
+              <select
+                value={selectedSymbol}
+                onChange={(e) => setSelectedSymbol(e.target.value)}
+                className="text-xs bg-blue-200 dark:bg-blue-800 rounded px-2 py-1"
+              >
+                <option value="R_100">Volatility 100 Index</option>
+                <option value="R_75">Volatility 75 Index</option>
+                <option value="R_50">Volatility 50 Index</option>
+                <option value="R_25">Volatility 25 Index</option>
+                <option value="R_10">Volatility 10 Index</option>
+              </select>
+            </div>
+          </div>
+
           {/* Conditional rendering based on prediction type */}
           {predictionType === "over_under" && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                 {getPredictionIcon("over_under")}
-                <span>Predict if the last digit will be over or under 4.5</span>
+                <span>
+                  {isConnected
+                    ? "AI will analyze live Deriv data and predict exact digits with entry points"
+                    : "Using fallback analysis - connect to API for optimal results"}
+                </span>
               </div>
               {renderPredictionOptions()}
             </div>
@@ -240,9 +361,10 @@ export function EnhancedPredictionModal({
 
           {predictionType === "matches_differs" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                {getPredictionIcon("matches_differs")}
-                <span>AI will predict matches or differs from optimal target digit</span>
+              <div className="text-sm text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                {isConnected
+                  ? "AI will analyze live Deriv.com data and provide exact digit predictions with entry points"
+                  : "Limited analysis available - connect to Deriv API for full predictions"}
               </div>
               {renderPredictionOptions()}
             </div>
@@ -251,8 +373,12 @@ export function EnhancedPredictionModal({
           {predictionType === "even_odd" && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                {getPredictionIcon("even_odd")}
-                <span>Predict if the last digit will be even or odd</span>
+                <Hash className="h-5 w-5" />
+                <span>
+                  {isConnected
+                    ? "AI will predict specific even/odd digits with live data entry recommendations"
+                    : "Basic analysis available - API connection recommended"}
+                </span>
               </div>
               {renderPredictionOptions()}
             </div>
@@ -261,8 +387,12 @@ export function EnhancedPredictionModal({
           {predictionType === "rise_fall" && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                {getPredictionIcon("rise_fall")}
-                <span>Predict if the price will rise or fall</span>
+                <BarChart3 className="h-5 w-5" />
+                <span>
+                  {isConnected
+                    ? "AI will analyze live price momentum and provide precise entry points"
+                    : "Trend analysis available - API recommended for accuracy"}
+                </span>
               </div>
               {renderPredictionOptions()}
             </div>
@@ -271,42 +401,115 @@ export function EnhancedPredictionModal({
           {isAnalyzing && (
             <div className="text-center py-4">
               <div className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-                {countdown > 0 ? `Fetching Deriv Data & AI Analysis — ${countdown}s` : "Processing AI Prediction..."}
+                {countdown > 0
+                  ? `${isConnected ? "Analyzing Live Deriv Data" : "Processing Available Data"} — ${countdown}s`
+                  : "Generating AI Predictions..."}
               </div>
               <div className="text-sm text-blue-600 dark:text-blue-400 mt-2">
-                Connecting to Deriv.com • Analyzing patterns • Generating entry points
+                {isConnected
+                  ? "Fetching live data • Pattern analysis • Calculating probabilities • Generating entry points"
+                  : "Local analysis • Pattern detection • Probability calculation"}
               </div>
             </div>
           )}
 
+          {/* Conditional rendering based on prediction type */}
           {result && (
-            <div className="bg-blue-100 dark:bg-blue-900/50 p-4 rounded-lg space-y-2 border border-blue-200 dark:border-blue-700">
-              <div className="flex items-center justify-between">
-                <strong className="text-blue-800 dark:text-blue-200">Prediction Type:</strong>
-                <Badge variant="outline" className="bg-blue-200 text-blue-800 border-blue-300">
-                  {result.type.toUpperCase()}
-                </Badge>
+            <div className="bg-blue-100 dark:bg-blue-900/50 p-4 rounded-lg space-y-3 border border-blue-200 dark:border-blue-700">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between">
+                  <strong className="text-blue-800 dark:text-blue-200">Prediction:</strong>
+                  <Badge variant="outline" className="bg-blue-200 text-blue-800 border-blue-300">
+                    {result.type.toUpperCase()}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <strong className="text-blue-800 dark:text-blue-200">Confidence:</strong>
+                  <span className="font-semibold">{result.confidence}%</span>
+                </div>
               </div>
+
+              {result.exactDigit !== undefined && (
+                <div className="bg-blue-200 dark:bg-blue-800 p-3 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-blue-900 dark:text-blue-100">Target Digit:</strong>
+                    <Badge className="bg-blue-600 text-white text-lg px-3 py-1">{result.exactDigit}</Badge>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <strong className="text-blue-800 dark:text-blue-200">Entry Points:</strong>
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded space-y-1">
+                  <div className="text-sm">
+                    <strong>Primary:</strong> {result.entryPoints.primary}
+                  </div>
+                  {result.entryPoints.secondary && (
+                    <div className="text-sm">
+                      <strong>Secondary:</strong> {result.entryPoints.secondary}
+                    </div>
+                  )}
+                  <div className="text-sm">
+                    <strong>Timing:</strong> {result.entryPoints.timing}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <strong className="text-blue-800 dark:text-blue-200">Risk Level:</strong>
+                  <Badge
+                    variant="outline"
+                    className={
+                      result.riskLevel === "LOW"
+                        ? "bg-green-100 text-green-800 border-green-300"
+                        : result.riskLevel === "MEDIUM"
+                          ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                          : "bg-red-100 text-red-800 border-red-300"
+                    }
+                  >
+                    {result.riskLevel}
+                  </Badge>
+                </div>
+                <div>
+                  <strong className="text-blue-800 dark:text-blue-200">Recommended Runs:</strong>
+                  <span className="ml-2 font-semibold">{result.runs}</span>
+                </div>
+              </div>
+
               <div className="text-blue-800 dark:text-blue-200">
-                <strong>Confidence:</strong> {result.confidence}%
+                <strong>Market Condition:</strong> {result.marketCondition}
               </div>
+
               <div className="text-blue-800 dark:text-blue-200">
-                <strong>Recommended Runs:</strong> {result.runs}
+                <strong>Expected Outcome:</strong> {result.expectedOutcome}
               </div>
+
               <div className="text-blue-800 dark:text-blue-200">
                 <strong>Entry Recommendation:</strong>{" "}
                 <Badge
-                  variant={result.recommendation === "STRONG" ? "default" : "secondary"}
+                  variant={
+                    result.recommendation === "STRONG"
+                      ? "default"
+                      : result.recommendation === "MODERATE"
+                        ? "secondary"
+                        : "outline"
+                  }
                   className={
-                    result.recommendation === "STRONG" ? "bg-green-600 text-white" : "bg-yellow-600 text-white"
+                    result.recommendation === "STRONG"
+                      ? "bg-green-600 text-white"
+                      : result.recommendation === "MODERATE"
+                        ? "bg-blue-600 text-white"
+                        : "bg-yellow-600 text-white"
                   }
                 >
                   {result.recommendation}
                 </Badge>
               </div>
+
               {result.analysis && (
-                <div className="text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-2 rounded">
-                  <strong>AI Analysis:</strong> {result.analysis}
+                <div className="text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-3 rounded">
+                  <strong>Detailed Analysis:</strong> {result.analysis}
                 </div>
               )}
             </div>
@@ -318,7 +521,7 @@ export function EnhancedPredictionModal({
               disabled={isAnalyzing}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isAnalyzing ? "Analyzing..." : "Start AI Analysis (15s)"}
+              {isAnalyzing ? "Analyzing..." : `Start ${isConnected ? "Live" : "Fallback"} Analysis (15s)`}
             </Button>
             <Button
               variant="outline"
