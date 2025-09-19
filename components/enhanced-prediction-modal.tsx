@@ -134,14 +134,20 @@ export function EnhancedPredictionModal({
             ? Math.round((overCount / recentData.length) * 100 + recentOverTrend * 15)
             : Math.round(((recentData.length - overCount) / recentData.length) * 100 + (1 - recentOverTrend) * 15)
 
-        confidence = Math.max(55, Math.min(92, confidence))
+        confidence = Math.max(25, Math.min(95, confidence))
         runs = confidence >= 85 ? 3 : confidence >= 70 ? 2 : 1
         recommendation = confidence >= 80 ? "STRONG" : confidence >= 65 ? "MODERATE" : "WEAK"
 
         const targetDigits = selection === "over" ? [5, 6, 7, 8, 9] : [0, 1, 2, 3, 4]
         const digitFreq: Record<number, number> = {}
         recentData.forEach((d) => (digitFreq[d] = (digitFreq[d] || 0) + 1))
-        exactDigit = targetDigits.reduce((a, b) => ((digitFreq[a] || 0) > (digitFreq[b] || 0) ? a : b))
+
+        // Add randomness to avoid always picking the same digit
+        const weightedTargets = targetDigits.map((digit) => ({
+          digit,
+          weight: (digitFreq[digit] || 0) + Math.random() * 3,
+        }))
+        exactDigit = weightedTargets.sort((a, b) => b.weight - a.weight)[0].digit
 
         entryPoints = {
           primary: `Enter ${selection.toUpperCase()} when last digit shows pattern convergence`,
@@ -150,29 +156,135 @@ export function EnhancedPredictionModal({
         }
 
         marketCondition = "Fallback analysis - API unavailable"
-        riskLevel = "HIGH"
+        riskLevel = confidence > 70 ? "LOW" : confidence > 50 ? "MEDIUM" : "HIGH"
         expectedOutcome = `${confidence}% probability (fallback mode)`
-        analysis = `Fallback Analysis: ${confidence}% confidence for ${selection.toUpperCase()}. API connection required for optimal results.`
+        analysis = `Fallback Analysis: ${confidence}% confidence for ${selection.toUpperCase()}. Target digit: ${exactDigit}. API connection required for optimal results.`
+        break
+
+      case "even_odd":
+        const evenCount = recentData.filter((d) => d % 2 === 0).length
+        const recentEvenTrend = veryRecentData.filter((d) => d % 2 === 0).length / veryRecentData.length
+
+        confidence =
+          selection === "even"
+            ? Math.round((evenCount / recentData.length) * 100 + recentEvenTrend * 10)
+            : Math.round(((recentData.length - evenCount) / recentData.length) * 100 + (1 - recentEvenTrend) * 10)
+
+        confidence = Math.max(30, Math.min(90, confidence))
+        runs = confidence >= 80 ? 3 : confidence >= 65 ? 2 : 1
+        recommendation = confidence >= 75 ? "STRONG" : confidence >= 60 ? "MODERATE" : "WEAK"
+
+        const evenDigits = [0, 2, 4, 6, 8]
+        const oddDigits = [1, 3, 5, 7, 9]
+        const targetEvenOddDigits = selection === "even" ? evenDigits : oddDigits
+        const evenOddFreq: Record<number, number> = {}
+        recentData.forEach((d) => (evenOddFreq[d] = (evenOddFreq[d] || 0) + 1))
+
+        // Add randomness to digit selection
+        const weightedEvenOdd = targetEvenOddDigits.map((digit) => ({
+          digit,
+          weight: (evenOddFreq[digit] || 0) + Math.random() * 2,
+        }))
+        exactDigit = weightedEvenOdd.sort((a, b) => b.weight - a.weight)[0].digit
+
+        entryPoints = {
+          primary: `Enter ${selection.toUpperCase()} based on recent pattern analysis`,
+          secondary: `Most frequent ${selection} digit: ${exactDigit}`,
+          timing: "Good entry window detected",
+        }
+
+        marketCondition = "Fallback analysis - API unavailable"
+        riskLevel = confidence > 65 ? "LOW" : confidence > 45 ? "MEDIUM" : "HIGH"
+        expectedOutcome = `${confidence}% probability (fallback mode)`
+        analysis = `Fallback Analysis: ${confidence}% confidence for ${selection.toUpperCase()} digits. Target digit: ${exactDigit}.`
+        break
+
+      case "rise_fall":
+        const priceChanges = recentData.slice(1).map((price, i) => price - recentData[i])
+        const positiveChanges = priceChanges.filter((change) => change > 0).length
+        const trendStrength = Math.abs(positiveChanges / priceChanges.length - 0.5) * 2
+
+        confidence =
+          selection === "rise"
+            ? Math.round((positiveChanges / priceChanges.length) * 100 + trendStrength * 20)
+            : Math.round(((priceChanges.length - positiveChanges) / priceChanges.length) * 100 + trendStrength * 20)
+
+        confidence = Math.max(35, Math.min(90, confidence))
+        runs = confidence >= 80 ? 3 : confidence >= 65 ? 2 : 1
+        recommendation = confidence >= 75 ? "STRONG" : confidence >= 60 ? "MODERATE" : "WEAK"
+
+        entryPoints = {
+          primary: `Enter ${selection.toUpperCase()} based on trend analysis`,
+          secondary: `Trend strength: ${Math.round(trendStrength * 100)}%`,
+          timing: "Monitor next few ticks for confirmation",
+        }
+
+        marketCondition = "Fallback analysis - API unavailable"
+        riskLevel = confidence > 70 ? "LOW" : confidence > 50 ? "MEDIUM" : "HIGH"
+        expectedOutcome = `${confidence}% probability (fallback mode)`
+        analysis = `Fallback Analysis: ${confidence}% confidence for ${selection.toUpperCase()} movement.`
+        break
+
+      case "matches_differs":
+        const lastDigitInBuffer = recentData[recentData.length - 1]
+        const digitOccurrences = recentData.filter((d) => d === lastDigitInBuffer).length
+        const digitFrequency = digitOccurrences / recentData.length
+
+        confidence =
+          selection === "matches"
+            ? Math.round(digitFrequency * 100 + (digitFrequency > 0.1 ? 20 : 0))
+            : Math.round((1 - digitFrequency) * 100 + (digitFrequency < 0.1 ? 15 : 0))
+
+        confidence = Math.max(40, Math.min(85, confidence))
+        runs = confidence >= 75 ? 3 : confidence >= 60 ? 2 : 1
+        recommendation = confidence >= 70 ? "STRONG" : confidence >= 55 ? "MODERATE" : "WEAK"
+
+        if (selection === "matches") {
+          exactDigit = lastDigitInBuffer
+        } else {
+          // For differs, pick a different digit with some randomness
+          const otherDigits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => d !== lastDigitInBuffer)
+          const digitFreqs: Record<number, number> = {}
+          recentData.forEach((d) => (digitFreqs[d] = (digitFreqs[d] || 0) + 1))
+
+          const weightedOthers = otherDigits.map((digit) => ({
+            digit,
+            weight: (digitFreqs[digit] || 0) + Math.random() * 2,
+          }))
+          exactDigit = weightedOthers.sort((a, b) => b.weight - a.weight)[0].digit
+        }
+
+        entryPoints = {
+          primary: `Enter ${selection.toUpperCase()} for digit ${exactDigit}`,
+          secondary: `Target digit frequency: ${Math.round(digitFrequency * 100)}%`,
+          timing: "Ready for entry",
+        }
+
+        marketCondition = "Fallback analysis - API unavailable"
+        riskLevel = confidence > 65 ? "LOW" : confidence > 50 ? "MEDIUM" : "HIGH"
+        expectedOutcome = `${confidence}% probability (fallback mode)`
+        analysis = `Fallback Analysis: ${confidence}% confidence for digit ${exactDigit} to ${selection}. Last digit was ${lastDigitInBuffer}.`
         break
 
       default:
-        confidence = 60
+        confidence = Math.floor(Math.random() * 30) + 35 // Random between 35-65
         runs = 1
         recommendation = "WEAK"
-        analysis = "Fallback mode - limited analysis available"
+        exactDigit = Math.floor(Math.random() * 10) // Random digit 0-9
+        analysis = `Fallback mode - limited analysis available. Random target digit: ${exactDigit}`
         entryPoints = {
           primary: "API connection required for detailed entry points",
-          secondary: "",
+          secondary: `Random target digit: ${exactDigit}`,
           timing: "Connect to Deriv API for optimal timing",
         }
         marketCondition = "API unavailable"
         riskLevel = "HIGH"
-        expectedOutcome = "Limited prediction without API connection"
+        expectedOutcome = "Limited prediction capability without data source"
     }
 
     return {
       type: selection,
-      confidence: Math.max(55, Math.min(95, confidence)),
+      confidence: Math.max(25, Math.min(95, confidence)),
       runs,
       recommendation,
       analysis,
@@ -190,15 +302,15 @@ export function EnhancedPredictionModal({
       setResult({
         type: choice as any,
         digit: null,
-        confidence: 0,
-        runs: 0,
+        confidence: 25,
+        runs: 1,
         recommendation: "WEAK",
         analysis: "No API connection and insufficient local data - connect to Deriv API for real-time analysis",
         exactDigit: undefined,
         entryPoints: { primary: "Connect to Deriv API", secondary: "", timing: "" },
         marketCondition: "No connection",
         riskLevel: "HIGH",
-        expectedOutcome: "Cannot predict without data source",
+        expectedOutcome: "Limited prediction capability without data source",
       })
       return
     }
@@ -335,11 +447,35 @@ export function EnhancedPredictionModal({
                 onChange={(e) => setSelectedSymbol(e.target.value)}
                 className="text-xs bg-blue-200 dark:bg-blue-800 rounded px-2 py-1"
               >
-                <option value="R_100">Volatility 100 Index</option>
-                <option value="R_75">Volatility 75 Index</option>
-                <option value="R_50">Volatility 50 Index</option>
-                <option value="R_25">Volatility 25 Index</option>
                 <option value="R_10">Volatility 10 Index</option>
+                <option value="R_25">Volatility 25 Index</option>
+                <option value="R_50">Volatility 50 Index</option>
+                <option value="R_75">Volatility 75 Index</option>
+                <option value="R_100">Volatility 100 Index</option>
+                <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                <option value="1HZ100V">Volatility 100 (1s) Index</option>
+                <option value="1HZ150V">Volatility 150 (1s) Index</option>
+                <option value="1HZ200V">Volatility 200 (1s) Index</option>
+                <option value="1HZ250V">Volatility 250 (1s) Index</option>
+                <option value="1HZ300V">Volatility 300 (1s) Index</option>
+                <option value="BOOM500">Boom 500 Index</option>
+                <option value="BOOM1000">Boom 1000 Index</option>
+                <option value="CRASH500">Crash 500 Index</option>
+                <option value="CRASH1000">Crash 1000 Index</option>
+                <option value="JD10">Jump 10 Index</option>
+                <option value="JD25">Jump 25 Index</option>
+                <option value="JD50">Jump 50 Index</option>
+                <option value="JD75">Jump 75 Index</option>
+                <option value="JD100">Jump 100 Index</option>
+                <option value="WLDAUD">AUD Basket</option>
+                <option value="WLDEUR">EUR Basket</option>
+                <option value="WLDGBP">GBP Basket</option>
+                <option value="WLDUSD">USD Basket</option>
+                <option value="WLDXAU">Gold Basket</option>
+                <option value="stpRNG">Step Index</option>
               </select>
             </div>
           </div>

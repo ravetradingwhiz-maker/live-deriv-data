@@ -58,12 +58,20 @@ export const useDerivAPI = () => {
   const getPrediction = useCallback(
     async (symbol: string, predictionType: string): Promise<PredictionResult> => {
       if (!isConnected) {
-        throw new Error("Not connected to Deriv API")
+        console.log("[v0] Not connected, attempting to reconnect...")
+        try {
+          await connect()
+          // Wait for connection to stabilize
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+        } catch (error) {
+          console.error("[v0] Failed to reconnect:", error)
+          throw new Error("Not connected to Deriv API")
+        }
       }
 
       return await derivAPI.analyzeForPrediction(symbol, predictionType)
     },
-    [derivAPI, isConnected],
+    [derivAPI, isConnected, connect],
   )
 
   const getActiveSymbols = useCallback(async () => {
