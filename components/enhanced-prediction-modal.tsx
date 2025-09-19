@@ -461,21 +461,6 @@ export function EnhancedPredictionModal({
                 <option value="1HZ200V">Volatility 200 (1s) Index</option>
                 <option value="1HZ250V">Volatility 250 (1s) Index</option>
                 <option value="1HZ300V">Volatility 300 (1s) Index</option>
-                <option value="BOOM500">Boom 500 Index</option>
-                <option value="BOOM1000">Boom 1000 Index</option>
-                <option value="CRASH500">Crash 500 Index</option>
-                <option value="CRASH1000">Crash 1000 Index</option>
-                <option value="JD10">Jump 10 Index</option>
-                <option value="JD25">Jump 25 Index</option>
-                <option value="JD50">Jump 50 Index</option>
-                <option value="JD75">Jump 75 Index</option>
-                <option value="JD100">Jump 100 Index</option>
-                <option value="WLDAUD">AUD Basket</option>
-                <option value="WLDEUR">EUR Basket</option>
-                <option value="WLDGBP">GBP Basket</option>
-                <option value="WLDUSD">USD Basket</option>
-                <option value="WLDXAU">Gold Basket</option>
-                <option value="stpRNG">Step Index</option>
               </select>
             </div>
           </div>
