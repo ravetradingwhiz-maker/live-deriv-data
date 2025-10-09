@@ -58,15 +58,19 @@ export const useDerivAPI = () => {
   const getPrediction = useCallback(
     async (symbol: string, predictionType: string): Promise<PredictionResult> => {
       if (!isConnected) {
-        console.log("[v0] Not connected, attempting to reconnect...")
+        console.log("[v0] Not connected, attempting to reconnect before prediction...")
         try {
           await connect()
           // Wait for connection to stabilize
           await new Promise((resolve) => setTimeout(resolve, 2000))
         } catch (error) {
           console.error("[v0] Failed to reconnect:", error)
-          throw new Error("Not connected to Deriv API")
+          throw new Error("Unable to establish connection to Deriv API. Please try again.")
         }
+      }
+
+      if (!derivAPI.isConnectedToAPI()) {
+        throw new Error("Connection lost. Please wait for reconnection.")
       }
 
       return await derivAPI.analyzeForPrediction(symbol, predictionType)
@@ -80,6 +84,20 @@ export const useDerivAPI = () => {
     }
 
     return await derivAPI.getActiveSymbols()
+  }, [derivAPI, isConnected])
+
+  useEffect(() => {
+    const checkConnection = setInterval(() => {
+      const connected = derivAPI.isConnectedToAPI()
+      if (connected !== isConnected) {
+        setIsConnected(connected)
+        if (!connected) {
+          console.log("[v0] Connection lost, will attempt to reconnect...")
+        }
+      }
+    }, 5000) // Check every 5 seconds
+
+    return () => clearInterval(checkConnection)
   }, [derivAPI, isConnected])
 
   useEffect(() => {

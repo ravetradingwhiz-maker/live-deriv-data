@@ -71,12 +71,21 @@ export function EnhancedPredictionModal({
   ): Promise<EnhancedPredictionResult> => {
     console.log(`[v0] Fetching live data from Deriv.com for ${predictionType} prediction...`)
 
-    if (!isConnected) {
-      throw new Error("Not connected to Deriv API")
-    }
-
     try {
       const derivPrediction = await getPrediction(selectedSymbol, predictionType)
+
+      let primaryEntry = ""
+
+      if (predictionType === "over_under" || predictionType === "matches_differs") {
+        // For Over/Under and Matches/Differs, show the target digit
+        primaryEntry = derivPrediction.targetDigit?.toString() || "0"
+      } else if (predictionType === "even_odd") {
+        // For Even/Odd, show "Even" or "Odd"
+        primaryEntry = derivPrediction.prediction === "even" ? "Even" : "Odd"
+      } else if (predictionType === "rise_fall") {
+        // For Rise/Fall, show "Rise" or "Fall"
+        primaryEntry = derivPrediction.prediction === "rise" ? "Rise" : "Fall"
+      }
 
       // Convert Deriv API response to our enhanced format
       const enhancedResult: EnhancedPredictionResult = {
@@ -89,7 +98,7 @@ export function EnhancedPredictionModal({
         analysis: derivPrediction.analysis,
         exactDigit: derivPrediction.targetDigit,
         entryPoints: {
-          primary: `Enter ${selection.toUpperCase()} at ${derivPrediction.entryPoint.toFixed(5)}`,
+          primary: primaryEntry,
           secondary: derivPrediction.recommendation,
           timing: derivPrediction.optimalTiming,
         },
@@ -101,7 +110,11 @@ export function EnhancedPredictionModal({
       return enhancedResult
     } catch (error) {
       console.error("[v0] Error fetching Deriv prediction:", error)
-      // Fallback to simulated analysis if API fails
+      if (error instanceof Error && error.message.includes("Unable to establish connection")) {
+        throw error // Re-throw connection errors to show user
+      }
+      // Fallback to simulated analysis if API fails for other reasons
+      console.log("[v0] Falling back to local analysis...")
       return await fallbackAnalysis(predictionType, selection)
     }
   }
@@ -150,7 +163,7 @@ export function EnhancedPredictionModal({
         exactDigit = weightedTargets.sort((a, b) => b.weight - a.weight)[0].digit
 
         entryPoints = {
-          primary: `Enter ${selection.toUpperCase()} when last digit shows pattern convergence`,
+          primary: exactDigit.toString(),
           secondary: `Target digit ${exactDigit} has ${Math.round(((digitFreq[exactDigit] || 0) / recentData.length) * 100)}% frequency`,
           timing: "Next 3-5 ticks optimal entry window",
         }
@@ -188,7 +201,7 @@ export function EnhancedPredictionModal({
         exactDigit = weightedEvenOdd.sort((a, b) => b.weight - a.weight)[0].digit
 
         entryPoints = {
-          primary: `Enter ${selection.toUpperCase()} based on recent pattern analysis`,
+          primary: selection === "even" ? "Even" : "Odd",
           secondary: `Most frequent ${selection} digit: ${exactDigit}`,
           timing: "Good entry window detected",
         }
@@ -214,7 +227,7 @@ export function EnhancedPredictionModal({
         recommendation = confidence >= 75 ? "STRONG" : confidence >= 60 ? "MODERATE" : "WEAK"
 
         entryPoints = {
-          primary: `Enter ${selection.toUpperCase()} based on trend analysis`,
+          primary: selection === "rise" ? "Rise" : "Fall",
           secondary: `Trend strength: ${Math.round(trendStrength * 100)}%`,
           timing: "Monitor next few ticks for confirmation",
         }
@@ -255,7 +268,7 @@ export function EnhancedPredictionModal({
         }
 
         entryPoints = {
-          primary: `Enter ${selection.toUpperCase()} for digit ${exactDigit}`,
+          primary: exactDigit.toString(),
           secondary: `Target digit frequency: ${Math.round(digitFrequency * 100)}%`,
           timing: "Ready for entry",
         }
@@ -274,8 +287,8 @@ export function EnhancedPredictionModal({
         analysis = `Fallback mode - limited analysis available. Random target digit: ${exactDigit}`
         entryPoints = {
           primary: "API connection required for detailed entry points",
-          secondary: `Random target digit: ${exactDigit}`,
-          timing: "Connect to Deriv API for optimal timing",
+          secondary: "Please check your internet connection",
+          timing: "Retry when connected",
         }
         marketCondition = "API unavailable"
         riskLevel = "HIGH"
@@ -298,23 +311,6 @@ export function EnhancedPredictionModal({
   }
 
   const runAnalysis = async () => {
-    if (!isConnected && ticksBuffer.length < 20) {
-      setResult({
-        type: choice as any,
-        digit: null,
-        confidence: 25,
-        runs: 1,
-        recommendation: "WEAK",
-        analysis: "No API connection and insufficient local data - connect to Deriv API for real-time analysis",
-        exactDigit: undefined,
-        entryPoints: { primary: "Connect to Deriv API", secondary: "", timing: "" },
-        marketCondition: "No connection",
-        riskLevel: "HIGH",
-        expectedOutcome: "Limited prediction capability without data source",
-      })
-      return
-    }
-
     setIsAnalyzing(true)
     let seconds = 15
 
@@ -324,11 +320,34 @@ export function EnhancedPredictionModal({
       seconds--
     }
 
-    const analysisResult = await fetchDerivDataAndPredict(predictionType, choice)
-    setResult(analysisResult)
-    setIsAnalyzing(false)
-    setCountdown(0)
-    onRunComplete(analysisResult.runs)
+    try {
+      const analysisResult = await fetchDerivDataAndPredict(predictionType, choice)
+      setResult(analysisResult)
+      onRunComplete(analysisResult.runs)
+    } catch (error) {
+      console.error("[v0] Analysis failed:", error)
+      setResult({
+        type: choice as any,
+        digit: null,
+        confidence: 25,
+        runs: 1,
+        recommendation: "WEAK",
+        analysis: error instanceof Error ? error.message : "Analysis failed - please try again",
+        exactDigit: undefined,
+        entryPoints: {
+          primary: "Connection issue detected",
+          secondary: "Please check your internet connection",
+          timing: "Retry when connected",
+        },
+        marketCondition: "Connection Error",
+        riskLevel: "HIGH",
+        expectedOutcome: "Unable to complete analysis",
+      })
+      onRunComplete(1)
+    } finally {
+      setIsAnalyzing(false)
+      setCountdown(0)
+    }
   }
 
   const getPredictionIcon = (type: PredictionType) => {
@@ -537,102 +556,42 @@ export function EnhancedPredictionModal({
           {/* Conditional rendering based on prediction type */}
           {result && (
             <div className="bg-blue-100 dark:bg-blue-900/50 p-4 rounded-lg space-y-3 border border-blue-200 dark:border-blue-700">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center justify-between">
-                  <strong className="text-blue-800 dark:text-blue-200">Prediction:</strong>
-                  <Badge variant="outline" className="bg-blue-200 text-blue-800 border-blue-300">
-                    {result.type.toUpperCase()}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <strong className="text-blue-800 dark:text-blue-200">Confidence:</strong>
-                  <span className="font-semibold">{result.confidence}%</span>
-                </div>
-              </div>
-
-              {result.exactDigit !== undefined && (
-                <div className="bg-blue-200 dark:bg-blue-800 p-3 rounded-lg">
+              <div className="space-y-3">
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded space-y-2">
                   <div className="flex items-center justify-between">
-                    <strong className="text-blue-900 dark:text-blue-100">Target Digit:</strong>
-                    <Badge className="bg-blue-600 text-white text-lg px-3 py-1">{result.exactDigit}</Badge>
+                    <strong className="text-blue-800 dark:text-blue-200">Entry Point:</strong>
+                    <span className="font-semibold text-blue-900 dark:text-blue-100">{result.entryPoints.primary}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <strong className="text-blue-800 dark:text-blue-200">Number of Runs:</strong>
+                    <Badge className="bg-blue-600 text-white text-lg px-3 py-1">{result.runs}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <strong className="text-blue-800 dark:text-blue-200">Probability:</strong>
+                    <span className="font-semibold text-lg text-blue-900 dark:text-blue-100">{result.confidence}%</span>
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <strong className="text-blue-800 dark:text-blue-200">Entry Points:</strong>
-                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded space-y-1">
-                  <div className="text-sm">
-                    <strong>Primary:</strong> {result.entryPoints.primary}
-                  </div>
-                  {result.entryPoints.secondary && (
-                    <div className="text-sm">
-                      <strong>Secondary:</strong> {result.entryPoints.secondary}
-                    </div>
-                  )}
-                  <div className="text-sm">
-                    <strong>Timing:</strong> {result.entryPoints.timing}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <strong className="text-blue-800 dark:text-blue-200">Risk Level:</strong>
-                  <Badge
-                    variant="outline"
-                    className={
-                      result.riskLevel === "LOW"
-                        ? "bg-green-100 text-green-800 border-green-300"
-                        : result.riskLevel === "MEDIUM"
-                          ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                          : "bg-red-100 text-red-800 border-red-300"
-                    }
-                  >
-                    {result.riskLevel}
-                  </Badge>
-                </div>
-                <div>
-                  <strong className="text-blue-800 dark:text-blue-200">Recommended Runs:</strong>
-                  <span className="ml-2 font-semibold">{result.runs}</span>
-                </div>
-              </div>
-
-              <div className="text-blue-800 dark:text-blue-200">
-                <strong>Market Condition:</strong> {result.marketCondition}
-              </div>
-
-              <div className="text-blue-800 dark:text-blue-200">
-                <strong>Expected Outcome:</strong> {result.expectedOutcome}
-              </div>
-
-              <div className="text-blue-800 dark:text-blue-200">
-                <strong>Entry Recommendation:</strong>{" "}
-                <Badge
-                  variant={
-                    result.recommendation === "STRONG"
-                      ? "default"
-                      : result.recommendation === "MODERATE"
-                        ? "secondary"
-                        : "outline"
-                  }
-                  className={
-                    result.recommendation === "STRONG"
-                      ? "bg-green-600 text-white"
-                      : result.recommendation === "MODERATE"
-                        ? "bg-blue-600 text-white"
-                        : "bg-yellow-600 text-white"
-                  }
-                >
-                  {result.recommendation}
-                </Badge>
-              </div>
-
-              {result.analysis && (
+                {/* Additional context in smaller text */}
                 <div className="text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-3 rounded">
-                  <strong>Detailed Analysis:</strong> {result.analysis}
+                  <div className="flex items-center justify-between mb-1">
+                    <span>Market: {result.marketCondition}</span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        result.riskLevel === "LOW"
+                          ? "bg-green-100 text-green-800 border-green-300"
+                          : result.riskLevel === "MEDIUM"
+                            ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                            : "bg-red-100 text-red-800 border-red-300"
+                      }
+                    >
+                      {result.riskLevel} Risk
+                    </Badge>
+                  </div>
+                  <div className="text-xs mt-2">{result.entryPoints.timing}</div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 

@@ -32,6 +32,23 @@ export interface PredictionResult {
   optimalTiming: string
 }
 
+function extractLastDigit(price: number): number {
+  // Convert to string and remove trailing zeros after decimal
+  let priceStr = price.toString()
+
+  // If there's a decimal point, remove trailing zeros
+  if (priceStr.includes(".")) {
+    priceStr = priceStr.replace(/\.?0+$/, "")
+  }
+
+  // Remove decimal point and get last character
+  const digitsOnly = priceStr.replace(".", "")
+  const lastChar = digitsOnly.slice(-1)
+  const digit = Number.parseInt(lastChar, 10)
+
+  return isNaN(digit) ? 0 : digit
+}
+
 class DerivAPI {
   private ws: WebSocket | null = null
   private apiToken: string
@@ -39,29 +56,55 @@ class DerivAPI {
   private messageId = 1
   private callbacks: Map<number, (data: any) => void> = new Map()
   private tickSubscriptions: Map<string, (tick: DerivTick) => void> = new Map()
+  private heartbeatInterval: NodeJS.Timeout | null = null
+  private reconnectAttempts = 0
+  private maxReconnectAttempts = 10
+  private reconnectTimeout: NodeJS.Timeout | null = null
+  private isAnalyzing = false
+  private connectionPromise: Promise<void> | null = null
 
   constructor(apiToken: string) {
     this.apiToken = apiToken
   }
 
   connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    if (this.connectionPromise) {
+      return this.connectionPromise
+    }
+
+    this.connectionPromise = new Promise((resolve, reject) => {
       try {
+        if (this.reconnectTimeout) {
+          clearTimeout(this.reconnectTimeout)
+          this.reconnectTimeout = null
+        }
+
         this.ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089")
 
         this.ws.onopen = () => {
           console.log("[v0] Deriv WebSocket connected successfully")
+          this.reconnectAttempts = 0
           this.authorize()
             .then(() => {
               this.isConnected = true
               console.log("[v0] Deriv API authentication completed")
+              this.startHeartbeat()
+              this.connectionPromise = null
               resolve()
             })
-            .catch(reject)
+            .catch((err) => {
+              this.connectionPromise = null
+              reject(err)
+            })
         }
 
         this.ws.onmessage = (event) => {
           const data = JSON.parse(event.data)
+
+          if (data.msg_type === "ping") {
+            console.log("[v0] Received ping response, connection is alive")
+            return
+          }
 
           if (data.msg_type === "tick" && data.tick) {
             const symbol = data.tick.symbol
@@ -69,7 +112,6 @@ class DerivAPI {
             if (callback) {
               callback(data as DerivTick)
             }
-            // Broadcast to all tick listeners
             console.log(`[v0] Received tick for ${symbol}: ${data.tick.quote}`)
           }
 
@@ -84,25 +126,64 @@ class DerivAPI {
 
         this.ws.onerror = (error) => {
           console.error("[v0] Deriv WebSocket error:", error)
+          this.connectionPromise = null
           reject(error)
         }
 
         this.ws.onclose = (event) => {
           console.log("[v0] Deriv WebSocket disconnected:", event.code, event.reason)
-          this.isConnected = false
+          if (event.code !== 1000 || !this.isAnalyzing) {
+            this.isConnected = false
+          }
+          this.stopHeartbeat()
+          this.connectionPromise = null
 
-          if (event.code !== 1000) {
-            // Not a normal closure
-            setTimeout(() => {
-              console.log("[v0] Attempting to reconnect...")
-              this.connect().catch(console.error)
-            }, 5000)
+          if (event.code !== 1000 || (event.code === 1000 && !event.reason)) {
+            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+              const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
+              this.reconnectAttempts++
+              console.log(
+                `[v0] Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
+              )
+
+              this.reconnectTimeout = setTimeout(() => {
+                console.log("[v0] Reconnecting to Deriv WebSocket...")
+                this.connect().catch((err) => {
+                  console.error("[v0] Reconnection failed:", err)
+                })
+              }, delay)
+            } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+              console.error("[v0] Max reconnection attempts reached. Please refresh the page.")
+            }
           }
         }
       } catch (error) {
+        this.connectionPromise = null
         reject(error)
       }
     })
+
+    return this.connectionPromise
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat()
+
+    this.heartbeatInterval = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        console.log("[v0] Sending heartbeat ping to keep connection alive")
+        this.send({
+          ping: 1,
+        })
+      }
+    }, 30000) // 30 seconds
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+      this.heartbeatInterval = null
+    }
   }
 
   private async authorize(): Promise<void> {
@@ -128,6 +209,8 @@ class DerivAPI {
   private send(message: any): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message))
+    } else {
+      console.warn("[v0] WebSocket not ready, message not sent:", message)
     }
   }
 
@@ -224,22 +307,61 @@ class DerivAPI {
 
   async analyzeForPrediction(symbol: string, predictionType: string): Promise<PredictionResult> {
     try {
+      this.isAnalyzing = true
+      console.log(`[v0] Starting analysis for ${symbol} (${predictionType})...`)
+
       if (!this.isConnectedToAPI()) {
-        console.log("[v0] Not connected, attempting to reconnect...")
-        await this.connect()
-        // Wait a bit for connection to stabilize
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        console.log("[v0] Not connected, waiting for connection...")
+
+        if (!this.connectionPromise) {
+          this.connect().catch((err) => console.error("[v0] Connection failed:", err))
+        }
+
+        const maxWaitTime = 10000
+        const startTime = Date.now()
+
+        while (!this.isConnectedToAPI() && Date.now() - startTime < maxWaitTime) {
+          await new Promise((resolve) => setTimeout(resolve, 500))
+
+          if (this.connectionPromise) {
+            try {
+              await Promise.race([
+                this.connectionPromise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 5000)),
+              ])
+            } catch (err) {
+              console.log("[v0] Connection attempt failed, retrying...")
+            }
+          }
+        }
+
+        if (!this.isConnectedToAPI()) {
+          throw new Error("Unable to establish connection. Please check your internet connection and try again.")
+        }
       }
 
-      // Get recent market data
-      const [ticks, candles] = await Promise.all([this.getTicks(symbol, 20), this.getCandles(symbol, 60, 30)])
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        console.log("[v0] WebSocket not open, attempting to reconnect...")
+        await this.connect()
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Simulate AI analysis based on real market data
+        if (this.ws?.readyState !== WebSocket.OPEN) {
+          throw new Error("WebSocket connection unavailable. Please try again.")
+        }
+      }
+
+      console.log("[v0] Fetching market data for analysis...")
+      const [ticks, candles] = await Promise.race([
+        Promise.all([this.getTicks(symbol, 20), this.getCandles(symbol, 60, 30)]),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Data fetch timeout")), 15000)),
+      ])
+
+      console.log("[v0] Market data received, performing analysis...")
+
       const lastTick = ticks.prices[ticks.prices.length - 1]
-      const lastDigit = Math.floor((lastTick * 10000) % 10)
+      const lastDigit = extractLastDigit(lastTick)
       const recentPrices = ticks.prices.slice(-10)
 
-      // Calculate trend and volatility
       const trend = this.calculateTrend(recentPrices)
       const volatility = this.calculateVolatility(recentPrices)
       const digitFrequency = this.analyzeDigitFrequency(ticks.prices)
@@ -266,10 +388,13 @@ class DerivAPI {
       prediction.symbol = symbol
       prediction.entryPoint = lastTick
 
+      console.log("[v0] Analysis completed successfully")
       return prediction
     } catch (error) {
       console.error("[v0] Error analyzing for prediction:", error)
       throw error
+    } finally {
+      this.isAnalyzing = false
     }
   }
 
@@ -292,7 +417,7 @@ class DerivAPI {
     for (let i = 0; i <= 9; i++) frequency[i] = 0
 
     prices.forEach((price) => {
-      const digit = Math.floor((price * 10000) % 10)
+      const digit = extractLastDigit(price)
       frequency[digit]++
     })
 
@@ -315,13 +440,11 @@ class DerivAPI {
     const overProbability = overCount / (overCount + underCount)
     let confidence = Math.abs(overProbability - 0.5) * 2
 
-    // Add trend and volatility factors for more realistic confidence
     const trendFactor = Math.abs(trend) * 0.3
-    const volatilityFactor = Math.max(0, (0.02 - volatility) * 10) // Lower volatility = higher confidence
+    const volatilityFactor = Math.max(0, (0.02 - volatility) * 10)
 
     confidence = confidence + trendFactor + volatilityFactor
 
-    // Ensure confidence is between 15% and 95% (never 0, never over 100%)
     confidence = Math.max(15, Math.min(95, confidence * 100))
 
     const prediction = overProbability > 0.5 ? "over" : "under"
@@ -330,7 +453,7 @@ class DerivAPI {
     const targetDigits = prediction === "over" ? [5, 6, 7, 8, 9] : [0, 1, 2, 3, 4]
     const weightedDigits = targetDigits.map((digit) => ({
       digit,
-      weight: frequency[digit] + Math.random() * 0.3, // Add randomness to avoid always same digit
+      weight: frequency[digit] + Math.random() * 0.3,
     }))
     const targetDigit = weightedDigits.sort((a, b) => b.weight - a.weight)[0].digit
 
@@ -354,11 +477,9 @@ class DerivAPI {
     const evenProbability = evenCount / (evenCount + oddCount)
     let confidence = Math.abs(evenProbability - 0.5) * 2
 
-    // Add trend factor for more realistic confidence
     const trendFactor = Math.abs(trend) * 0.2
     confidence = confidence + trendFactor
 
-    // Ensure confidence is between 20% and 90% (never 0, never over 100%)
     confidence = Math.max(20, Math.min(90, confidence * 100))
 
     const prediction = evenProbability > 0.5 ? "even" : "odd"
@@ -366,7 +487,7 @@ class DerivAPI {
     const targetDigits = prediction === "even" ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]
     const weightedDigits = targetDigits.map((digit) => ({
       digit,
-      weight: frequency[digit] + Math.random() * 0.4, // Add randomness
+      weight: frequency[digit] + Math.random() * 0.4,
     }))
     const targetDigit = weightedDigits.sort((a, b) => b.weight - a.weight)[0].digit
 
@@ -386,18 +507,15 @@ class DerivAPI {
   private predictRiseFall(trend: number, volatility: number, candles: DerivCandle): PredictionResult {
     let confidence = Math.abs(trend) * 100
 
-    // Add volatility factor - lower volatility increases confidence
     const volatilityFactor = Math.max(0, (0.03 - volatility) * 500)
     confidence = confidence + volatilityFactor
 
-    // Add momentum factor based on recent candles
     if (candles.candles && candles.candles.length >= 3) {
       const recentCandles = candles.candles.slice(-3)
       const momentum = recentCandles.every((c) => c.close > c.open) || recentCandles.every((c) => c.close < c.open)
       if (momentum) confidence += 15
     }
 
-    // Ensure confidence is between 25% and 95% (never 0, never over 100%)
     confidence = Math.max(25, Math.min(95, confidence))
 
     const prediction = trend > 0 ? "rise" : "fall"
@@ -423,28 +541,23 @@ class DerivAPI {
     const totalCount = Object.values(frequency).reduce((sum, count) => sum + count, 0)
     const digitProbability = frequency[lastDigit] / totalCount
 
-    // Base confidence on how much the digit frequency deviates from expected 10%
-    let confidence = Math.abs(digitProbability - 0.1) * 5 // Scale up the difference
+    let confidence = Math.abs(digitProbability - 0.1) * 5
 
-    // Add trend factor
     const trendFactor = Math.abs(trend) * 0.3
     confidence = confidence + trendFactor
 
-    // Add frequency pattern factor - if digit appears in clusters, increase confidence
     const recentAppearances = Object.keys(frequency).filter((d) => Number.parseInt(d) === lastDigit).length
 
     if (recentAppearances > 0) {
       confidence += 0.2
     }
 
-    // Ensure confidence is between 30% and 85% (never 0, never over 100%)
     confidence = Math.max(30, Math.min(85, confidence * 100))
 
     const prediction = digitProbability > 0.1 ? "matches" : "differs"
 
     let targetDigit = lastDigit
     if (prediction === "differs") {
-      // For differs, pick a different digit with some randomness
       const otherDigits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => d !== lastDigit)
       const weightedOthers = otherDigits.map((digit) => ({
         digit,
@@ -467,18 +580,23 @@ class DerivAPI {
   }
 
   disconnect(): void {
+    this.stopHeartbeat()
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = null
+    }
     if (this.ws) {
-      this.ws.close()
+      this.ws.close(1000, "User initiated disconnect")
       this.isConnected = false
     }
+    this.connectionPromise = null
   }
 
   isConnectedToAPI(): boolean {
-    return this.isConnected
+    return this.isConnected && this.ws?.readyState === WebSocket.OPEN
   }
 }
 
-// Singleton instance
 let derivAPIInstance: DerivAPI | null = null
 
 export const getDerivAPI = (): DerivAPI => {

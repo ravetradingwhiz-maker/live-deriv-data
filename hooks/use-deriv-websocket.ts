@@ -9,6 +9,23 @@ const APP_ID = 1089 // This is a demo app ID, replace with your own
 const WS_URL = `wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`
 const CANDLE_INTERVAL = 60000 // 1 minute in milliseconds
 
+function extractLastDigit(quote: number): number {
+  // Convert to string and remove trailing zeros after decimal
+  let quoteStr = quote.toString()
+
+  // If there's a decimal point, remove trailing zeros
+  if (quoteStr.includes(".")) {
+    quoteStr = quoteStr.replace(/\.?0+$/, "")
+  }
+
+  // Remove decimal point and get last character
+  const digitsOnly = quoteStr.replace(".", "")
+  const lastChar = digitsOnly.slice(-1)
+  const digit = Number.parseInt(lastChar, 10)
+
+  return isNaN(digit) ? 0 : digit
+}
+
 export function useDerivWebSocket() {
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [status, setStatus] = useState("Connecting...")
@@ -169,10 +186,7 @@ export function useDerivWebSocket() {
             return
           }
 
-          // Extract last digit from quote
-          const quoteStr = tickData.quote.toFixed(5) // Ensure consistent decimal places
-          const lastDigitStr = quoteStr.replace(".", "").slice(-1)
-          const digit = Number.parseInt(lastDigitStr, 10)
+          const digit = extractLastDigit(tickData.quote)
 
           if (!isNaN(digit) && digit >= 0 && digit <= 9) {
             setTicksBuffer((prev) => {
