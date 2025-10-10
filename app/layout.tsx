@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Live Deriv Analysis Tool",
+  title: "Live Deriv Data Analysis",
   description: "Real-time Deriv data analysis dashboard",
   generator: "Netlify",
 }
