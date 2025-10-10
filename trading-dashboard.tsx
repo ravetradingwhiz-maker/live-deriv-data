@@ -63,26 +63,35 @@ export default function TradingDashboard() {
   const hasRealTimeData = user?.subscription === "premium" || user?.subscription === "enterprise"
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/10 to-background">
       <DashboardHeader />
 
       <div className="max-w-6xl mx-auto p-4 space-y-4">
         <Tabs defaultValue="trading" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-slate-800/90">
-            <TabsTrigger value="trading" className="text-slate-100 data-[state=active]:text-slate-900">
+          <TabsList className="grid w-full grid-cols-4 bg-card/90">
+            <TabsTrigger
+              value="trading"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
               Trading
             </TabsTrigger>
-            <TabsTrigger value="analysis" className="text-slate-100 data-[state=active]:text-slate-900">
+            <TabsTrigger
+              value="analysis"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
               Analysis
             </TabsTrigger>
             <TabsTrigger
               value="backtesting"
               disabled={!canBacktest}
-              className="text-slate-100 data-[state=active]:text-slate-900 disabled:text-slate-400"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground disabled:opacity-50"
             >
               Backtesting {!canBacktest && <Lock className="h-3 w-3 ml-1" />}
             </TabsTrigger>
-            <TabsTrigger value="account" className="text-slate-100 data-[state=active]:text-slate-900">
+            <TabsTrigger
+              value="account"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
               Account
             </TabsTrigger>
           </TabsList>
@@ -110,28 +119,23 @@ export default function TradingDashboard() {
           <TabsContent value="analysis" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Live Deriv Data Analysis Panel */}
-              <Card className="bg-slate-800/90 border-slate-700 text-white backdrop-blur-sm">
+              <Card className="bg-card/90 border-border backdrop-blur-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl font-bold">Live Deriv Data Analysis</CardTitle>
                     <div className="flex items-center gap-2">
                       {!hasRealTimeData && (
-                        <Badge variant="outline" className="text-xs text-yellow-400">
+                        <Badge variant="outline" className="text-xs text-yellow-500">
                           Limited
                         </Badge>
                       )}
                       {isConnected ? (
-                        <Wifi className="h-4 w-4 text-green-400" />
+                        <Wifi className="h-4 w-4 text-green-500" />
                       ) : (
-                        <WifiOff className="h-4 w-4 text-red-400" />
+                        <WifiOff className="h-4 w-4 text-red-500" />
                       )}
                       {!isConnected && connectionAttempts > 0 && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={reconnect}
-                          className="text-xs text-slate-200 hover:text-white"
-                        >
+                        <Button size="sm" variant="ghost" onClick={reconnect} className="text-xs">
                           <RefreshCw className="h-3 w-3 mr-1" />
                           Retry
                         </Button>
@@ -142,12 +146,12 @@ export default function TradingDashboard() {
 
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="text-sm text-slate-100 mb-2 block">Select market (Volatility indices)</label>
+                    <label className="text-sm mb-2 block">Select market (Volatility indices)</label>
                     <Select value={selectedMarket} onValueChange={setSelectedMarket}>
-                      <SelectTrigger className="bg-slate-700 border-slate-600">
+                      <SelectTrigger className="bg-background border-border">
                         <SelectValue placeholder="-- choose market --" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-700 border-slate-600">
+                      <SelectContent className="bg-popover border-border">
                         {markets.map((market) => (
                           <SelectItem key={market.symbol} value={market.symbol}>
                             {market.display_name} ({market.symbol})
@@ -161,7 +165,7 @@ export default function TradingDashboard() {
                     <Button
                       onClick={handleStartAnalysis}
                       disabled={!selectedMarket || !isConnected || !canTrade}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      className="flex-1"
                     >
                       Start Analysis
                     </Button>
@@ -169,42 +173,41 @@ export default function TradingDashboard() {
                       onClick={unsubscribeTicks}
                       disabled={!subscribedSymbol}
                       variant="secondary"
-                      className="flex-1 bg-slate-600 hover:bg-slate-700"
+                      className="flex-1"
                     >
                       Stop Analysis
                     </Button>
                   </div>
 
-                  {/* Enhanced Prediction Buttons */}
                   <PredictionButtons
                     onOpenPrediction={handleOpenPrediction}
                     canTrade={canTrade}
                     ticksBufferLength={ticksBuffer.length}
                     runsThisSession={runsThisSession}
-                    maxRuns={999} // Unlimited
+                    maxRuns={999}
                   />
 
                   {lastTick && (
-                    <div className="bg-slate-700/50 p-3 rounded-lg">
+                    <div className="bg-muted/50 p-3 rounded-lg">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-100">Last digit:</span>
+                        <span className="text-sm">Last digit:</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-green-400">{lastTick.digit}</span>
+                          <span className="text-2xl font-bold text-green-500">{lastTick.digit}</span>
                           {lastTick.digit > 4 ? (
-                            <TrendingUp className="h-4 w-4 text-green-400" />
+                            <TrendingUp className="h-4 w-4 text-green-500" />
                           ) : (
-                            <TrendingDown className="h-4 w-4 text-red-400" />
+                            <TrendingDown className="h-4 w-4 text-red-500" />
                           )}
                         </div>
                       </div>
-                      <div className="text-xs text-slate-200 mt-1">Quote: {lastTick.quote.toFixed(5)}</div>
-                      <div className="text-xs text-slate-200 mt-1">
+                      <div className="text-xs text-muted-foreground mt-1">Quote: {lastTick.quote.toFixed(5)}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
                         Type: {lastTick.digit % 2 === 0 ? "Even" : "Odd"} | {lastTick.digit > 4 ? "Over" : "Under"} 4.5
                       </div>
                     </div>
                   )}
 
-                  <div className="text-xs text-slate-200 space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1">
                     <div>Status: {status}</div>
                     <div>Buffer: {ticksBuffer.length} ticks</div>
                     <div>Plan: {user?.subscription}</div>
@@ -222,14 +225,14 @@ export default function TradingDashboard() {
             {canBacktest ? (
               <BacktestingPanel liveData={candleData} />
             ) : (
-              <Card className="bg-slate-800/90 border-slate-700 text-white">
+              <Card className="bg-card/90 border-border">
                 <CardContent className="text-center py-12">
-                  <Lock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                  <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-semibold mb-2">Backtesting Locked</h3>
-                  <p className="text-slate-200 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     Upgrade to Premium or Enterprise to access backtesting features.
                   </p>
-                  <Button className="bg-blue-600 hover:bg-blue-700">Upgrade Now</Button>
+                  <Button>Upgrade Now</Button>
                 </CardContent>
               </Card>
             )}
@@ -244,7 +247,7 @@ export default function TradingDashboard() {
           <EnhancedPredictionModal
             ticksBuffer={ticksBuffer}
             runsThisSession={runsThisSession}
-            maxRuns={999} // Unlimited
+            maxRuns={999}
             currentPrice={lastTick?.quote}
             predictionType={selectedPredictionType as PredictionType}
             onClose={() => setShowPredictionModal(false)}

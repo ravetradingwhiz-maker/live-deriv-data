@@ -14,12 +14,12 @@ interface TechnicalIndicatorsProps {
 export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicatorsProps) {
   if (data.length === 0) {
     return (
-      <Card className="bg-slate-800/90 border-slate-700 text-white">
+      <Card className="bg-card/90 border-border">
         <CardHeader>
           <CardTitle className="text-lg">Technical Indicators</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-slate-400">Waiting for data...</p>
+          <p className="text-muted-foreground">Waiting for data...</p>
         </CardContent>
       </Card>
     )
@@ -65,7 +65,7 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
   const bollingerSignal = getBollingerSignal(currentPrice, latest.bollingerUpper, latest.bollingerLower)
 
   return (
-    <Card className="bg-slate-800/90 border-slate-700 text-white">
+    <Card className="bg-card/90 border-border">
       <CardHeader>
         <CardTitle className="text-lg">Technical Indicators</CardTitle>
       </CardHeader>
@@ -73,7 +73,7 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
         {/* RSI */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">RSI (14)</span>
+            <span className="text-sm text-muted-foreground">RSI (14)</span>
             <div className="flex items-center gap-2">
               <rsiSignal.icon className={`h-4 w-4 ${rsiSignal.color}`} />
               <Badge variant="outline" className={rsiSignal.color}>
@@ -83,7 +83,7 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
           </div>
           {latest.rsi && (
             <>
-              <div className="flex justify-between text-xs text-slate-400">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Oversold (30)</span>
                 <span>{latest.rsi.toFixed(1)}</span>
                 <span>Overbought (70)</span>
@@ -96,7 +96,7 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
         {/* MACD */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">MACD</span>
+            <span className="text-sm text-muted-foreground">MACD</span>
             <div className="flex items-center gap-2">
               <macdSignal.icon className={`h-4 w-4 ${macdSignal.color}`} />
               <Badge variant="outline" className={macdSignal.color}>
@@ -107,17 +107,17 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
           {latest.macd && latest.macdSignal && (
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className="text-center">
-                <div className="text-slate-400">MACD</div>
+                <div className="text-muted-foreground">MACD</div>
                 <div className="font-bold">{latest.macd.toFixed(5)}</div>
               </div>
               <div className="text-center">
-                <div className="text-slate-400">Signal</div>
+                <div className="text-muted-foreground">Signal</div>
                 <div className="font-bold">{latest.macdSignal.toFixed(5)}</div>
               </div>
               <div className="text-center">
-                <div className="text-slate-400">Histogram</div>
+                <div className="text-muted-foreground">Histogram</div>
                 <div
-                  className={`font-bold ${latest.macdHistogram && latest.macdHistogram > 0 ? "text-green-400" : "text-red-400"}`}
+                  className={`font-bold ${latest.macdHistogram && latest.macdHistogram > 0 ? "text-green-500" : "text-red-500"}`}
                 >
                   {latest.macdHistogram?.toFixed(5) || "N/A"}
                 </div>
@@ -128,10 +128,10 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
 
         {/* Moving Averages */}
         <div className="space-y-3">
-          <div className="text-sm text-slate-300">Moving Averages</div>
+          <div className="text-sm text-muted-foreground">Moving Averages</div>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">SMA 20</span>
+            <span className="text-xs text-muted-foreground">SMA 20</span>
             <div className="flex items-center gap-2">
               <span className="text-xs">{latest.sma20?.toFixed(5) || "N/A"}</span>
               <sma20Signal.icon className={`h-3 w-3 ${sma20Signal.color}`} />
@@ -142,7 +142,7 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">SMA 50</span>
+            <span className="text-xs text-muted-foreground">SMA 50</span>
             <div className="flex items-center gap-2">
               <span className="text-xs">{latest.sma50?.toFixed(5) || "N/A"}</span>
               <sma50Signal.icon className={`h-3 w-3 ${sma50Signal.color}`} />
@@ -156,7 +156,7 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
         {/* Bollinger Bands */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">Bollinger Bands</span>
+            <span className="text-sm text-muted-foreground">Bollinger Bands</span>
             <div className="flex items-center gap-2">
               <bollingerSignal.icon className={`h-4 w-4 ${bollingerSignal.color}`} />
               <Badge variant="outline" className={bollingerSignal.color}>
@@ -167,26 +167,26 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
           {latest.bollingerUpper && latest.bollingerLower && (
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className="text-center">
-                <div className="text-slate-400">Upper</div>
-                <div className="font-bold text-red-400">{latest.bollingerUpper.toFixed(5)}</div>
+                <div className="text-muted-foreground">Upper</div>
+                <div className="font-bold text-red-500">{latest.bollingerUpper.toFixed(5)}</div>
               </div>
               <div className="text-center">
-                <div className="text-slate-400">Middle</div>
-                <div className="font-bold text-yellow-400">{latest.bollingerMiddle?.toFixed(5)}</div>
+                <div className="text-muted-foreground">Middle</div>
+                <div className="font-bold text-yellow-500">{latest.bollingerMiddle?.toFixed(5)}</div>
               </div>
               <div className="text-center">
-                <div className="text-slate-400">Lower</div>
-                <div className="font-bold text-green-400">{latest.bollingerLower.toFixed(5)}</div>
+                <div className="text-muted-foreground">Lower</div>
+                <div className="font-bold text-green-500">{latest.bollingerLower.toFixed(5)}</div>
               </div>
             </div>
           )}
         </div>
 
         {/* Overall Signal */}
-        <div className="pt-2 border-t border-slate-600">
+        <div className="pt-2 border-t border-border">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">Overall Signal</span>
-            <Badge variant="outline" className="text-yellow-400">
+            <span className="text-sm text-muted-foreground">Overall Signal</span>
+            <Badge variant="outline" className="text-yellow-500">
               Mixed Signals
             </Badge>
           </div>

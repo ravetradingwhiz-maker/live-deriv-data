@@ -102,7 +102,21 @@ class DerivAuthService {
       console.log("[v0] Available synthetic markets:", syntheticSymbols.length)
 
       // Subscribe to popular synthetic indices for live tick data
-      const popularSymbols = ["R_10", "R_25", "R_50", "R_75", "R_100"]
+      const popularSymbols = [
+        "1HZ10V",
+        "R_10",
+        "1HZ15V",
+        "1HZ25V",
+        "R_25",
+        "1HZ30V",
+        "1HZ50V",
+        "R_50",
+        "1HZ75V",
+        "R_75",
+        "1HZ90V",
+        "1HZ100V",
+        "R_100",
+      ]
 
       popularSymbols.forEach((symbol) => {
         derivAPI.subscribeTicks(symbol, (tick) => {

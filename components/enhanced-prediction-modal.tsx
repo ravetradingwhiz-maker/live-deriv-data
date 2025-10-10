@@ -382,7 +382,7 @@ export function EnhancedPredictionModal({
       case "matches_differs":
         return (
           <div className="space-y-4">
-            <div className="text-sm text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+            <div className="text-sm text-primary bg-muted p-3 rounded-lg">
               AI will analyze Deriv.com data and provide exact digit predictions with entry points
             </div>
             <RadioGroup value={choice} onValueChange={setChoice}>
@@ -430,19 +430,19 @@ export function EnhancedPredictionModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-        <CardHeader className="bg-blue-100 dark:bg-blue-900">
-          <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
-            <Calculator className="h-5 w-5 text-blue-600" />
+      <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-card border-border">
+        <CardHeader className="bg-muted">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Calculator className="h-5 w-5 text-primary" />
             AI Prediction Analysis - Deriv.com Integration
             <div className="ml-auto flex items-center gap-2">
               {isConnected ? (
-                <div className="flex items-center gap-1 text-green-600">
+                <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                   <Wifi className="h-4 w-4" />
                   <span className="text-xs">Connected</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-red-600">
+                <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
                   <WifiOff className="h-4 w-4" />
                   <span className="text-xs">Disconnected</span>
                 </div>
@@ -450,44 +450,42 @@ export function EnhancedPredictionModal({
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 text-blue-900 dark:text-blue-100">
-          <div className="bg-blue-100 dark:bg-blue-900/50 p-3 rounded-lg">
+        <CardContent className="space-y-4 text-foreground">
+          <div className="bg-muted p-3 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Deriv API Status:</span>
               <Badge variant={isConnected ? "default" : "destructive"}>
                 {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
               </Badge>
             </div>
-            {error && <div className="text-xs text-red-600 dark:text-red-400 mt-1">Error: {error}</div>}
+            {error && <div className="text-xs text-destructive mt-1">Error: {error}</div>}
             <div className="flex items-center justify-between mt-2">
               <span className="text-sm">Trading Symbol:</span>
               <select
                 value={selectedSymbol}
                 onChange={(e) => setSelectedSymbol(e.target.value)}
-                className="text-xs bg-blue-200 dark:bg-blue-800 rounded px-2 py-1"
+                className="text-xs bg-background border border-input rounded px-2 py-1"
               >
-                <option value="R_10">Volatility 10 Index</option>
-                <option value="R_25">Volatility 25 Index</option>
-                <option value="R_50">Volatility 50 Index</option>
-                <option value="R_75">Volatility 75 Index</option>
-                <option value="R_100">Volatility 100 Index</option>
                 <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                <option value="R_10">Volatility 10 Index</option>
+                <option value="1HZ15V">Volatility 15 (1s) Index</option>
                 <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                <option value="R_25">Volatility 25 Index</option>
+                <option value="1HZ30V">Volatility 30 (1s) Index</option>
                 <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                <option value="R_50">Volatility 50 Index</option>
                 <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                <option value="R_75">Volatility 75 Index</option>
+                <option value="1HZ90V">Volatility 90 (1s) Index</option>
                 <option value="1HZ100V">Volatility 100 (1s) Index</option>
-                <option value="1HZ150V">Volatility 150 (1s) Index</option>
-                <option value="1HZ200V">Volatility 200 (1s) Index</option>
-                <option value="1HZ250V">Volatility 250 (1s) Index</option>
-                <option value="1HZ300V">Volatility 300 (1s) Index</option>
+                <option value="R_100">Volatility 100 Index</option>
               </select>
             </div>
           </div>
 
-          {/* Conditional rendering based on prediction type */}
           {predictionType === "over_under" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {getPredictionIcon("over_under")}
                 <span>
                   {isConnected
@@ -501,7 +499,7 @@ export function EnhancedPredictionModal({
 
           {predictionType === "matches_differs" && (
             <div className="space-y-4">
-              <div className="text-sm text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+              <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
                 {isConnected
                   ? "AI will analyze live Deriv.com data and provide exact digit predictions with entry points"
                   : "Limited analysis available - connect to Deriv API for full predictions"}
@@ -512,7 +510,7 @@ export function EnhancedPredictionModal({
 
           {predictionType === "even_odd" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Hash className="h-5 w-5" />
                 <span>
                   {isConnected
@@ -526,7 +524,7 @@ export function EnhancedPredictionModal({
 
           {predictionType === "rise_fall" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <BarChart3 className="h-5 w-5" />
                 <span>
                   {isConnected
@@ -540,12 +538,12 @@ export function EnhancedPredictionModal({
 
           {isAnalyzing && (
             <div className="text-center py-4">
-              <div className="text-lg font-semibold text-blue-700 dark:text-blue-300">
+              <div className="text-lg font-semibold text-foreground">
                 {countdown > 0
                   ? `${isConnected ? "Analyzing Live Deriv Data" : "Processing Available Data"} — ${countdown}s`
                   : "Generating AI Predictions..."}
               </div>
-              <div className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+              <div className="text-sm text-muted-foreground mt-2">
                 {isConnected
                   ? "Fetching live data • Pattern analysis • Calculating probabilities • Generating entry points"
                   : "Local analysis • Pattern detection • Probability calculation"}
@@ -553,37 +551,35 @@ export function EnhancedPredictionModal({
             </div>
           )}
 
-          {/* Conditional rendering based on prediction type */}
           {result && (
-            <div className="bg-blue-100 dark:bg-blue-900/50 p-4 rounded-lg space-y-3 border border-blue-200 dark:border-blue-700">
+            <div className="bg-muted p-4 rounded-lg space-y-3 border border-border">
               <div className="space-y-3">
-                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded space-y-2">
+                <div className="bg-background p-3 rounded space-y-2">
                   <div className="flex items-center justify-between">
-                    <strong className="text-blue-800 dark:text-blue-200">Entry Point:</strong>
-                    <span className="font-semibold text-blue-900 dark:text-blue-100">{result.entryPoints.primary}</span>
+                    <strong className="text-foreground">Entry Point:</strong>
+                    <span className="font-semibold text-foreground">{result.entryPoints.primary}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <strong className="text-blue-800 dark:text-blue-200">Number of Runs:</strong>
-                    <Badge className="bg-blue-600 text-white text-lg px-3 py-1">{result.runs}</Badge>
+                    <strong className="text-foreground">Number of Runs:</strong>
+                    <Badge className="bg-primary text-primary-foreground text-lg px-3 py-1">{result.runs}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <strong className="text-blue-800 dark:text-blue-200">Probability:</strong>
-                    <span className="font-semibold text-lg text-blue-900 dark:text-blue-100">{result.confidence}%</span>
+                    <strong className="text-foreground">Probability:</strong>
+                    <span className="font-semibold text-lg text-foreground">{result.confidence}%</span>
                   </div>
                 </div>
 
-                {/* Additional context in smaller text */}
-                <div className="text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-3 rounded">
+                <div className="text-sm text-muted-foreground bg-background p-3 rounded">
                   <div className="flex items-center justify-between mb-1">
                     <span>Market: {result.marketCondition}</span>
                     <Badge
                       variant="outline"
                       className={
                         result.riskLevel === "LOW"
-                          ? "bg-green-100 text-green-800 border-green-300"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-700"
                           : result.riskLevel === "MEDIUM"
-                            ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                            : "bg-red-100 text-red-800 border-red-300"
+                            ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700"
+                            : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-300 dark:border-red-700"
                       }
                     >
                       {result.riskLevel} Risk
@@ -599,15 +595,11 @@ export function EnhancedPredictionModal({
             <Button
               onClick={runAnalysis}
               disabled={isAnalyzing}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {isAnalyzing ? "Analyzing..." : `Start ${isConnected ? "Live" : "Fallback"} Analysis (15s)`}
             </Button>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900 bg-transparent"
-            >
+            <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent">
               Close
             </Button>
           </div>

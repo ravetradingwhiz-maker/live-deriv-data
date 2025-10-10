@@ -57,23 +57,23 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload
     return (
-      <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 text-white text-sm">
+      <div className="bg-popover border border-border rounded-lg p-3 text-sm">
         <p className="font-semibold">{label}</p>
         <div className="space-y-1 mt-2">
           <p>
-            Open: <span className="text-blue-400">{data.open?.toFixed(5)}</span>
+            Open: <span className="text-blue-500">{data.open?.toFixed(5)}</span>
           </p>
           <p>
-            High: <span className="text-green-400">{data.high?.toFixed(5)}</span>
+            High: <span className="text-green-500">{data.high?.toFixed(5)}</span>
           </p>
           <p>
-            Low: <span className="text-red-400">{data.low?.toFixed(5)}</span>
+            Low: <span className="text-red-500">{data.low?.toFixed(5)}</span>
           </p>
           <p>
-            Close: <span className="text-yellow-400">{data.close?.toFixed(5)}</span>
+            Close: <span className="text-yellow-500">{data.close?.toFixed(5)}</span>
           </p>
           <p>
-            Volume: <span className="text-gray-400">{data.volume}</span>
+            Volume: <span className="text-muted-foreground">{data.volume}</span>
           </p>
         </div>
       </div>
@@ -112,12 +112,12 @@ export function CandlestickChart({ data, currentCandle, symbol }: CandlestickCha
   }
 
   return (
-    <Card className="bg-slate-800/90 border-slate-700 text-white">
+    <Card className="bg-card/90 border-border">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">
             Price Chart {symbol && `(${symbol})`}
-            <span className="text-sm text-slate-400 ml-2">1m intervals</span>
+            <span className="text-sm text-muted-foreground ml-2">1m intervals</span>
           </CardTitle>
         </div>
 
@@ -180,11 +180,11 @@ export function CandlestickChart({ data, currentCandle, symbol }: CandlestickCha
         >
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="time" stroke="#9ca3af" fontSize={10} interval="preserveStartEnd" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={10} interval="preserveStartEnd" />
               <YAxis
                 domain={[minPrice, maxPrice]}
-                stroke="#9ca3af"
+                stroke="hsl(var(--muted-foreground))"
                 fontSize={10}
                 tickFormatter={(value) => value.toFixed(5)}
               />
@@ -257,24 +257,24 @@ export function CandlestickChart({ data, currentCandle, symbol }: CandlestickCha
         {/* Current Values Display */}
         {currentCandle && (
           <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-            <div className="bg-slate-700/50 p-2 rounded">
-              <div className="text-slate-400">Current Price</div>
-              <div className="text-lg font-bold text-yellow-400">{currentCandle.close.toFixed(5)}</div>
+            <div className="bg-muted/50 p-2 rounded">
+              <div className="text-muted-foreground">Current Price</div>
+              <div className="text-lg font-bold text-yellow-500">{currentCandle.close.toFixed(5)}</div>
             </div>
-            <div className="bg-slate-700/50 p-2 rounded">
-              <div className="text-slate-400">Volume</div>
-              <div className="text-lg font-bold text-blue-400">{currentCandle.volume}</div>
+            <div className="bg-muted/50 p-2 rounded">
+              <div className="text-muted-foreground">Volume</div>
+              <div className="text-lg font-bold text-blue-500">{currentCandle.volume}</div>
             </div>
             {data.length > 0 && data[data.length - 1].sma20 && (
-              <div className="bg-slate-700/50 p-2 rounded">
-                <div className="text-slate-400">SMA 20</div>
-                <div className="text-sm font-bold text-blue-400">{data[data.length - 1].sma20?.toFixed(5)}</div>
+              <div className="bg-muted/50 p-2 rounded">
+                <div className="text-muted-foreground">SMA 20</div>
+                <div className="text-sm font-bold text-blue-500">{data[data.length - 1].sma20?.toFixed(5)}</div>
               </div>
             )}
             {data.length > 0 && data[data.length - 1].rsi && (
-              <div className="bg-slate-700/50 p-2 rounded">
-                <div className="text-slate-400">RSI</div>
-                <div className="text-sm font-bold text-purple-400">{data[data.length - 1].rsi?.toFixed(1)}</div>
+              <div className="bg-muted/50 p-2 rounded">
+                <div className="text-muted-foreground">RSI</div>
+                <div className="text-sm font-bold text-purple-500">{data[data.length - 1].rsi?.toFixed(1)}</div>
               </div>
             )}
           </div>

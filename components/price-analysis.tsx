@@ -13,12 +13,12 @@ interface PriceAnalysisProps {
 export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
   if (data.length < 2) {
     return (
-      <Card className="bg-slate-800/90 border-slate-700 text-white">
+      <Card className="bg-card/90 border-border">
         <CardHeader>
           <CardTitle className="text-lg">Price Analysis</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-slate-400">Waiting for more data...</p>
+          <p className="text-muted-foreground">Waiting for more data...</p>
         </CardContent>
       </Card>
     )
@@ -45,21 +45,21 @@ export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
   const trend = priceChange > 0 ? "up" : priceChange < 0 ? "down" : "neutral"
 
   return (
-    <Card className="bg-slate-800/90 border-slate-700 text-white">
+    <Card className="bg-card/90 border-border">
       <CardHeader>
         <CardTitle className="text-lg">Price Analysis</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Price Movement */}
         <div className="flex items-center justify-between">
-          <span className="text-slate-300">Price Change</span>
+          <span className="text-muted-foreground">Price Change</span>
           <div className="flex items-center gap-2">
-            {trend === "up" && <TrendingUp className="h-4 w-4 text-green-400" />}
-            {trend === "down" && <TrendingDown className="h-4 w-4 text-red-400" />}
-            {trend === "neutral" && <Minus className="h-4 w-4 text-gray-400" />}
+            {trend === "up" && <TrendingUp className="h-4 w-4 text-green-500" />}
+            {trend === "down" && <TrendingDown className="h-4 w-4 text-red-500" />}
+            {trend === "neutral" && <Minus className="h-4 w-4 text-muted-foreground" />}
             <span
               className={`font-bold ${
-                trend === "up" ? "text-green-400" : trend === "down" ? "text-red-400" : "text-gray-400"
+                trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-muted-foreground"
               }`}
             >
               {priceChangePercent.toFixed(3)}%
@@ -69,20 +69,20 @@ export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
 
         {/* Over/Under Distribution */}
         <div className="space-y-2">
-          <div className="text-slate-300 text-sm">Digit Distribution</div>
+          <div className="text-muted-foreground text-sm">Digit Distribution</div>
           <div className="flex justify-between">
             <div className="text-center">
-              <div className="text-red-400 font-bold">{underCount}</div>
-              <div className="text-xs text-slate-400">Under (0-4)</div>
+              <div className="text-red-500 font-bold">{underCount}</div>
+              <div className="text-xs text-muted-foreground">Under (0-4)</div>
             </div>
             <div className="text-center">
-              <div className="text-green-400 font-bold">{overCount}</div>
-              <div className="text-xs text-slate-400">Over (5-9)</div>
+              <div className="text-green-500 font-bold">{overCount}</div>
+              <div className="text-xs text-muted-foreground">Over (5-9)</div>
             </div>
           </div>
-          <div className="w-full bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-2">
             <div
-              className="bg-green-400 h-2 rounded-full transition-all duration-300"
+              className="bg-green-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${totalTicks ? (overCount / totalTicks) * 100 : 0}%` }}
             />
           </div>
@@ -90,7 +90,7 @@ export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
 
         {/* Individual Digit Frequency */}
         <div className="space-y-2">
-          <div className="text-slate-300 text-sm">Digit Frequency</div>
+          <div className="text-muted-foreground text-sm">Digit Frequency</div>
           <div className="grid grid-cols-5 gap-1">
             {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => {
               const count = digitCounts[digit] || 0
@@ -103,7 +103,7 @@ export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
                   >
                     {digit}
                   </Badge>
-                  <div className="text-xs text-slate-400 mt-1">{percentage.toFixed(0)}%</div>
+                  <div className="text-xs text-muted-foreground mt-1">{percentage.toFixed(0)}%</div>
                 </div>
               )
             })}
@@ -112,7 +112,7 @@ export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
 
         {/* Market Sentiment */}
         <div className="flex items-center justify-between">
-          <span className="text-slate-300">Market Sentiment</span>
+          <span className="text-muted-foreground">Market Sentiment</span>
           <Badge variant={overCount > underCount ? "default" : "secondary"}>
             {overCount > underCount ? "Bullish" : underCount > overCount ? "Bearish" : "Neutral"}
           </Badge>
