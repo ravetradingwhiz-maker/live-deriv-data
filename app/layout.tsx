@@ -7,9 +7,9 @@ import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Live Deriv Analysis Tool",
+  description: "Real-time Deriv data analysis dashboard",
+  generator: "Netlify",
 }
 
 export default function RootLayout({
