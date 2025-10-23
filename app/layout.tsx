@@ -8,7 +8,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: "Live Deriv Data Analysis",
-  description: "Real-time Deriv data analysis dashboard",
+  description: "Live Deriv Data Analysis (LDDA) is a professional-grade analytical tool designed for traders who want precision and profitability on Deriv.com",
   generator: "Netlify",
 }
 
