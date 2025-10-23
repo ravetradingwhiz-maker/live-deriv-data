@@ -1,11 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import { AuthProvider, useAuth } from "@/contexts/auth-context"
 import { LoginForm } from "@/components/login-form"
+import { LandingPage } from "@/components/landing-page"
 import TradingDashboard from "../trading-dashboard"
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth()
+  const [showLogin, setShowLogin] = useState(false)
 
   if (isLoading) {
     return (
@@ -18,7 +21,15 @@ function AppContent() {
     )
   }
 
-  return isAuthenticated ? <TradingDashboard /> : <LoginForm />
+  if (isAuthenticated) {
+    return <TradingDashboard />
+  }
+
+  if (showLogin) {
+    return <LoginForm onBackClick={() => setShowLogin(false)} />
+  }
+
+  return <LandingPage onGetStarted={() => setShowLogin(true)} />
 }
 
 export default function Page() {
