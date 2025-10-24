@@ -58,7 +58,9 @@ export function DashboardHeader() {
               <TrendingUp className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Live Deriv Data Analysis</h1>
+              <h1 className="text-xs sm:text-sm md:text-base font-bold text-foreground whitespace-nowrap">
+                Live Deriv Data Analysis
+              </h1>
               <p className="text-xs text-muted-foreground">Professional Trading Platform</p>
             </div>
           </div>

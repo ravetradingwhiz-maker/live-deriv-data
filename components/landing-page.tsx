@@ -204,16 +204,18 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-2 rounded-lg">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="bg-blue-600 p-2 rounded-lg flex-shrink-0">
                 <TrendingUp className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">Live Deriv Data Analysis</h1>
-                <p className="text-xs text-slate-400">Professional Trading</p>
+              <div className="min-w-0">
+                <h1 className="text-xs sm:text-sm md:text-base font-bold text-white whitespace-nowrap">
+                  Live Deriv Data Analysis
+                </h1>
+                <p className="text-xs text-slate-400 whitespace-nowrap">Professional Trading</p>
               </div>
             </div>
-            <Button onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -224,13 +226,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 text-center">
         <div className="max-w-4xl mx-auto space-y-6">
-          <h2 className="text-5xl sm:text-6xl font-bold text-white leading-tight">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
             Trade Smarter.{" "}
             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Win Consistently.
             </span>
           </h2>
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto">
             Live Deriv Data Analysis (LDDA) is a professional-grade analytical tool designed for traders who want
             precision and profitability on Deriv.com
           </p>
@@ -578,7 +580,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               <div className="bg-blue-600 p-2 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
-              <span className="font-semibold text-white">Live Deriv Data Analysis</span>
+              <span className="font-semibold text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
+                Live Deriv Data Analysis
+              </span>
             </div>
             <p className="text-sm text-slate-400">
               © 2025 All rights reserved. Professional trading tools for serious traders.
