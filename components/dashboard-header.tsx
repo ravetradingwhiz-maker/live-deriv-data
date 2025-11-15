@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Settings, LogOut, Crown, Shield, Eye, TrendingUp, Bell, HelpCircle } from "lucide-react"
+import { User, Settings, LogOut, Crown, Shield, Eye, TrendingUp, Bell, HelpCircle, Download } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export function DashboardHeader() {
@@ -69,6 +69,16 @@ export function DashboardHeader() {
           <div className="flex items-center gap-4">
             {/* Theme Toggle */}
             <ThemeToggle />
+
+            {/* Download Guide */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open("/api/generate-pdf", "_blank")}
+              title="Download User Guide"
+            >
+              <Download className="h-5 w-5" />
+            </Button>
 
             {/* Notifications */}
             <Button variant="ghost" size="sm" className="relative">

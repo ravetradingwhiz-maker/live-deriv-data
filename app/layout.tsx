@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Live Deriv Data Analysis",
-  description: "Live Deriv Data Analysis is a professional-grade analytical tool designed for traders who want precision and profitability on Deriv.com",
+  title: "Deriv Pro",
+  description: "Professional trading analysis dashboard",
   generator: "Netlify",
 }
 
