@@ -7,31 +7,29 @@ import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Live Deriv Data Analysis",
-  description: "Live Deriv Data Analysis (LDDA) is a professional-grade analytical tool designed for traders who want precision and profitability on Deriv.com",
+  title: "Deriv Pro",
+  description: "Professional trading analysis dashboard",
   generator: "Netlify",
+  icons: {
+    icon: "/favicon.ico",
+  },
 }
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-      <link rel="icon" href="/favicon.ico" sizes="any" />
-
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              :root {
-                --font-sans: ${GeistSans.style.fontFamily};
-                --font-mono: ${GeistMono.variable};
-              }
-            `,
-          }}
-        />
+        <style>{`
+html {
+  font-family: ${GeistSans.style.fontFamily};
+  --font-sans: ${GeistSans.variable};
+  --font-mono: ${GeistMono.variable};
+}
+        `}</style>
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -39,5 +37,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  );
+  )
 }
