@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/contexts/auth-context"
-import { Eye, EyeOff, Lock, User, TrendingUp, Shield, Zap, MessageCircle, ArrowLeft } from "lucide-react"
+import { Eye, EyeOff, Lock, User, Shield, Zap, MessageCircle, ArrowLeft } from 'lucide-react'
+import Image from "next/image"
 
 interface LoginFormProps {
   onBackClick?: () => void
@@ -59,9 +60,13 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
         {/* Logo and Branding */}
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="bg-blue-600 p-3 rounded-lg">
-              <TrendingUp className="h-8 w-8 text-white" />
-            </div>
+            <Image
+              src="/deriv-logo.png"
+              alt="Deriv Pro Logo"
+              width={48}
+              height={48}
+              className="rounded-lg"
+            />
             <div>
               <h1 className="text-2xl font-bold text-white">Live Deriv Data Analysis</h1>
               <p className="text-sm text-slate-400">Professional Trading Platform</p>
@@ -170,7 +175,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
           </div>
           <div className="space-y-2">
             <div className="bg-blue-600/20 p-3 rounded-lg mx-auto w-fit">
-              <TrendingUp className="h-6 w-6 text-blue-400" />
+              <Lock className="h-6 w-6 text-blue-400" />
             </div>
             <div className="text-xs text-slate-400">Real-time Data</div>
           </div>

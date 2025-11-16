@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { TrendingUp, BarChart3, Brain, Bell, ArrowRight, CheckCircle2, Target, Gauge, Star } from "lucide-react"
+import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star } from 'lucide-react'
 import { TermsConditionsModal } from "@/components/terms-conditions-modal"
+import Image from "next/image"
 
 interface LandingPageProps {
   onGetStarted: () => void
@@ -205,9 +206,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="bg-blue-600 p-2 rounded-lg flex-shrink-0">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
+              <Image
+                src="/deriv-logo.png"
+                alt="Deriv Pro Logo"
+                width={40}
+                height={40}
+                className="rounded-lg flex-shrink-0"
+              />
               <div className="min-w-0">
                 <h1 className="text-xs sm:text-sm md:text-base font-bold text-white whitespace-nowrap">
                   Live Deriv Data Analysis
@@ -217,7 +222,6 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             </div>
             <Button onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
               Get Started
-              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -239,7 +243,6 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
             <Button size="lg" onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
               Start Trading Now
-              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
 
@@ -577,9 +580,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           <div className="border-t border-slate-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-white" />
-              </div>
+              <Image
+                src="/deriv-logo.png"
+                alt="Deriv Pro Logo"
+                width={32}
+                height={32}
+                className="rounded-lg"
+              />
               <span className="font-semibold text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
                 Live Deriv Data Analysis
               </span>
