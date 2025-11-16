@@ -52,19 +52,6 @@ const MOCK_USERS: Record<string, { password: string; user: User }> = {
       permissions: ["view"],
     },
   },
-  kemutuk: {
-    password: "Windsor@24",
-    user: {
-      id: "4",
-      username: "kemutuk",
-      email: "kemutuk@example.com",
-      role: "trader",
-      subscription: "premium",
-      createdAt: "2024-03-01T00:00:00Z",
-      lastLogin: new Date().toISOString(),
-      permissions: ["trade", "backtest", "analyze"],
-    },
-  },
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
