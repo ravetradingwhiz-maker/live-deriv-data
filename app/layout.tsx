@@ -15,18 +15,23 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <style>{`
-html {
-  font-family: ${GeistSans.style.fontFamily};
-  --font-sans: ${GeistSans.variable};
-  --font-mono: ${GeistMono.variable};
-}
-        `}</style>
+        <link rel="icon" href="/favicon.png" type="image/png" />
+
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              :root {
+                --font-sans: ${GeistSans.style.fontFamily};
+                --font-mono: ${GeistMono.variable};
+              }
+            `,
+          }}
+        />
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -34,5 +39,5 @@ html {
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
