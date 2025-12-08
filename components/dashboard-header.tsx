@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Settings, LogOut, Crown, Shield, Eye, Bell, HelpCircle, Download } from 'lucide-react'
+import { User, Settings, LogOut, Crown, Shield, Eye, Bell, HelpCircle, Download, TrendingUp } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
@@ -55,13 +55,7 @@ export function DashboardHeader() {
         <div className="flex items-center justify-between">
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
-            <Image
-              src="/deriv-logo.png"
-              alt="Deriv Pro Logo"
-              width={40}
-              height={40}
-              className="rounded-lg"
-            />
+            <Image src="/deriv-logo.png" alt="Deriv Pro Logo" width={40} height={40} className="rounded-lg" />
             <div>
               <h1 className="text-xs sm:text-sm md:text-base font-bold text-foreground whitespace-nowrap">
                 Live Deriv Data Analysis

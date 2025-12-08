@@ -601,7 +601,7 @@ let derivAPIInstance: DerivAPI | null = null
 
 export const getDerivAPI = (): DerivAPI => {
   if (!derivAPIInstance) {
-    derivAPIInstance = new DerivAPI("GegsFtAxp9oTNhh")
+    derivAPIInstance = new DerivAPI("aNwknOB3epi8aF1")
   }
   return derivAPIInstance
 }

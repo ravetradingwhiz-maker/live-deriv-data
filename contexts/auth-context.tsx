@@ -11,46 +11,76 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock user database
-const MOCK_USERS: Record<string, { password: string; user: User }> = {
-  binary: {
-    password: "beast",
-    user: {
-      id: "1",
-      username: "binary",
-      email: "admin@liveDerivData.com",
-      role: "admin",
-      subscription: "enterprise",
-      createdAt: "2024-01-01T00:00:00Z",
-      lastLogin: new Date().toISOString(),
-      permissions: ["all"],
-    },
+const MOCK_ACCESS_CODES: Record<string, User> = {
+  "ADM-2024-001": {
+    id: "1",
+    username: "binary",
+    email: "admin@liveDerivData.com",
+    role: "admin",
+    subscription: "enterprise",
+    createdAt: "2024-01-01T00:00:00Z",
+    lastLogin: new Date().toISOString(),
+    permissions: ["all"],
   },
-  trader1: {
-    password: "demo123",
-    user: {
-      id: "2",
-      username: "trader1",
-      email: "trader@example.com",
-      role: "trader",
-      subscription: "premium",
-      createdAt: "2024-01-15T00:00:00Z",
-      lastLogin: new Date().toISOString(),
-      permissions: ["trade", "backtest", "analyze"],
-    },
+  "TRD-2024-002": {
+    id: "2",
+    username: "trader1",
+    email: "trader@example.com",
+    role: "trader",
+    subscription: "premium",
+    createdAt: "2024-01-15T00:00:00Z",
+    lastLogin: new Date().toISOString(),
+    permissions: ["trade", "backtest", "analyze"],
   },
-  viewer1: {
-    password: "view123",
-    user: {
-      id: "3",
-      username: "viewer1",
-      email: "viewer@example.com",
-      role: "viewer",
-      subscription: "free",
-      createdAt: "2024-02-01T00:00:00Z",
-      lastLogin: new Date().toISOString(),
-      permissions: ["view"],
-    },
+  "VWR-2024-003": {
+    id: "3",
+    username: "viewer1",
+    email: "viewer@example.com",
+    role: "viewer",
+    subscription: "free",
+    createdAt: "2024-02-01T00:00:00Z",
+    lastLogin: new Date().toISOString(),
+    permissions: ["view"],
+  },
+  "TRD-KEMUTUK-001": {
+    id: "4",
+    username: "kemutuk",
+    email: "kemutuk@example.com",
+    role: "trader",
+    subscription: "premium",
+    createdAt: "2024-01-20T00:00:00Z",
+    lastLogin: new Date().toISOString(),
+    permissions: ["trade", "backtest", "analyze"],
+  },
+  "T9!mA7#Q4z": {
+    id: "5",
+    username: "trader2",
+    email: "trader2@example.com",
+    role: "trader",
+    subscription: "premium",
+    createdAt: "2024-02-10T00:00:00Z",
+    lastLogin: new Date().toISOString(),
+    permissions: ["trade", "backtest", "analyze"],
+  },
+  "Qw9@Hp3!Lm": {
+    id: "6",
+    username: "trader3",
+    email: "trader3@example.com",
+    role: "trader",
+    subscription: "premium",
+    createdAt: "2024-02-15T00:00:00Z",
+    lastLogin: new Date().toISOString(),
+    permissions: ["trade", "backtest", "analyze"],
+  },
+  "R8!cT2$Zp5": {
+    id: "7",
+    username: "trader4",
+    email: "trader4@example.com",
+    role: "trader",
+    subscription: "premium",
+    createdAt: "2024-02-20T00:00:00Z",
+    lastLogin: new Date().toISOString(),
+    permissions: ["trade", "backtest", "analyze"],
   },
 }
 
@@ -87,17 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    const userRecord = MOCK_USERS[credentials.username]
+    const user = MOCK_ACCESS_CODES[credentials.accessCode]
 
-    if (userRecord && userRecord.password === credentials.password) {
-      const user = {
-        ...userRecord.user,
+    if (user) {
+      const updatedUser = {
+        ...user,
         lastLogin: new Date().toISOString(),
       }
 
-      localStorage.setItem("auth_user", JSON.stringify(user))
+      localStorage.setItem("auth_user", JSON.stringify(updatedUser))
       setAuthState({
-        user,
+        user: updatedUser,
         isAuthenticated: true,
         isLoading: false,
       })

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/contexts/auth-context"
-import { Eye, EyeOff, Lock, User, Shield, Zap, MessageCircle, ArrowLeft } from 'lucide-react'
+import { Lock, Shield, Zap, MessageCircle, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 
 interface LoginFormProps {
@@ -17,22 +17,21 @@ interface LoginFormProps {
 
 export function LoginForm({ onBackClick }: LoginFormProps) {
   const { login, isLoading } = useAuth()
-  const [credentials, setCredentials] = useState({ username: "", password: "" })
-  const [showPassword, setShowPassword] = useState(false)
+  const [accessCode, setAccessCode] = useState("")
   const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (!credentials.username || !credentials.password) {
-      setError("Please enter both username and password")
+    if (!accessCode) {
+      setError("Please enter your access code")
       return
     }
 
-    const success = await login(credentials)
+    const success = await login({ accessCode })
     if (!success) {
-      setError("Invalid username or password")
+      setError("Invalid access code")
     }
   }
 
@@ -60,13 +59,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
         {/* Logo and Branding */}
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Image
-              src="/deriv-logo.png"
-              alt="Deriv Pro Logo"
-              width={48}
-              height={48}
-              className="rounded-lg"
-            />
+            <Image src="/deriv-logo.png" alt="Deriv Pro Logo" width={48} height={48} className="rounded-lg" />
             <div>
               <h1 className="text-2xl font-bold text-white">Live Deriv Data Analysis</h1>
               <p className="text-sm text-slate-400">Professional Trading Platform</p>
@@ -78,48 +71,24 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
         <Card className="bg-slate-800/90 border-slate-700 backdrop-blur-sm">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center text-white">Welcome Back</CardTitle>
-            <p className="text-center text-slate-400">Sign in to your trading account</p>
+            <p className="text-center text-slate-400">Sign in with your access code</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-white">
-                  Username
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={credentials.username}
-                    onChange={(e) => setCredentials((prev) => ({ ...prev, username: e.target.value }))}
-                    className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-white">
-                  Password
+                <Label htmlFor="accessCode" className="text-white">
+                  Access Code
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={credentials.password}
-                    onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
-                    className="pl-10 pr-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                    id="accessCode"
+                    type="text"
+                    placeholder="Enter your access code"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-slate-400 hover:text-white"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
                 </div>
               </div>
 
@@ -146,7 +115,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
               </div>
 
               <div className="bg-slate-700/30 p-4 rounded-lg text-center space-y-3">
-                <div className="text-sm text-slate-300">Don't have an account yet?</div>
+                <div className="text-sm text-slate-300">Don't have an access code?</div>
                 <p className="text-xs text-slate-400">
                   Get instant access to our professional trading platform with advanced analytics, real-time data, and
                   powerful backtesting tools.

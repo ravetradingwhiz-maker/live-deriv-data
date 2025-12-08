@@ -16,8 +16,7 @@ export interface AuthState {
 }
 
 export interface LoginCredentials {
-  username: string
-  password: string
+  accessCode: string
 }
 
 export interface SubscriptionPlan {
