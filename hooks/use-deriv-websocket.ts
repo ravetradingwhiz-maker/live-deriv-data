@@ -4,10 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import type { Market, WebSocketMessage, CandleData, ChartData } from "@/types/trading"
 import { calculateAllIndicators } from "@/utils/technical-indicators"
 
-// Use a valid Deriv app ID - you should register your own app at api.deriv.com
-const APP_ID = 1089 // This is a demo app ID, replace with your own
-const WS_URL = `wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`
+const WS_URL = "wss://ws.derivws.com/websockets/v3"
 const CANDLE_INTERVAL = 60000 // 1 minute in milliseconds
+const API_TOKEN = "aNwknOB3epi8aF1"
 
 function extractLastDigit(quote: number): number {
   // Convert to string and remove trailing zeros after decimal
@@ -37,6 +36,7 @@ export function useDerivWebSocket() {
   const [currentCandle, setCurrentCandle] = useState<CandleData | null>(null)
   const [rawCandleHistory, setRawCandleHistory] = useState<CandleData[]>([])
   const [connectionAttempts, setConnectionAttempts] = useState(0)
+  const [isAuthorized, setIsAuthorized] = useState(false)
 
   const keepAliveTimer = useRef<NodeJS.Timeout | null>(null)
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null)
@@ -129,6 +129,12 @@ export function useDerivWebSocket() {
     (event: MessageEvent) => {
       try {
         const data: WebSocketMessage = JSON.parse(event.data)
+
+        if (data.authorize) {
+          console.log("[v0] Successfully authorized with API token")
+          setIsAuthorized(true)
+          return
+        }
 
         // Handle ping response
         if (data.ping) {
@@ -236,35 +242,58 @@ export function useDerivWebSocket() {
 
       websocket.addEventListener("open", () => {
         console.log("Connected to Deriv WebSocket API")
-        setStatus("Connected — Fetching markets...")
+        setStatus("Connected — Authenticating...")
 
-        // Request active symbols for volatility indices
         websocket.send(
           JSON.stringify({
-            active_symbols: "brief",
+            authorize: API_TOKEN,
             req_id: Date.now(),
           }),
         )
+      })
 
-        // Set up keep alive ping
-        if (keepAliveTimer.current) clearInterval(keepAliveTimer.current)
-        keepAliveTimer.current = setInterval(() => {
-          if (websocket.readyState === WebSocket.OPEN) {
+      websocket.addEventListener("message", (event) => {
+        try {
+          const data: WebSocketMessage = JSON.parse(event.data)
+
+          if (data.authorize) {
+            console.log("[v0] Successfully authorized with API token")
+            setIsAuthorized(true)
+            setStatus("Connected — Fetching markets...")
+
+            // Request active symbols after authorization
             websocket.send(
               JSON.stringify({
-                ping: 1,
+                active_symbols: "brief",
                 req_id: Date.now(),
               }),
             )
-          }
-        }, 30000) // Ping every 30 seconds
-      })
 
-      websocket.addEventListener("message", handleWebSocketMessage)
+            // Set up keep alive ping
+            if (keepAliveTimer.current) clearInterval(keepAliveTimer.current)
+            keepAliveTimer.current = setInterval(() => {
+              if (websocket.readyState === WebSocket.OPEN) {
+                websocket.send(
+                  JSON.stringify({
+                    ping: 1,
+                    req_id: Date.now(),
+                  }),
+                )
+              }
+            }, 30000)
+            return
+          }
+
+          handleWebSocketMessage(event)
+        } catch (error) {
+          console.error("Error in message handler:", error)
+        }
+      })
 
       websocket.addEventListener("close", (event) => {
         console.log("WebSocket connection closed:", event.code, event.reason)
         setStatus("Disconnected")
+        setIsAuthorized(false)
 
         // Clear timers
         if (keepAliveTimer.current) {
@@ -280,8 +309,12 @@ export function useDerivWebSocket() {
       })
 
       websocket.addEventListener("error", (error) => {
-        console.error("WebSocket error:", error)
-        setStatus("Connection error")
+        console.error("[v0] WebSocket error:", {
+          type: error.type,
+          message: error.message || "No message provided",
+          timestamp: new Date().toISOString(),
+        })
+        setStatus("Connection error - attempting to reconnect")
       })
 
       setWs(websocket)
@@ -385,5 +418,6 @@ export function useDerivWebSocket() {
     isConnected: ws?.readyState === WebSocket.OPEN,
     connectionAttempts,
     reconnect: connect,
+    isAuthorized,
   }
 }
