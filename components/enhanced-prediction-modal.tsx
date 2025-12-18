@@ -7,8 +7,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import type { PredictionResult, PredictionType } from "@/types/trading"
-import { TrendingUp, Target, Hash, Calculator, BarChart3, Wifi, WifiOff } from "lucide-react"
+import { TrendingUp, Target, Hash, BarChart3, Zap, Wifi, WifiOff, Loader2 } from "lucide-react"
 import { useDerivAPI } from "@/hooks/use-deriv-api"
+import { Calculator } from "lucide-react" // Import Calculator component
 
 interface EnhancedPredictionModalProps {
   ticksBuffer: number[]
@@ -537,16 +538,65 @@ export function EnhancedPredictionModal({
           )}
 
           {isAnalyzing && (
-            <div className="text-center py-4">
-              <div className="text-lg font-semibold text-foreground">
-                {countdown > 0
-                  ? `${isConnected ? "Analyzing Live Deriv Data" : "Processing Available Data"} — ${countdown}s`
-                  : "Generating AI Predictions..."}
+            <div className="text-center py-8">
+              <div className="relative inline-flex items-center justify-center mb-4">
+                {/* Pulsing outer ring */}
+                <div className="absolute w-32 h-32 rounded-full bg-primary/20 animate-ping"></div>
+                <div className="absolute w-28 h-28 rounded-full bg-primary/30 animate-pulse"></div>
+
+                {/* Countdown circle */}
+                <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
+                  <div className="absolute inset-2 rounded-full bg-background flex items-center justify-center">
+                    <span className="text-3xl font-bold text-primary tabular-nums">
+                      {countdown > 0 ? countdown : <Loader2 className="h-8 w-8 animate-spin" />}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground mt-2">
-                {isConnected
-                  ? "Fetching live data • Pattern analysis • Calculating probabilities • Generating entry points"
-                  : "Local analysis • Pattern detection • Probability calculation"}
+
+              <div className="space-y-2">
+                <div className="text-xl font-bold text-foreground">
+                  {countdown > 0 ? (
+                    <span className="animate-pulse">
+                      {isConnected ? "Analyzing Live Deriv Data" : "Processing Available Data"}
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Zap className="h-5 w-5 text-primary animate-pulse" />
+                      Generating AI Predictions
+                      <Zap className="h-5 w-5 text-primary animate-pulse" />
+                    </span>
+                  )}
+                </div>
+
+                {/* Animated progress steps */}
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-3">
+                  {isConnected ? (
+                    <>
+                      <span className={countdown > 11 ? "text-primary font-medium" : ""}>Fetching live data</span>
+                      <span className="opacity-50">•</span>
+                      <span className={countdown <= 11 && countdown > 7 ? "text-primary font-medium" : ""}>
+                        Pattern analysis
+                      </span>
+                      <span className="opacity-50">•</span>
+                      <span className={countdown <= 7 && countdown > 3 ? "text-primary font-medium" : ""}>
+                        Calculating probabilities
+                      </span>
+                      <span className="opacity-50">•</span>
+                      <span className={countdown <= 3 ? "text-primary font-medium" : ""}>Generating entry points</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={countdown > 9 ? "text-primary font-medium" : ""}>Local analysis</span>
+                      <span className="opacity-50">•</span>
+                      <span className={countdown <= 9 && countdown > 5 ? "text-primary font-medium" : ""}>
+                        Pattern detection
+                      </span>
+                      <span className="opacity-50">•</span>
+                      <span className={countdown <= 5 ? "text-primary font-medium" : ""}>Probability calculation</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -79,7 +79,7 @@ class DerivAPI {
           this.reconnectTimeout = null
         }
 
-        this.ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089")
+        this.ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=115912")
 
         this.ws.onopen = () => {
           console.log("[v0] Deriv WebSocket connected successfully")
@@ -601,7 +601,7 @@ let derivAPIInstance: DerivAPI | null = null
 
 export const getDerivAPI = (): DerivAPI => {
   if (!derivAPIInstance) {
-    derivAPIInstance = new DerivAPI("aNwknOB3epi8aF1")
+    derivAPIInstance = new DerivAPI("2jJrchpytEWU9Ef")
   }
   return derivAPIInstance
 }
