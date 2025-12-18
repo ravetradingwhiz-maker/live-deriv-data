@@ -62,6 +62,7 @@ class DerivAPI {
   private reconnectTimeout: NodeJS.Timeout | null = null
   private isAnalyzing = false
   private connectionPromise: Promise<void> | null = null
+  private authorizationAttempted = false
 
   constructor(apiToken: string) {
     this.apiToken = apiToken
@@ -70,6 +71,11 @@ class DerivAPI {
   connect(): Promise<void> {
     if (this.connectionPromise) {
       return this.connectionPromise
+    }
+
+    if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN && this.authorizationAttempted) {
+      console.log("[v0] Already connected and authorized, skipping connection")
+      return Promise.resolve()
     }
 
     this.connectionPromise = new Promise((resolve, reject) => {
@@ -84,18 +90,27 @@ class DerivAPI {
         this.ws.onopen = () => {
           console.log("[v0] Deriv WebSocket connected successfully")
           this.reconnectAttempts = 0
-          this.authorize()
-            .then(() => {
-              this.isConnected = true
-              console.log("[v0] Deriv API authentication completed")
-              this.startHeartbeat()
-              this.connectionPromise = null
-              resolve()
-            })
-            .catch((err) => {
-              this.connectionPromise = null
-              reject(err)
-            })
+          if (!this.authorizationAttempted) {
+            this.authorize()
+              .then(() => {
+                this.isConnected = true
+                this.authorizationAttempted = true
+                console.log("[v0] Deriv API authentication completed")
+                this.startHeartbeat()
+                this.connectionPromise = null
+                resolve()
+              })
+              .catch((err) => {
+                console.error("[v0] Deriv authentication failed:", err.message)
+                this.connectionPromise = null
+                reject(err)
+              })
+          } else {
+            this.isConnected = true
+            this.startHeartbeat()
+            this.connectionPromise = null
+            resolve()
+          }
         }
 
         this.ws.onmessage = (event) => {
@@ -134,6 +149,7 @@ class DerivAPI {
           console.log("[v0] Deriv WebSocket disconnected:", event.code, event.reason)
           if (event.code !== 1000 || !this.isAnalyzing) {
             this.isConnected = false
+            this.authorizationAttempted = false
           }
           this.stopHeartbeat()
           this.connectionPromise = null
@@ -187,6 +203,11 @@ class DerivAPI {
   }
 
   private async authorize(): Promise<void> {
+    if (this.authorizationAttempted) {
+      console.log("[v0] Authorization already attempted, skipping")
+      return Promise.resolve()
+    }
+
     return new Promise((resolve, reject) => {
       const reqId = this.messageId++
       this.callbacks.set(reqId, (data) => {
@@ -588,6 +609,7 @@ class DerivAPI {
     if (this.ws) {
       this.ws.close(1000, "User initiated disconnect")
       this.isConnected = false
+      this.authorizationAttempted = false
     }
     this.connectionPromise = null
   }
