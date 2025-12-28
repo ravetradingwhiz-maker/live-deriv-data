@@ -1,12 +1,15 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import type { Market, WebSocketMessage, CandleData, ChartData } from "@/types/trading"
+import type { Market, CandleData, ChartData } from "@/types/trading"
 import { calculateAllIndicators } from "@/utils/technical-indicators"
+import DerivAPI from "@/lib/deriv-api" // Fixed import: DerivAPI is a default export, not a named export
 
 const WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=115912"
 const CANDLE_INTERVAL = 60000 // 1 minute in milliseconds
 const API_TOKEN = "2jJrchpytEWU9Ef" // Updated API token
+
+const derivApi = new DerivAPI(API_TOKEN)
 
 function extractLastDigit(quote: number): number {
   // Convert to string and remove trailing zeros after decimal
@@ -26,7 +29,6 @@ function extractLastDigit(quote: number): number {
 }
 
 export function useDerivWebSocket() {
-  const [ws, setWs] = useState<WebSocket | null>(null)
   const [status, setStatus] = useState("Connecting...")
   const [markets, setMarkets] = useState<Market[]>([])
   const [subscribedSymbol, setSubscribedSymbol] = useState<string | null>(null)
@@ -39,8 +41,6 @@ export function useDerivWebSocket() {
   const [isAuthorized, setIsAuthorized] = useState(false)
   const isAuthorizing = useRef(false) // Added ref to track authorization status
 
-  const keepAliveTimer = useRef<NodeJS.Timeout | null>(null)
-  const reconnectTimer = useRef<NodeJS.Timeout | null>(null)
   const indicatorState = useRef<{
     ema12?: number
     ema26?: number
@@ -50,8 +50,6 @@ export function useDerivWebSocket() {
   const MAX_BUFFER = 200
   const MAX_RECONNECT_ATTEMPTS = 5
   const RECONNECT_DELAY = 3000
-
-  const connectAttemptInProgress = useRef(false)
 
   const calculateIndicatorsForCandles = useCallback((candles: CandleData[]): ChartData[] => {
     return candles.map((candle, index) => {
@@ -128,280 +126,73 @@ export function useDerivWebSocket() {
     [calculateIndicatorsForCandles],
   )
 
-  const handleWebSocketMessage = useCallback(
-    (event: MessageEvent) => {
-      try {
-        const data: WebSocketMessage = JSON.parse(event.data)
-
-        if (data.authorize) {
-          console.log("[v0] Successfully authorized with API token")
-          setIsAuthorized(true)
-          isAuthorizing.current = false // Reset authorizing flag
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(
-              JSON.stringify({
-                active_symbols: "brief",
-                req_id: Date.now(),
-              }),
-            )
-          }
-          return
-        }
-
-        // Handle ping response
-        if (data.ping) {
-          console.log("[v0] Received ping response, connection is alive")
-          return
-        }
-
-        // Handle error messages
-        if (data.error) {
-          console.error("Deriv API Error:", data.error)
-          setStatus(`Error: ${data.error.message || "Unknown error"}`)
-          return
-        }
-
-        // Handle active symbols response
-        if (data.active_symbols) {
-          console.log("[v0] Received active symbols:", data.active_symbols.length)
-          const volSymbols = data.active_symbols
-            .filter((s: any) => {
-              return (
-                s.display_name &&
-                (s.display_name.includes("Volatility") ||
-                  s.display_name.includes("volatility") ||
-                  s.symbol.startsWith("R_") ||
-                  s.symbol.startsWith("1HZ"))
-              )
-            })
-            .reduce((acc: Market[], s: any) => {
-              // Remove duplicates based on symbol
-              if (!acc.find((x) => x.symbol === s.symbol)) {
-                acc.push({
-                  symbol: s.symbol,
-                  display_name: s.display_name || s.symbol,
-                })
-              }
-              return acc
-            }, [])
-            .sort((a, b) => a.display_name.localeCompare(b.display_name))
-
-          console.log("[v0] Filtered volatility markets:", volSymbols.length)
-          setMarkets(volSymbols)
-          setStatus(
-            volSymbols.length
-              ? "Connected — Select a market to start analysis"
-              : "Connected — No volatility markets found",
-          )
-          setConnectionAttempts(0)
-          return
-        }
-
-        // Handle tick data
-        if (data.tick) {
-          const tickData = data.tick
-
-          // Validate tick data
-          if (typeof tickData.quote !== "number" || !tickData.symbol) {
-            console.warn("Invalid tick data received:", tickData)
-            return
-          }
-
-          console.log(`[v0] Live tick for ${tickData.symbol}: ${tickData.quote}`)
-          const digit = extractLastDigit(tickData.quote)
-
-          if (!isNaN(digit) && digit >= 0 && digit <= 9) {
-            setTicksBuffer((prev) => {
-              const newBuffer = [...prev, digit]
-              return newBuffer.length > MAX_BUFFER ? newBuffer.slice(1) : newBuffer
-            })
-
-            setLastTick({
-              digit,
-              quote: tickData.quote,
-            })
-
-            // Process tick for candlestick chart
-            processTick(tickData.quote, Date.now())
-          }
-        }
-
-        // Handle subscription confirmation
-        if (data.subscription) {
-          setStatus(`Analysis started for ${data.subscription.id}`)
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error)
-        setStatus("Error parsing server response")
-      }
-    },
-    [processTick, ws],
-  )
-
-  const connect = useCallback(() => {
-    if (connectAttemptInProgress.current) {
-      console.log("[v0] Connection attempt already in progress, skipping...")
-      return
-    }
-
-    if (connectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      setStatus("Connection failed - Max attempts reached")
-      return
-    }
-
-    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-      console.log("[v0] WebSocket already exists, checking state...")
-      if (ws.readyState === WebSocket.OPEN && isAuthorized) {
-        console.log("[v0] WebSocket already open and authorized")
-        return
-      }
-    }
-
-    connectAttemptInProgress.current = true
-    setStatus("Connecting to Deriv API...")
-    setConnectionAttempts((prev) => prev + 1)
+  const connect = useCallback(async () => {
+    if (isAuthorizing.current) return
 
     try {
-      const websocket = new WebSocket(WS_URL)
+      isAuthorizing.current = true
+      setStatus("Connecting to Deriv API...")
 
-      websocket.addEventListener("open", () => {
-        console.log("[v0] Connected to Deriv WebSocket API")
-        setStatus("Connected — Authenticating...")
-        connectAttemptInProgress.current = false
+      await derivApi.connect()
 
-        if (!isAuthorizing.current) {
-          isAuthorizing.current = true
-          websocket.send(
-            JSON.stringify({
-              authorize: API_TOKEN,
-              req_id: Date.now(),
-            }),
-          )
-        }
-      })
+      setIsAuthorized(true)
+      isAuthorizing.current = false
+      setConnectionAttempts(0)
 
-      websocket.addEventListener("message", (event) => {
-        try {
-          const data: WebSocketMessage = JSON.parse(event.data)
+      const symbols = await derivApi.getActiveSymbols()
+      setMarkets(
+        symbols.map((s: any) => ({
+          symbol: s.symbol,
+          display_name: s.display_name || s.symbol,
+        })),
+      )
 
-          if (data.authorize) {
-            console.log("[v0] Successfully authorized with API token")
-            setIsAuthorized(true)
-            isAuthorizing.current = false // Reset authorizing flag
-            setConnectionAttempts(0)
+      setStatus("Connected — Select a market to start analysis")
+    } catch (error: any) {
+      console.error("[v0] Connection failed:", error)
+      setStatus(`Connection failed: ${error.message}`)
+      isAuthorizing.current = false
 
-            if (websocket.readyState === WebSocket.OPEN) {
-              websocket.send(
-                JSON.stringify({
-                  active_symbols: "brief",
-                  req_id: Date.now(),
-                }),
-              )
-            }
-
-            if (keepAliveTimer.current) clearInterval(keepAliveTimer.current)
-            keepAliveTimer.current = setInterval(() => {
-              if (websocket.readyState === WebSocket.OPEN) {
-                websocket.send(
-                  JSON.stringify({
-                    ping: 1,
-                    req_id: Date.now(),
-                  }),
-                )
-              }
-            }, 30000)
-            return
-          }
-
-          handleWebSocketMessage(event)
-        } catch (error) {
-          console.error("[v0] Error in message handler:", error)
-        }
-      })
-
-      websocket.addEventListener("close", (event) => {
-        console.log("[v0] Deriv WebSocket disconnected:", event.code, event.reason)
-        setStatus("Disconnected")
-        setIsAuthorized(false)
-        connectAttemptInProgress.current = false
-
-        if (keepAliveTimer.current) {
-          clearInterval(keepAliveTimer.current)
-          keepAliveTimer.current = null
-        }
-
-        if (event.code !== 1000 && connectionAttempts < MAX_RECONNECT_ATTEMPTS) {
-          setStatus(`Reconnecting... (${connectionAttempts}/${MAX_RECONNECT_ATTEMPTS})`)
-          reconnectTimer.current = setTimeout(() => {
-            connect()
-          }, RECONNECT_DELAY)
-        } else if (connectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
-          setStatus("Connection failed - Max attempts reached")
-        }
-      })
-
-      websocket.addEventListener("error", (error) => {
-        console.error("[v0] WebSocket error")
-        connectAttemptInProgress.current = false
-      })
-
-      setWs(websocket)
-    } catch (error) {
-      console.error("[v0] Failed to create WebSocket connection:", error)
-      setStatus("Failed to connect")
-      connectAttemptInProgress.current = false
+      if (connectionAttempts < MAX_RECONNECT_ATTEMPTS) {
+        setConnectionAttempts((prev) => prev + 1)
+        setTimeout(connect, RECONNECT_DELAY)
+      }
     }
-  }, [connectionAttempts, handleWebSocketMessage, ws])
+  }, [connectionAttempts])
 
   const subscribeTicks = useCallback(
     (symbol: string) => {
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
+      if (!isAuthorized) {
         setStatus("Not connected - Cannot start analysis")
         return
       }
 
-      // Unsubscribe from previous symbol if any
       if (subscribedSymbol) {
-        ws.send(
-          JSON.stringify({
-            forget_all: "ticks",
-            req_id: Date.now(),
-          }),
-        )
+        derivApi.unsubscribeTicks(subscribedSymbol)
       }
 
-      // Clear existing data
       setSubscribedSymbol(symbol)
       setTicksBuffer([])
       setLastTick(null)
-      setRawCandleHistory([])
-      setCandleData([])
-      setCurrentCandle(null)
-      indicatorState.current = { macdHistory: [] }
 
-      // Subscribe to new symbol
-      ws.send(
-        JSON.stringify({
-          ticks: symbol,
-          subscribe: 1,
-          req_id: Date.now(),
-        }),
-      )
+      derivApi.subscribeTicks(symbol, (data) => {
+        const quote = data.tick.quote
+        const digit = extractLastDigit(quote)
 
-      setStatus(`Starting analysis for ${symbol}...`)
+        setLastTick({ digit, quote })
+        setTicksBuffer((prev) => [...prev, digit].slice(-MAX_BUFFER))
+        processTick(quote, Date.now())
+      })
+
+      setStatus(`Analyzing ${symbol}...`)
     },
-    [ws, subscribedSymbol],
+    [isAuthorized, subscribedSymbol, processTick],
   )
 
   const unsubscribeTicks = useCallback(() => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return
+    if (!isAuthorized) return
 
-    ws.send(
-      JSON.stringify({
-        forget_all: "ticks",
-        req_id: Date.now(),
-      }),
-    )
+    derivApi.unsubscribeTicks(subscribedSymbol)
 
     setSubscribedSymbol(null)
     setTicksBuffer([])
@@ -411,23 +202,19 @@ export function useDerivWebSocket() {
     setCandleData([])
     indicatorState.current = { macdHistory: [] }
     setStatus("Analysis stopped")
-  }, [ws])
+  }, [isAuthorized, subscribedSymbol])
 
   // Initialize connection on mount
   useEffect(() => {
     let mounted = true
 
-    if (mounted && !ws) {
+    if (mounted && !isAuthorized) {
       connect()
     }
 
     return () => {
       mounted = false
-      if (keepAliveTimer.current) clearInterval(keepAliveTimer.current)
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
-      if (ws) {
-        ws.close(1000, "Component unmounting")
-      }
+      derivApi.disconnect()
     }
   }, []) // Empty dependency array to run only once on mount
 
@@ -441,7 +228,7 @@ export function useDerivWebSocket() {
     currentCandle,
     subscribeTicks,
     unsubscribeTicks,
-    isConnected: ws?.readyState === WebSocket.OPEN,
+    isConnected: isAuthorized,
     connectionAttempts,
     reconnect: connect,
     isAuthorized,

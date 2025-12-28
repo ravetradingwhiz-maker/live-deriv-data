@@ -52,6 +52,7 @@ function extractLastDigit(price: number): number {
 class DerivAPI {
   private ws: WebSocket | null = null
   private apiToken: string
+  private static instance: DerivAPI | null = null
   private isConnected = false
   private messageId = 1
   private callbacks: Map<number, (data: any) => void> = new Map()
@@ -64,9 +65,17 @@ class DerivAPI {
   private connectionPromise: Promise<void> | null = null
   private authorizationAttempted = false
   private isAuthorizing = false // Added flag to track active authorization request
+  private authorizedAccount: string | null = null // Added to track authorized state
 
   constructor(apiToken: string) {
     this.apiToken = apiToken
+  }
+
+  public static getInstance(apiToken: string): DerivAPI {
+    if (!DerivAPI.instance) {
+      DerivAPI.instance = new DerivAPI(apiToken)
+    }
+    return DerivAPI.instance
   }
 
   connect(): Promise<void> {
@@ -74,7 +83,7 @@ class DerivAPI {
       return this.connectionPromise
     }
 
-    if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN && this.authorizationAttempted) {
+    if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN && this.authorizedAccount) {
       console.log("[v0] Already connected and authorized, skipping connection")
       return Promise.resolve()
     }
@@ -153,6 +162,7 @@ class DerivAPI {
           if (event.code !== 1000 || !this.isAnalyzing) {
             this.isConnected = false
             this.authorizationAttempted = false
+            this.authorizedAccount = null // Reset authorized state on disconnect
           }
           this.stopHeartbeat()
           this.connectionPromise = null
@@ -223,6 +233,7 @@ class DerivAPI {
         } else {
           console.log("[v0] Deriv API authorized successfully for account:", data.authorize?.loginid)
           this.authorizationAttempted = true
+          this.authorizedAccount = data.authorize?.loginid // Track authorized account
           resolve()
         }
       })
@@ -617,6 +628,7 @@ class DerivAPI {
       this.ws.close(1000, "User initiated disconnect")
       this.isConnected = false
       this.authorizationAttempted = false
+      this.authorizedAccount = null // Reset authorized state on disconnect
     }
     this.connectionPromise = null
   }
@@ -630,7 +642,7 @@ let derivAPIInstance: DerivAPI | null = null
 
 export const getDerivAPI = (): DerivAPI => {
   if (!derivAPIInstance) {
-    derivAPIInstance = new DerivAPI("2jJrchpytEWU9Ef")
+    derivAPIInstance = DerivAPI.getInstance("2jJrchpytEWU9Ef")
   }
   return derivAPIInstance
 }
