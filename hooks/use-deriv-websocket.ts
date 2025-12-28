@@ -37,6 +37,7 @@ export function useDerivWebSocket() {
   const [rawCandleHistory, setRawCandleHistory] = useState<CandleData[]>([])
   const [connectionAttempts, setConnectionAttempts] = useState(0)
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const isAuthorizing = useRef(false) // Added ref to track authorization status
 
   const keepAliveTimer = useRef<NodeJS.Timeout | null>(null)
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null)
@@ -135,6 +136,7 @@ export function useDerivWebSocket() {
         if (data.authorize) {
           console.log("[v0] Successfully authorized with API token")
           setIsAuthorized(true)
+          isAuthorizing.current = false // Reset authorizing flag
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(
               JSON.stringify({
@@ -248,7 +250,11 @@ export function useDerivWebSocket() {
     }
 
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-      ws.close()
+      console.log("[v0] WebSocket already exists, checking state...")
+      if (ws.readyState === WebSocket.OPEN && isAuthorized) {
+        console.log("[v0] WebSocket already open and authorized")
+        return
+      }
     }
 
     connectAttemptInProgress.current = true
@@ -263,12 +269,15 @@ export function useDerivWebSocket() {
         setStatus("Connected — Authenticating...")
         connectAttemptInProgress.current = false
 
-        websocket.send(
-          JSON.stringify({
-            authorize: API_TOKEN,
-            req_id: Date.now(),
-          }),
-        )
+        if (!isAuthorizing.current) {
+          isAuthorizing.current = true
+          websocket.send(
+            JSON.stringify({
+              authorize: API_TOKEN,
+              req_id: Date.now(),
+            }),
+          )
+        }
       })
 
       websocket.addEventListener("message", (event) => {
@@ -278,6 +287,7 @@ export function useDerivWebSocket() {
           if (data.authorize) {
             console.log("[v0] Successfully authorized with API token")
             setIsAuthorized(true)
+            isAuthorizing.current = false // Reset authorizing flag
             setConnectionAttempts(0)
 
             if (websocket.readyState === WebSocket.OPEN) {

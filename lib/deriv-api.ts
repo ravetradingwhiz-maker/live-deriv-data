@@ -63,6 +63,7 @@ class DerivAPI {
   private isAnalyzing = false
   private connectionPromise: Promise<void> | null = null
   private authorizationAttempted = false
+  private isAuthorizing = false // Added flag to track active authorization request
 
   constructor(apiToken: string) {
     this.apiToken = apiToken
@@ -90,22 +91,24 @@ class DerivAPI {
         this.ws.onopen = () => {
           console.log("[v0] Deriv WebSocket connected successfully")
           this.reconnectAttempts = 0
-          if (!this.authorizationAttempted) {
+          if (!this.authorizationAttempted && !this.isAuthorizing) {
             this.authorize()
               .then(() => {
                 this.isConnected = true
                 this.authorizationAttempted = true
+                this.isAuthorizing = false
                 console.log("[v0] Deriv API authentication completed")
                 this.startHeartbeat()
                 this.connectionPromise = null
                 resolve()
               })
               .catch((err) => {
+                this.isAuthorizing = false
                 console.error("[v0] Deriv authentication failed:", err.message)
                 this.connectionPromise = null
                 reject(err)
               })
-          } else {
+          } else if (this.authorizationAttempted) {
             this.isConnected = true
             this.startHeartbeat()
             this.connectionPromise = null
@@ -203,19 +206,23 @@ class DerivAPI {
   }
 
   private async authorize(): Promise<void> {
-    if (this.authorizationAttempted) {
-      console.log("[v0] Authorization already attempted, skipping")
+    if (this.authorizationAttempted || this.isAuthorizing) {
+      console.log("[v0] Authorization already attempted or in progress, skipping")
       return Promise.resolve()
     }
+
+    this.isAuthorizing = true
 
     return new Promise((resolve, reject) => {
       const reqId = this.messageId++
       this.callbacks.set(reqId, (data) => {
+        this.isAuthorizing = false // Reset flag on response
         if (data.error) {
           console.error("[v0] Deriv API authorization failed:", data.error.message)
           reject(new Error(data.error.message))
         } else {
           console.log("[v0] Deriv API authorized successfully for account:", data.authorize?.loginid)
+          this.authorizationAttempted = true
           resolve()
         }
       })
