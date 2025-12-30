@@ -10,6 +10,7 @@ import type { PredictionResult, PredictionType } from "@/types/trading"
 import { TrendingUp, Target, Hash, BarChart3, Zap, Wifi, WifiOff, Loader2 } from "lucide-react"
 import { useDerivAPI } from "@/hooks/use-deriv-api"
 import { Calculator } from "lucide-react" // Import Calculator component
+import { VOLATILITY_INDICES } from "@/types/trading" // Added import to use standardized names
 
 interface EnhancedPredictionModalProps {
   ticksBuffer: number[]
@@ -467,19 +468,11 @@ export function EnhancedPredictionModal({
                 onChange={(e) => setSelectedSymbol(e.target.value)}
                 className="text-xs bg-background border border-input rounded px-2 py-1"
               >
-                <option value="1HZ10V">Volatility 10 (1s) Index</option>
-                <option value="R_10">Volatility 10 Index</option>
-                <option value="1HZ15V">Volatility 15 (1s) Index</option>
-                <option value="1HZ25V">Volatility 25 (1s) Index</option>
-                <option value="R_25">Volatility 25 Index</option>
-                <option value="1HZ30V">Volatility 30 (1s) Index</option>
-                <option value="1HZ50V">Volatility 50 (1s) Index</option>
-                <option value="R_50">Volatility 50 Index</option>
-                <option value="1HZ75V">Volatility 75 (1s) Index</option>
-                <option value="R_75">Volatility 75 Index</option>
-                <option value="1HZ90V">Volatility 90 (1s) Index</option>
-                <option value="1HZ100V">Volatility 100 (1s) Index</option>
-                <option value="R_100">Volatility 100 Index</option>
+                {VOLATILITY_INDICES.map((market) => (
+                  <option key={market.symbol} value={market.symbol}>
+                    {market.display_name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

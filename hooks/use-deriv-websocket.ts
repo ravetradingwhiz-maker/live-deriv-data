@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import type { Market, CandleData, ChartData } from "@/types/trading"
+import { VOLATILITY_INDICES } from "@/types/trading"
 import { calculateAllIndicators } from "@/utils/technical-indicators"
 import DerivAPI from "@/lib/deriv-api" // Fixed import: DerivAPI is a default export, not a named export
 
@@ -139,13 +140,8 @@ export function useDerivWebSocket() {
       isAuthorizing.current = false
       setConnectionAttempts(0)
 
-      const symbols = await derivApi.getActiveSymbols()
-      setMarkets(
-        symbols.map((s: any) => ({
-          symbol: s.symbol,
-          display_name: s.display_name || s.symbol,
-        })),
-      )
+      // Restricted the markets list to ONLY the specific volatilities requested
+      setMarkets(VOLATILITY_INDICES)
 
       setStatus("Connected — Select a market to start analysis")
     } catch (error: any) {
