@@ -25,7 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
-      <head>{/* Font variables are now applied via CSS custom properties */}</head>
+      <head>{<link rel="icon" href="/favicon.ico">
+</head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <DerivConnectionProvider>
