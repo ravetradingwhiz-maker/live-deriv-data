@@ -67,6 +67,7 @@ class DerivAPI {
   private isAuthorizing = false // Added flag to track active authorization request
   private authorizedAccount: string | null = null // Added to track authorized state
   private currentWsId: string | null = null // Added a unique identifier for each WebSocket instance to prevent cross-contamination
+  private authRequestInFlight = false // Added flag to track if authorization is currently being sent
 
   constructor(apiToken: string) {
     this.apiToken = apiToken
@@ -111,7 +112,7 @@ class DerivAPI {
           console.log("[v0] Deriv WebSocket connected successfully")
           this.reconnectAttempts = 0
 
-          if (!this.authorizedAccount && !this.isAuthorizing) {
+          if (!this.authorizedAccount && !this.isAuthorizing && !this.authRequestInFlight) {
             this.authorize()
               .then(() => {
                 this.isConnected = true
@@ -224,18 +225,22 @@ class DerivAPI {
   }
 
   private async authorize(): Promise<void> {
-    if (this.authorizedAccount || this.isAuthorizing) {
+    // Stricter checks for active authorization requests
+    if (this.authorizedAccount || this.isAuthorizing || this.authRequestInFlight) {
       console.log("[v0] Already authorized or authorization in progress, skipping")
       return Promise.resolve()
     }
 
     this.isAuthorizing = true
+    this.authRequestInFlight = true
 
     return new Promise((resolve, reject) => {
       const reqId = this.messageId++
 
       this.callbacks.set(reqId, (data) => {
         this.isAuthorizing = false
+        this.authRequestInFlight = false
+
         if (data.error) {
           console.error("[v0] Deriv API authorization failed:", data.error.message)
           this.authorizedAccount = null

@@ -1,6 +1,4 @@
 "use client"
-
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -13,13 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Settings, LogOut, Crown, Shield, Eye, Bell, HelpCircle, Download, TrendingUp } from "lucide-react"
+import { User, Settings, LogOut, Crown, Shield, Eye, Download, TrendingUp } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
 export function DashboardHeader() {
   const { user, logout } = useAuth()
-  const [notifications] = useState(3) // Mock notification count
 
   if (!user) return null
 
@@ -77,19 +74,6 @@ export function DashboardHeader() {
               title="Download User Guide"
             >
               <Download className="h-5 w-5" />
-            </Button>
-
-            {/* Notifications */}
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-5 w-5" />
-              {notifications > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-red-600">{notifications}</Badge>
-              )}
-            </Button>
-
-            {/* Help */}
-            <Button variant="ghost" size="sm">
-              <HelpCircle className="h-5 w-5" />
             </Button>
 
             {/* User Menu */}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star } from 'lucide-react'
+import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star } from "lucide-react"
 import { TermsConditionsModal } from "@/components/terms-conditions-modal"
 import Image from "next/image"
 
@@ -217,7 +217,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 <h1 className="text-xs sm:text-sm md:text-base font-bold text-white whitespace-nowrap">
                   Live Deriv Data Analysis
                 </h1>
-                <p className="text-xs text-slate-400 whitespace-nowrap">Professional Trading</p>
+                <p className="text-xs text-slate-400 whitespace-nowrap">Professional Trading Platform</p>
               </div>
             </div>
             <Button onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
@@ -580,13 +580,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           <div className="border-t border-slate-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <Image
-                src="/deriv-logo.png"
-                alt="Deriv Pro Logo"
-                width={32}
-                height={32}
-                className="rounded-lg"
-              />
+              <Image src="/deriv-logo.png" alt="Deriv Pro Logo" width={32} height={32} className="rounded-lg" />
               <span className="font-semibold text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
                 Live Deriv Data Analysis
               </span>
