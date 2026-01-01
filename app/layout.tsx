@@ -9,15 +9,16 @@ import "./globals.css"
 const geistSans = Geist({ subsets: ["latin"] })
 const geistMono = Geist_Mono({ subsets: ["latin"] })
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Live Deriv Data Analysis",
-  description:
-    "A professional-grade analytical tool designed for traders who want precision and profitability on Deriv.com",
-  generator: "Netlify",
+  description: "Professional trading analysis tool",
   icons: {
     icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
-}
+};
+
 
 export default function RootLayout({
   children,
