@@ -231,15 +231,17 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                         className="opacity-90 hover:opacity-100 transition-opacity w-10 sm:w-[60px] h-auto"
                       />
                     </div>
-                    <button
-                      onClick={onGetStarted}
-                      className="ml-1 pl-1.5 sm:pl-2 text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 transition-colors font-semibold text-left"
-                    >
-                      Get Started
-                    </button>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 whitespace-nowrap">Professional Trading Platform</p>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-xs text-slate-400 whitespace-nowrap">Professional Trading Platform</p>
+                  <button
+                    onClick={onGetStarted}
+                    className="text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 transition-colors font-semibold whitespace-nowrap"
+                  >
+                    Get Started
+                  </button>
+                </div>
               </div>
             </div>
           </div>
