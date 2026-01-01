@@ -214,15 +214,34 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 className="rounded-lg flex-shrink-0"
               />
               <div className="min-w-0">
-                <h1 className="text-xs sm:text-sm md:text-base font-bold text-white whitespace-nowrap">
-                  Live Deriv Data Analysis
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xs sm:text-sm md:text-base font-bold text-white whitespace-nowrap">
+                    Live Deriv Data Analysis
+                  </h1>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1 sm:gap-1.5 pl-1.5 sm:pl-2 border-l border-slate-700 ml-1">
+                      <span className="text-[8px] sm:text-[10px] uppercase tracking-wider text-slate-500 font-medium whitespace-nowrap">
+                        Powered by
+                      </span>
+                      <Image
+                        src="/deriv-powered-by.png"
+                        alt="Deriv"
+                        width={60}
+                        height={15}
+                        className="opacity-90 hover:opacity-100 transition-opacity w-10 sm:w-[60px] h-auto"
+                      />
+                    </div>
+                    <button
+                      onClick={onGetStarted}
+                      className="ml-1 pl-1.5 sm:pl-2 text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 transition-colors font-semibold text-left"
+                    >
+                      Get Started
+                    </button>
+                  </div>
+                </div>
                 <p className="text-xs text-slate-400 whitespace-nowrap">Professional Trading Platform</p>
               </div>
             </div>
-            <Button onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
-              Get Started
-            </Button>
           </div>
         </div>
       </nav>
@@ -241,7 +260,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             precision and profitability on Deriv.com
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+            <Button size="lg" onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
               Start Trading Now
             </Button>
           </div>

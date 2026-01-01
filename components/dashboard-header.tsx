@@ -54,9 +54,23 @@ export function DashboardHeader() {
           <div className="flex items-center gap-3">
             <Image src="/deriv-logo.png" alt="Deriv Pro Logo" width={40} height={40} className="rounded-lg" />
             <div>
-              <h1 className="text-xs sm:text-sm md:text-base font-bold text-foreground whitespace-nowrap">
-                Live Deriv Data Analysis
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xs sm:text-sm md:text-base font-bold text-foreground whitespace-nowrap">
+                  Live Deriv Data Analysis
+                </h1>
+                <div className="flex items-center gap-1 sm:gap-1.5 border-l border-border pl-1.5 sm:pl-2 h-3 sm:h-4">
+                  <span className="text-[8px] sm:text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">
+                    Powered by
+                  </span>
+                  <Image
+                    src="/deriv-powered-by.png"
+                    alt="Deriv Logo"
+                    width={48}
+                    height={16}
+                    className="opacity-90 object-contain w-8 sm:w-12 h-auto"
+                  />
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground">Professional Trading Platform</p>
             </div>
           </div>
