@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Settings, LogOut, Crown, Shield, Eye, Download, TrendingUp } from "lucide-react"
+import { User, LogOut, Crown, Eye, Download, TrendingUp } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
@@ -54,23 +54,9 @@ export function DashboardHeader() {
           <div className="flex items-center gap-3">
             <Image src="/deriv-logo.png" alt="Deriv Pro Logo" width={40} height={40} className="rounded-lg" />
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xs sm:text-sm md:text-base font-bold text-foreground whitespace-nowrap">
-                  Live Deriv Data Analysis
-                </h1>
-                <div className="flex items-center gap-1 sm:gap-1.5 border-l border-border pl-1.5 sm:pl-2 h-3 sm:h-4">
-                  <span className="text-[8px] sm:text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium">
-                    Powered by
-                  </span>
-                  <Image
-                    src="/deriv-powered-by.png"
-                    alt="Deriv Logo"
-                    width={48}
-                    height={16}
-                    className="opacity-90 object-contain w-8 sm:w-12 h-auto"
-                  />
-                </div>
-              </div>
+              <h1 className="text-xs sm:text-sm md:text-base font-bold text-foreground whitespace-nowrap">
+                Live Deriv Data Analysis
+              </h1>
               <p className="text-xs text-muted-foreground">Professional Trading Platform</p>
             </div>
           </div>
@@ -119,22 +105,8 @@ export function DashboardHeader() {
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium">{user.username}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Shield className="mr-2 h-4 w-4" />
-                  Security
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />

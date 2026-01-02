@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star } from "lucide-react"
 import { TermsConditionsModal } from "@/components/terms-conditions-modal"
+import { FloatingContactButtons } from "@/components/floating-contact-buttons"
 import Image from "next/image"
 
 interface LandingPageProps {
@@ -200,49 +201,54 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Navigation */}
       <nav
         className={`fixed top-0 w-full z-40 transition-all duration-300 ${
-          scrolled ? "bg-slate-900/80 backdrop-blur-md border-b border-slate-700" : "bg-transparent"
+          scrolled ? "bg-slate-900/90 backdrop-blur-md border-b border-slate-700/50" : "bg-transparent"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2 min-w-0">
-              <Image
-                src="/deriv-logo.png"
-                alt="Deriv Pro Logo"
-                width={40}
-                height={40}
-                className="rounded-lg flex-shrink-0"
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xs sm:text-sm md:text-base font-bold text-white whitespace-nowrap">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div className="flex items-center justify-between md:justify-start gap-4">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/deriv-logo.png"
+                  alt="Deriv Pro Logo"
+                  width={44}
+                  height={44}
+                  className="rounded-xl flex-shrink-0 shadow-lg shadow-blue-500/10"
+                />
+                <div className="flex flex-col">
+                  <h1 className="text-sm sm:text-base md:text-lg font-extrabold text-white tracking-tight">
                     Live Deriv Data Analysis
                   </h1>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-1 sm:gap-1.5 pl-1.5 sm:pl-2 border-l border-slate-700 ml-1">
-                      <span className="text-[8px] sm:text-[10px] uppercase tracking-wider text-slate-500 font-medium whitespace-nowrap">
-                        Powered by
-                      </span>
-                      <Image
-                        src="/deriv-powered-by.png"
-                        alt="Deriv"
-                        width={60}
-                        height={15}
-                        className="opacity-90 hover:opacity-100 transition-opacity w-10 sm:w-[60px] h-auto"
-                      />
-                    </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[9px] uppercase tracking-[0.1em] text-slate-400 font-bold">Powered by</span>
+                    <Image
+                      src="/deriv-powered-by.png"
+                      alt="Deriv"
+                      width={52}
+                      height={12}
+                      className="opacity-100 brightness-110 contrast-110 w-10 sm:w-[52px] h-auto"
+                    />
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-xs text-slate-400 whitespace-nowrap">Professional Trading Platform</p>
-                  <button
-                    onClick={onGetStarted}
-                    className="text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 transition-colors font-semibold whitespace-nowrap"
-                  >
-                    Get Started
-                  </button>
-                </div>
               </div>
+
+              <div className="md:hidden">
+                <Button
+                  onClick={onGetStarted}
+                  className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-5 py-2 text-xs font-bold"
+                >
+                  Get Started
+                </Button>
+              </div>
+            </div>
+
+            <div className="hidden md:block">
+              <Button
+                onClick={onGetStarted}
+                className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-8 py-2.5 font-bold transition-all hover:scale-105 active:scale-95"
+              >
+                Get Started
+              </Button>
             </div>
           </div>
         </div>
@@ -270,11 +276,11 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 pt-12 max-w-2xl mx-auto">
             <div className="bg-slate-800/50 backdrop-blur p-4 rounded-lg border border-slate-700">
-              <div className="text-2xl font-bold text-blue-400">2,500+</div>
+              <div className="text-2xl font-bold text-blue-400">1.5M+</div>
               <div className="text-sm text-slate-400">Active Traders</div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur p-4 rounded-lg border border-slate-700">
-              <div className="text-2xl font-bold text-green-400">89%</div>
+              <div className="text-2xl font-bold text-green-400">95%</div>
               <div className="text-sm text-slate-400">Avg Win Rate</div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur p-4 rounded-lg border border-slate-700">
@@ -621,6 +627,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* Terms and Conditions Modal */}
       <TermsConditionsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+
+      {/* Floating Contact Buttons */}
+      <FloatingContactButtons />
     </div>
   )
 }
