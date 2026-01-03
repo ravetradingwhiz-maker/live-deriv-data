@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "A professional-grade analytical tool designed for traders who want precision and profitability on Deriv.com",
   generator: "Netlify",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/images/image.png",
   },
 }
 
