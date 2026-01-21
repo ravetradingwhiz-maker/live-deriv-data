@@ -102,6 +102,16 @@ const MOCK_ACCESS_CODES: Record<string, User> = {
     lastLogin: new Date().toISOString(),
     permissions: ["trade", "backtest", "analyze"],
   },
+  "Minangedwa123": {
+    id: "10",
+    username: "minangedwa",
+    email: "minangedwa@example.com",
+    role: "trader",
+    subscription: "premium",
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    permissions: ["trade", "backtest", "analyze"],
+  },
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
