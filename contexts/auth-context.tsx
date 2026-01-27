@@ -107,10 +107,10 @@ const MOCK_ACCESS_CODES: Record<string, User> = {
     username: "minangedwa",
     email: "minangedwa@example.com",
     role: "trader",
-    subscription: "VIP User",
+    subscription: "full access",
     createdAt: new Date().toISOString(),
     lastLogin: new Date().toISOString(),
-    permissions: ["trade", "backtest", "analyze"],
+    permissions: ["all"],
   },
 }
 
