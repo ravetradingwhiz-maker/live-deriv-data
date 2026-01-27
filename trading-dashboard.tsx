@@ -60,6 +60,10 @@ export default function TradingDashboard() {
   const canTrade = user?.permissions.includes("all") || user?.permissions.includes("trade")
   const canBacktest = user?.permissions.includes("all") || user?.permissions.includes("backtest")
   const hasRealTimeData = user?.subscription === "premium" || user?.subscription === "enterprise"
+  
+  // Check if user is Minangedwa123 for full access display
+  const isMinangedwaUser = user?.username === "minangedwa"
+  const accessLevel = isMinangedwaUser ? "full access" : "Limited"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/10 to-background">
@@ -118,8 +122,8 @@ export default function TradingDashboard() {
                     <CardTitle className="text-xl font-bold">Live Deriv Data Analysis</CardTitle>
                     <div className="flex items-center gap-2">
                       {!hasRealTimeData && (
-                        <Badge variant="outline" className="text-xs text-yellow-500">
-                          Limited
+                        <Badge variant="outline" className={`text-xs ${isMinangedwaUser ? "text-green-500" : "text-yellow-500"}`}>
+                          {accessLevel}
                         </Badge>
                       )}
                       {isConnected ? (
