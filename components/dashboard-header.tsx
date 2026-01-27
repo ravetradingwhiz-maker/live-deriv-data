@@ -95,7 +95,7 @@ export function DashboardHeader() {
                         </span>
                       </Badge>
                       <Badge className={`text-xs ${getSubscriptionColor(user.subscription)}`}>
-                        {user.subscription}
+                        VIP User
                       </Badge>
                     </div>
                   </div>
