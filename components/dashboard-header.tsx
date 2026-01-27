@@ -39,8 +39,6 @@ export function DashboardHeader() {
         return "bg-purple-600"
       case "premium":
         return "bg-blue-600"
-      case "full access":
-        return "bg-green-600"
       case "free":
         return "bg-gray-600"
       default:
