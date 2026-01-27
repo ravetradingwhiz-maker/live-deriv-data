@@ -122,8 +122,10 @@ class DerivAPI {
                 resolve()
               })
               .catch((err) => {
+                console.error("[v0] Authorization failed during connection:", err)
                 this.isAuthorizing = false
                 this.connectionPromise = null
+                this.ws?.close()
                 reject(err)
               })
           } else {
@@ -236,27 +238,57 @@ class DerivAPI {
 
     return new Promise((resolve, reject) => {
       const reqId = this.messageId++
+      let timeoutId: NodeJS.Timeout | null = null
+
+      // Set a timeout for the authorization request
+      timeoutId = setTimeout(() => {
+        this.callbacks.delete(reqId)
+        this.isAuthorizing = false
+        this.authRequestInFlight = false
+        console.error("[v0] Authorization request timed out")
+        reject(new Error("Authorization request timed out"))
+      }, 10000) // 10 second timeout
 
       this.callbacks.set(reqId, (data) => {
+        // Clear the timeout if we got a response
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+
         this.isAuthorizing = false
         this.authRequestInFlight = false
 
         if (data.error) {
           console.error("[v0] Deriv API authorization failed:", data.error.message)
           this.authorizedAccount = null
-          reject(new Error(data.error.message))
-        } else {
+          reject(new Error(`Authorization failed: ${data.error.message}`))
+        } else if (data.authorize) {
           console.log("[v0] Deriv API authorized successfully for account:", data.authorize?.loginid)
           this.authorizationAttempted = true
           this.authorizedAccount = data.authorize?.loginid
           resolve()
+        } else {
+          // Handle unexpected response format
+          console.warn("[v0] Unexpected authorization response:", data)
+          this.authorizedAccount = null
+          reject(new Error("Authorization response missing expected data"))
         }
       })
 
-      this.send({
-        authorize: this.apiToken,
-        req_id: reqId,
-      })
+      try {
+        this.send({
+          authorize: this.apiToken,
+          req_id: reqId,
+        })
+      } catch (error) {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        this.isAuthorizing = false
+        this.authRequestInFlight = false
+        this.callbacks.delete(reqId)
+        reject(error)
+      }
     })
   }
 
