@@ -70,19 +70,19 @@ export default function TradingDashboard() {
       <DashboardHeader />
 
       <div className="max-w-6xl mx-auto p-4 space-y-4">
-        <Tabs defaultValue="trading" className="w-full">
+        <Tabs defaultValue="analysis" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-card/90">
-            <TabsTrigger
-              value="trading"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              Trading
-            </TabsTrigger>
             <TabsTrigger
               value="analysis"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               Analysis
+            </TabsTrigger>
+            <TabsTrigger
+              value="trading"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              Trading
             </TabsTrigger>
             <TabsTrigger
               value="backtesting"
