@@ -119,13 +119,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
     return () => clearInterval(interval)
   }, [])
 
-  const handleContactWhatsApp = () => {
-    const phoneNumber = "254775317514"
-    const message = "Hello mentor, am ready to purchase your trading software package"
-    const encodedMessage = encodeURIComponent(message)
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
-    window.open(whatsappUrl, "_blank")
-  }
+
 
   const features = [
     {

@@ -503,14 +503,9 @@ export async function GET() {
         <div class="section">
             <h2>Support & Feedback</h2>
             <p>
-                For technical support, feature requests, or bug reports, contact us via WhatsApp at +254775317514. 
+                For technical support, feature requests, or bug reports, please contact our support team. 
                 Our team is ready to assist you with any questions or concerns.
             </p>
-            <div class="info-box">
-                <h4>Contact Us</h4>
-                <p>WhatsApp: +254775317514</p>
-                <p>Message: "Hello mentor, am ready to purchase your trading software package"</p>
-            </div>
         </div>
         
         <div class="footer">
