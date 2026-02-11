@@ -70,24 +70,24 @@ export default function TradingDashboard() {
       <DashboardHeader />
 
       <div className="max-w-6xl mx-auto p-4 space-y-4">
-        <Tabs defaultValue="trading" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-card/90">
-            <TabsTrigger
-              value="trading"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              Trading
-            </TabsTrigger>
+        <Tabs defaultValue="analysis" className="w-full">
+          <TabsList className="flex gap-3 bg-transparent justify-center py-4">
             <TabsTrigger
               value="analysis"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="rounded-full px-6 py-2 font-medium transition-all duration-200 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg"
             >
               Analysis
             </TabsTrigger>
             <TabsTrigger
+              value="trading"
+              className="rounded-full px-6 py-2 font-medium transition-all duration-200 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg"
+            >
+              Trading
+            </TabsTrigger>
+            <TabsTrigger
               value="backtesting"
               disabled={!canBacktest}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground disabled:opacity-50"
+              className="rounded-full px-6 py-2 font-medium transition-all duration-200 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Backtesting {!canBacktest && <Lock className="h-3 w-3 ml-1" />}
             </TabsTrigger>

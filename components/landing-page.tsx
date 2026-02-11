@@ -119,13 +119,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
     return () => clearInterval(interval)
   }, [])
 
-  const handleContactWhatsApp = () => {
-    const phoneNumber = "254775317514"
-    const message = "Hello mentor, am ready to purchase your trading software package"
-    const encodedMessage = encodeURIComponent(message)
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
-    window.open(whatsappUrl, "_blank")
-  }
+
 
   const features = [
     {
@@ -509,11 +503,10 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
             <Button
               size="lg"
-              onClick={handleContactWhatsApp}
-              variant="outline"
-              className="border-slate-600 text-white hover:bg-slate-800 bg-transparent font-semibold"
+              onClick={onGetStarted}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
             >
-              Contact Us
+              Get Started
             </Button>
           </div>
           <p className="text-sm text-slate-400 pt-4">Limited resale licenses available — for serious traders only</p>

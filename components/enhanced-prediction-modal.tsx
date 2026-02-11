@@ -493,11 +493,6 @@ export function EnhancedPredictionModal({
 
           {predictionType === "matches_differs" && (
             <div className="space-y-4">
-              <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-                {isConnected
-                  ? "AI will analyze live Deriv.com data and provide exact digit predictions with entry points"
-                  : "Limited analysis available - connect to Deriv API for full predictions"}
-              </div>
               {renderPredictionOptions()}
             </div>
           )}

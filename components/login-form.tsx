@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/contexts/auth-context"
-import { Lock, Shield, Zap, MessageCircle, ArrowLeft } from "lucide-react"
+import { Lock, Shield, Zap, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 
 interface LoginFormProps {
@@ -36,11 +36,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
   }
 
   const handleGetAccess = () => {
-    const phoneNumber = "254775317514"
-    const message = "Hello mentor, am ready to purchase your trading software package"
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
-
-    window.open(whatsappUrl, "_blank")
+    // Contact functionality disabled
   }
 
   return (
@@ -120,15 +116,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
                   Get instant access to our professional trading platform with advanced analytics, real-time data, and
                   powerful backtesting tools.
                 </p>
-                <Button
-                  type="button"
-                  onClick={handleGetAccess}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Get Access via WhatsApp
-                </Button>
-                <p className="text-xs text-slate-500">Click to contact our mentor directly</p>
+
               </div>
             </div>
           </CardContent>
