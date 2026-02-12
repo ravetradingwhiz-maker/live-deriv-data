@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { EnhancedPredictionModal } from "@/components/enhanced-prediction-modal"
 import { PredictionButtons } from "@/components/prediction-buttons"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { FloatingContactButtons } from "@/components/floating-contact-buttons"
 import { TrendingUp, TrendingDown, Wifi, WifiOff, Lock, RefreshCw } from "lucide-react"
 import { CandlestickChart } from "@/components/candlestick-chart"
 import { PriceAnalysis } from "@/components/price-analysis"
@@ -248,6 +249,7 @@ export default function TradingDashboard() {
           />
         )}
       </div>
+      <FloatingContactButtons />
     </div>
   )
 }
