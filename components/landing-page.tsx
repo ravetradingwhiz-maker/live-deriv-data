@@ -606,7 +606,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               </span>
             </div>
             <p className="text-sm text-slate-400">
-              © 2025 All rights reserved. Professional trading tools for serious traders.
+              © 2023 All rights reserved. Professional trading tools for serious traders.
             </p>
             <button
               onClick={() => setShowTerms(true)}
