@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star } from "lucide-react"
 import { TermsConditionsModal } from "@/components/terms-conditions-modal"
 import { FloatingContactButtons } from "@/components/floating-contact-buttons"
+import { CodeRainAnimation } from "@/components/code-rain-animation"
 import Image from "next/image"
 
 interface LandingPageProps {
@@ -191,10 +192,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative">
+      {/* Code Rain Animation Background */}
+      <CodeRainAnimation intensity="low" opacity={0.08} position="fixed" className="top-0 left-0" />
+
       {/* Navigation */}
       <nav
-        className={`fixed top-0 w-full z-40 transition-all duration-300 ${
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
           scrolled ? "bg-slate-900/90 backdrop-blur-md border-b border-slate-700/50" : "bg-transparent"
         }`}
       >
@@ -249,7 +253,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 text-center">
+      <section className="pt-32 pb-20 px-4 text-center relative z-10">
         <div className="max-w-4xl mx-auto space-y-6">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
             Trade Smarter.{" "}
