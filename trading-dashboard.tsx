@@ -12,7 +12,6 @@ import { EnhancedPredictionModal } from "@/components/enhanced-prediction-modal"
 import { PredictionButtons } from "@/components/prediction-buttons"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { FloatingContactButtons } from "@/components/floating-contact-buttons"
-import { AITradingInsights } from "@/components/ai-trading-insights"
 import { TrendingUp, TrendingDown, Wifi, WifiOff, Lock, RefreshCw } from "lucide-react"
 import { CandlestickChart } from "@/components/candlestick-chart"
 import { PriceAnalysis } from "@/components/price-analysis"
@@ -116,9 +115,6 @@ export default function TradingDashboard() {
           </TabsContent>
 
           <TabsContent value="analysis" className="space-y-4">
-            {/* AI Trading Insights */}
-            <AITradingInsights />
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Live Deriv Data Analysis Panel */}
               <Card className="bg-card/90 border-border backdrop-blur-sm">
