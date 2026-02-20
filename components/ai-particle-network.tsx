@@ -15,12 +15,14 @@ interface AIParticleNetworkProps {
   intensity?: 'low' | 'medium' | 'high'
   opacity?: number
   color?: string
+  derivStyle?: boolean
 }
 
 export function AIParticleNetwork({
   intensity = 'low',
   opacity = 0.3,
   color = '#3b82f6',
+  derivStyle = true,
 }: AIParticleNetworkProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<Particle[]>([])

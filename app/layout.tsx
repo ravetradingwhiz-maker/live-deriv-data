@@ -29,8 +29,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>{/* Font variables are now applied via CSS custom properties */}</head>
       <body className="relative overflow-x-hidden">
-        {/* AI Particle Network Background */}
-        <AIParticleNetwork intensity="low" opacity={0.15} color="#3b82f6" />
+        {/* AI Particle Network Background - Deriv Style */}
+        <AIParticleNetwork 
+          intensity="low" 
+          opacity={0.12} 
+          color="#00d9d9"
+          derivStyle={true}
+        />
         
         {/* Main Application Content - z-index ensures it appears above animation */}
         <div className="relative z-10">
