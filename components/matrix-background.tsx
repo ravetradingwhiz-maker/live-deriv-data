@@ -24,67 +24,83 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
 
     resizeCanvas()
 
-    // Matrix characters
-    const matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン'
-    
-    // Configure intensity
-    const columnCount = intensity === 'low' ? Math.floor(canvas.width / 40) : 
-                       intensity === 'high' ? Math.floor(canvas.width / 20) : 
-                       Math.floor(canvas.width / 30)
+    // Technical text strings - realistic error logs and system messages
+    const textFragments = [
+      '[INFO]', '[WARNING]', '[ERROR]', '[SUCCESS]', '[DEBUG]', '[CRITICAL]',
+      'Connecting to server...', 'Connection timeout', 'Data transmitted',
+      'Authentication failed', 'API key validated', 'Encryption enabled',
+      'Market volatility detected', 'High masked volatility', 'Analyzing signals',
+      'Fetching market data', 'Processing stream', 'Computing results',
+      'Data transmission complete', 'Stream established', 'Security enabled',
+      'Unstable connection detected', 'Retrying...', 'Signal processing',
+      'Predicting next digit', 'Compiling results', 'Backtesting tools',
+      'Real-time data', 'Advanced analytics', 'Professional trading',
+      '[OK]', '[FAILED]', 'Connection detected', 'Streaming data',
+      'Signal Scanner', 'QuantumSyn', 'Trading Platform',
+      'Deriv Connection', 'Live Update', 'Data Analysis',
+      'Socket connected', 'Receiving stream', 'Processing tick',
+    ]
 
     interface Column {
       x: number
       y: number
       speed: number
-      chars: string[]
+      text: string[]
       brightness: number
     }
 
+    const columnCount = intensity === 'low' ? Math.floor(canvas.width / 35) :
+      intensity === 'high' ? Math.floor(canvas.width / 15) :
+      Math.floor(canvas.width / 25)
+
     const columns: Column[] = []
 
-    // Initialize columns
+    // Initialize columns with random text fragments
     for (let i = 0; i < columnCount; i++) {
+      const randomFragments = Array.from(
+        { length: Math.floor(Math.random() * 20) + 15 },
+        () => textFragments[Math.floor(Math.random() * textFragments.length)]
+      )
       columns.push({
         x: i * (canvas.width / columnCount),
         y: Math.random() * canvas.height,
-        speed: Math.random() * 2 + 1,
-        chars: Array.from({ length: Math.floor(Math.random() * 15) + 5 }, () => 
-          matrixChars[Math.floor(Math.random() * matrixChars.length)]
-        ),
-        brightness: Math.random() * 0.5 + 0.5,
+        speed: Math.random() * 1.5 + 0.5,
+        text: randomFragments,
+        brightness: Math.random() * 0.3 + 0.6,
       })
     }
 
     const animate = () => {
-      // Semi-transparent background to create trail effect
-      ctx.fillStyle = `rgba(0, 0, 0, ${0.05 * opacity})`
+      // Dark background with slight transparency for trail effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.98)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Draw columns
+      // Draw text columns
       columns.forEach((column) => {
-        // Green color with variable brightness
+        // Matrix green color with variable brightness
         ctx.fillStyle = `rgba(0, 255, 0, ${column.brightness * opacity})`
-        ctx.font = 'bold 20px monospace'
-        ctx.textAlign = 'center'
+        ctx.font = '12px "Courier New", monospace'
+        ctx.textAlign = 'left'
+        ctx.letterSpacing = '1px'
 
-        // Draw characters
-        column.chars.forEach((char, index) => {
-          const charY = column.y + index * 20
-          if (charY > canvas.height) {
+        // Draw text fragments
+        column.text.forEach((text, index) => {
+          const textY = column.y + index * 18
+          if (textY > canvas.height + 100) {
             // Reset column
-            column.y = -column.chars.length * 20
-            column.brightness = Math.random() * 0.5 + 0.5
-            column.speed = Math.random() * 2 + 1
+            column.y = -column.text.length * 18
+            column.brightness = Math.random() * 0.3 + 0.6
+            column.speed = Math.random() * 1.5 + 0.5
           }
-          ctx.fillText(char, column.x, charY)
+          ctx.fillText(text, column.x, textY)
         })
 
         // Move column down
         column.y += column.speed
 
-        // Random brightness flicker
-        if (Math.random() > 0.95) {
-          column.brightness = Math.random() * 0.5 + 0.5
+        // Random brightness flicker for authenticity
+        if (Math.random() > 0.97) {
+          column.brightness = Math.random() * 0.3 + 0.6
         }
       })
 
@@ -105,7 +121,7 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
     <canvas
       ref={canvasRef}
       className="fixed top-0 left-0 w-full h-full pointer-events-none z-0"
-      style={{ background: 'rgba(0, 0, 0, 0.95)' }}
+      style={{ background: '#000000' }}
     />
   )
 }
