@@ -65,7 +65,7 @@ export function LiveChatPopup({ isOpen, onClose }: { isOpen: boolean; onClose: (
   if (!isOpen) return null
 
   return (
-    <div className="fixed bottom-24 right-6 z-[60] w-[360px] max-w-[90vw] overflow-hidden rounded-2xl bg-white shadow-2xl transition-all animate-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-24 right-6 z-[60] w-[360px] max-w-[90vw] overflow-hidden rounded-2xl bg-black/80 backdrop-blur shadow-2xl transition-all animate-in slide-in-from-bottom-5 duration-300">
       {/* Header */}
       <div className="relative bg-[#FF444F] p-6 pb-12">
         <div className="flex items-center justify-between">
@@ -102,7 +102,7 @@ export function LiveChatPopup({ isOpen, onClose }: { isOpen: boolean; onClose: (
 
       {/* Content Area */}
       <div
-        className="relative -mt-6 h-[400px] overflow-y-auto bg-white px-4 pb-16 pt-2 custom-scrollbar"
+        className="relative -mt-6 h-[400px] overflow-y-auto bg-black/60 px-4 pb-16 pt-2 custom-scrollbar"
         ref={scrollRef}
       >
         {view === "home" ? (
@@ -199,7 +199,7 @@ export function LiveChatPopup({ isOpen, onClose }: { isOpen: boolean; onClose: (
       {view === "chat" ? (
         <form
           onSubmit={handleSendMessage}
-          className="absolute bottom-0 left-0 flex w-full items-center gap-2 border-t bg-white p-3"
+          className="absolute bottom-0 left-0 flex w-full items-center gap-2 border-t bg-black/60 p-3"
         >
           <input
             type="text"
@@ -213,7 +213,7 @@ export function LiveChatPopup({ isOpen, onClose }: { isOpen: boolean; onClose: (
           </Button>
         </form>
       ) : (
-        <div className="absolute bottom-0 left-0 flex w-full border-t bg-white">
+        <div className="absolute bottom-0 left-0 flex w-full border-t bg-black/60">
           <button
             onClick={() => setView("home")}
             className={cn(

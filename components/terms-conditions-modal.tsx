@@ -110,7 +110,7 @@ export function TermsConditionsModal({ isOpen, onClose }: TermsConditionsModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden bg-slate-900 border-slate-700 flex flex-col">
+      <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden bg-black/80 backdrop-blur border-slate-700 flex flex-col">
         <CardHeader className="border-b border-slate-700 flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl text-white">Terms and Conditions</CardTitle>
           <Button
