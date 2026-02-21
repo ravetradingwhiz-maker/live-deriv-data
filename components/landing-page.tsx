@@ -226,14 +226,25 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 </div>
               </div>
 
-              <div className="md:hidden">
+            <div className="md:hidden">
+              <a href="https://track.deriv.me/_CNojBBdK_CsUBGj1nD25y2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
                 <Button
-                  onClick={onGetStarted}
                   className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-5 py-2 text-xs font-bold"
                 >
-                  Get Started
+                  Sign Up
                 </Button>
-              </div>
+              </a>
+            </div>
+
+            <div className="hidden md:block">
+              <a href="https://track.deriv.me/_CNojBBdK_CsUBGj1nD25y2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
+                <Button
+                  className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-8 py-2.5 font-bold transition-all hover:scale-105 active:scale-95"
+                >
+                  Sign Up
+                </Button>
+              </a>
+            </div>
             </div>
 
             <div className="hidden md:block">
@@ -501,13 +512,14 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             market.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button
-              size="lg"
-              onClick={onGetStarted}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-            >
-              Get Started
-            </Button>
+            <a href="https://track.deriv.me/_CNojBBdK_CsUBGj1nD25y2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
+              <Button
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              >
+                Sign Up
+              </Button>
+            </a>
           </div>
           <p className="text-sm text-slate-400 pt-4">Limited resale licenses available — for serious traders only</p>
         </div>
