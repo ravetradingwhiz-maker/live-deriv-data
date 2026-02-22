@@ -7,7 +7,7 @@ interface AnimatedAnalysisCircleProps {
   isConnected: boolean
 }
 
-export function AnimatedAnalysisCircle({ countdown }: AnimatedAnalysisCircleProps) {
+export function AnimatedAnalysisCircle({ countdown, isConnected }: AnimatedAnalysisCircleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -18,98 +18,111 @@ export function AnimatedAnalysisCircle({ countdown }: AnimatedAnalysisCircleProp
     if (!ctx) return
 
     let animationId: number
-    let time = 0
+    let particleAngle = 0
 
+    // Set canvas size
     const size = 200
     canvas.width = size
     canvas.height = size
 
-    const centerX = size / 2
-    const centerY = size / 2
-    const radius = 60
+    interface Particle {
+      angle: number
+      distance: number
+      speed: number
+      life: number
+    }
 
-    // Data stream elements flowing around the circle
-    const streamElements = [
-      '[INFO] Analyzing data',
-      '[DATA] Stream active',
-      '[PROCESS] Computing',
-      '[CALC] Probability',
-      '[SIGNAL] Pattern',
-      '[TRADE] Prediction',
-    ]
+    const particles: Particle[] = []
+    const particleCount = 15
+
+    // Initialize particles
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        angle: (Math.PI * 2 * i) / particleCount,
+        distance: 40 + Math.random() * 30,
+        speed: Math.random() * 0.05 + 0.02,
+        life: Math.random(),
+      })
+    }
 
     const animate = () => {
-      // Clear with semi-transparent background for trail effect
+      // Clear canvas with transparency
       ctx.clearRect(0, 0, size, size)
 
-      // Draw flowing data stream around the circle
-      for (let i = 0; i < 24; i++) {
-        const angle = (i / 24) * Math.PI * 2 + time * 0.08
-        const x = centerX + Math.cos(angle) * radius
-        const y = centerY + Math.sin(angle) * radius
+      const centerX = size / 2
+      const centerY = size / 2
 
-        // Draw streaming element
-        const element = streamElements[i % streamElements.length]
-        const elementIndex = Math.floor((time * 0.1 + i) / streamElements.length) % streamElements.length
-        const currentElement = streamElements[elementIndex]
+      // Draw rotating outer circle with gradient
+      ctx.save()
+      ctx.translate(centerX, centerY)
+      ctx.rotate(particleAngle)
 
-        // Calculate opacity based on position for flowing effect
-        const opacity = 0.3 + Math.sin(time * 0.15 + i * 0.5) * 0.4
+      // Outer ring gradient
+      const gradient = ctx.createLinearGradient(-60, 0, 60, 0)
+      gradient.addColorStop(0, 'rgba(0, 255, 255, 0)')
+      gradient.addColorStop(0.5, 'rgba(0, 217, 217, 0.8)')
+      gradient.addColorStop(1, 'rgba(0, 255, 255, 0)')
 
-        ctx.save()
-        ctx.translate(x, y)
-        ctx.rotate(angle + Math.PI / 2)
-
-        ctx.fillStyle = `rgba(0, 217, 217, ${opacity})`
-        ctx.font = 'bold 8px "Courier New", monospace'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.shadowColor = 'rgba(0, 217, 217, 0.6)'
-        ctx.shadowBlur = 4
-        ctx.fillText(currentElement.slice(0, 10), 0, 0)
-
-        ctx.restore()
-      }
-
-      // Draw outer ring with rotating glow
-      const outerGradient = ctx.createLinearGradient(centerX - 70, centerY, centerX + 70, centerY)
-      outerGradient.addColorStop(0, 'rgba(0, 217, 217, 0)')
-      outerGradient.addColorStop(0.5, 'rgba(0, 217, 217, 0.8)')
-      outerGradient.addColorStop(1, 'rgba(0, 217, 217, 0)')
-
-      ctx.strokeStyle = outerGradient
-      ctx.lineWidth = 4
+      ctx.strokeStyle = gradient
+      ctx.lineWidth = 3
       ctx.beginPath()
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+      ctx.arc(0, 0, 60, 0, Math.PI * 2)
       ctx.stroke()
 
-      // Draw pulsing center glow
-      const pulseGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 50)
-      const glowIntensity = 0.2 + Math.sin(time * 0.08) * 0.2
-      pulseGlow.addColorStop(0, `rgba(0, 217, 217, ${glowIntensity})`)
-      pulseGlow.addColorStop(1, 'rgba(0, 217, 217, 0)')
+      ctx.restore()
 
-      ctx.fillStyle = pulseGlow
+      // Draw animated particles flowing around the circle
+      particles.forEach((particle, index) => {
+        particle.angle += particle.speed
+        particle.life -= 0.01
+
+        if (particle.life <= 0) {
+          particle.life = 1
+          particle.angle = Math.random() * Math.PI * 2
+        }
+
+        const x = centerX + Math.cos(particle.angle) * particle.distance
+        const y = centerY + Math.sin(particle.angle) * particle.distance
+
+        // Draw particle with fade effect
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, 4)
+        gradient.addColorStop(0, `rgba(0, 217, 217, ${particle.life})`)
+        gradient.addColorStop(1, `rgba(0, 217, 217, 0)`)
+
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(x, y, 4, 0, Math.PI * 2)
+        ctx.fill()
+      })
+
+      // Draw center circle with inner glow
+      const centerGradient = ctx.createRadialGradient(centerX, centerY, 20, centerX, centerY, 45)
+      centerGradient.addColorStop(0, 'rgba(0, 217, 217, 0.3)')
+      centerGradient.addColorStop(1, 'rgba(0, 217, 217, 0)')
+
+      ctx.fillStyle = centerGradient
       ctx.beginPath()
-      ctx.arc(centerX, centerY, 50, 0, Math.PI * 2)
+      ctx.arc(centerX, centerY, 45, 0, Math.PI * 2)
       ctx.fill()
 
-      // Draw inner circle background
-      ctx.fillStyle = 'rgba(10, 10, 20, 0.8)'
+      // Draw inner fixed circle
+      ctx.fillStyle = 'rgba(0, 217, 217, 0.1)'
       ctx.beginPath()
-      ctx.arc(centerX, centerY, 40, 0, Math.PI * 2)
+      ctx.arc(centerX, centerY, 35, 0, Math.PI * 2)
       ctx.fill()
 
       // Draw countdown number in center
       ctx.fillStyle = 'rgb(0, 217, 217)'
-      ctx.font = 'bold 52px Arial, sans-serif'
+      ctx.font = 'bold 48px Arial, sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.shadowColor = 'rgba(0, 217, 217, 0.9)'
-      ctx.shadowBlur = 25
+      ctx.shadowColor = 'rgba(0, 217, 217, 0.8)'
+      ctx.shadowBlur = 20
       ctx.fillText(countdown.toString(), centerX, centerY)
+      ctx.shadowBlur = 0
 
-      time += 1
+      particleAngle += 0.02
+
       animationId = requestAnimationFrame(animate)
     }
 
@@ -125,7 +138,7 @@ export function AnimatedAnalysisCircle({ countdown }: AnimatedAnalysisCircleProp
       <canvas
         ref={canvasRef}
         className="w-48 h-48"
-        style={{ filter: 'drop-shadow(0 0 30px rgba(0, 217, 217, 0.8))' }}
+        style={{ filter: 'drop-shadow(0 0 20px rgba(0, 217, 217, 0.6))' }}
       />
     </div>
   )
