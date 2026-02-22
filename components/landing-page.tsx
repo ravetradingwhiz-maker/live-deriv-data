@@ -191,7 +191,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-black/40">
       {/* Navigation */}
       <nav
         className={`fixed top-0 w-full z-40 transition-all duration-300 ${
