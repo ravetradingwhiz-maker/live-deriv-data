@@ -11,6 +11,7 @@ import { TrendingUp, Target, Hash, BarChart3, Zap, Wifi, WifiOff, Loader2 } from
 import { useDerivAPI } from "@/hooks/use-deriv-api"
 import { Calculator } from "lucide-react" // Import Calculator component
 import { VOLATILITY_INDICES } from "@/types/trading" // Added import to use standardized names
+import { AnimatedAnalysisCircle } from "@/components/animated-analysis-circle"
 
 interface EnhancedPredictionModalProps {
   ticksBuffer: number[]
@@ -528,18 +529,8 @@ export function EnhancedPredictionModal({
           {isAnalyzing && (
             <div className="text-center py-8">
               <div className="relative inline-flex items-center justify-center mb-4">
-                {/* Pulsing outer ring */}
-                <div className="absolute w-32 h-32 rounded-full bg-primary/20 animate-ping"></div>
-                <div className="absolute w-28 h-28 rounded-full bg-primary/30 animate-pulse"></div>
-
-                {/* Countdown circle */}
-                <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
-                  <div className="absolute inset-2 rounded-full bg-background flex items-center justify-center">
-                    <span className="text-3xl font-bold text-primary tabular-nums">
-                      {countdown > 0 ? countdown : <Loader2 className="h-8 w-8 animate-spin" />}
-                    </span>
-                  </div>
-                </div>
+                {/* Animated analysis circle with flowing particles */}
+                <AnimatedAnalysisCircle countdown={countdown} isConnected={isConnected} />
               </div>
 
               <div className="space-y-2">
