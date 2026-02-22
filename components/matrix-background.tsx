@@ -49,24 +49,24 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
       brightness: number
     }
 
-    const columnCount = intensity === 'low' ? Math.floor(canvas.width / 35) :
-      intensity === 'high' ? Math.floor(canvas.width / 15) :
-      Math.floor(canvas.width / 25)
+    const columnCount = intensity === 'low' ? Math.floor(canvas.width / 25) :
+      intensity === 'high' ? Math.floor(canvas.width / 10) :
+      Math.floor(canvas.width / 18)
 
     const columns: Column[] = []
 
     // Initialize columns with random text fragments
     for (let i = 0; i < columnCount; i++) {
       const randomFragments = Array.from(
-        { length: Math.floor(Math.random() * 20) + 15 },
+        { length: Math.floor(Math.random() * 25) + 20 },
         () => textFragments[Math.floor(Math.random() * textFragments.length)]
       )
       columns.push({
         x: i * (canvas.width / columnCount),
         y: Math.random() * canvas.height,
-        speed: Math.random() * 1.5 + 0.5,
+        speed: Math.random() * 3.5 + 1.5,
         text: randomFragments,
-        brightness: Math.random() * 0.3 + 0.6,
+        brightness: Math.random() * 0.5 + 0.7,
       })
     }
 
@@ -77,30 +77,34 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
 
       // Draw text columns
       columns.forEach((column) => {
-        // Matrix green color with variable brightness
-        ctx.fillStyle = `rgba(0, 255, 0, ${column.brightness * opacity})`
-        ctx.font = '12px "Courier New", monospace'
+        // Matrix green color with enhanced brightness
+        ctx.fillStyle = `rgba(0, 255, 0, ${Math.min(column.brightness * opacity * 1.5, 1)})`
+        ctx.font = 'bold 13px "Courier New", monospace'
         ctx.textAlign = 'left'
-        ctx.letterSpacing = '1px'
+        ctx.letterSpacing = '2px'
 
-        // Draw text fragments
+        // Draw text fragments with glow effect
         column.text.forEach((text, index) => {
-          const textY = column.y + index * 18
+          const textY = column.y + index * 16
           if (textY > canvas.height + 100) {
             // Reset column
-            column.y = -column.text.length * 18
-            column.brightness = Math.random() * 0.3 + 0.6
-            column.speed = Math.random() * 1.5 + 0.5
+            column.y = -column.text.length * 16
+            column.brightness = Math.random() * 0.5 + 0.7
+            column.speed = Math.random() * 3.5 + 1.5
           }
+          // Add glow effect
+          ctx.shadowBlur = 8
+          ctx.shadowColor = 'rgba(0, 255, 0, 0.8)'
           ctx.fillText(text, column.x, textY)
+          ctx.shadowBlur = 0
         })
 
-        // Move column down
+        // Move column down with increased speed
         column.y += column.speed
 
         // Random brightness flicker for authenticity
-        if (Math.random() > 0.97) {
-          column.brightness = Math.random() * 0.3 + 0.6
+        if (Math.random() > 0.95) {
+          column.brightness = Math.random() * 0.5 + 0.7
         }
       })
 
