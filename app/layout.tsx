@@ -30,7 +30,7 @@ export default function RootLayout({
       <head>{/* Font variables are now applied via CSS custom properties */}</head>
       <body className="relative overflow-x-hidden">
         {/* Matrix Background */}
-        <MatrixBackground intensity="low" opacity={0.08} />
+        <MatrixBackground intensity="medium" opacity={0.25} />
         
         {/* Main Application Content - z-index ensures it appears above animation */}
         <div className="relative z-10">

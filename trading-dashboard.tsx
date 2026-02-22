@@ -67,7 +67,7 @@ export default function TradingDashboard() {
   const accessLevel = isMinangedwaUser ? "full access" : "Limited"
 
   return (
-    <div className="min-h-screen bg-black/40">
+    <div className="min-h-screen bg-black/20">
       <DashboardHeader />
 
       <div className="max-w-6xl mx-auto p-4 space-y-4">

@@ -191,7 +191,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-black/40">
+    <div className="min-h-screen bg-black/20">
       {/* Navigation */}
       <nav
         className={`fixed top-0 w-full z-40 transition-all duration-300 ${

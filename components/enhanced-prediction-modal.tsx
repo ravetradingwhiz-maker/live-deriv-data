@@ -431,7 +431,7 @@ export function EnhancedPredictionModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-black/80 backdrop-blur border-border">
         <CardHeader className="bg-muted">
           <CardTitle className="flex items-center gap-2 text-foreground">
