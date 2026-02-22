@@ -49,9 +49,9 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
       brightness: number
     }
 
-    const columnCount = intensity === 'low' ? Math.floor(canvas.width / 25) :
-      intensity === 'high' ? Math.floor(canvas.width / 10) :
-      Math.floor(canvas.width / 18)
+    const columnCount = intensity === 'low' ? Math.floor(canvas.width / 60) :
+      intensity === 'high' ? Math.floor(canvas.width / 40) :
+      Math.floor(canvas.width / 50)
 
     const columns: Column[] = []
 
@@ -64,7 +64,7 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
       columns.push({
         x: i * (canvas.width / columnCount),
         y: Math.random() * canvas.height,
-        speed: Math.random() * 3.5 + 1.5,
+        speed: (Math.random() * 3.5 + 1.5) * 5,
         text: randomFragments,
         brightness: Math.random() * 0.5 + 0.7,
       })
@@ -90,7 +90,7 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
             // Reset column
             column.y = -column.text.length * 16
             column.brightness = Math.random() * 0.5 + 0.7
-            column.speed = Math.random() * 3.5 + 1.5
+            column.speed = (Math.random() * 3.5 + 1.5) * 5
           }
           // Add glow effect
           ctx.shadowBlur = 8
