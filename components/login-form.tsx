@@ -162,7 +162,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
 
         {/* Footer */}
         <div className="text-center text-xs text-slate-500">
-          <p>© 2025 Live Deriv Data Analysis Platform. All rights reserved.</p>
+          <p>© 2023 Live Deriv Data Analysis Platform. All rights reserved.</p>
           <p className="mt-1">Professional trading tools for serious traders.</p>
         </div>
       </div>

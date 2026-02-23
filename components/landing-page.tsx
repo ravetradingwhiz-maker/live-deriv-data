@@ -508,7 +508,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 size="lg"
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               >
-                Sign Up
+                Login
               </Button>
             </a>
           </div>
