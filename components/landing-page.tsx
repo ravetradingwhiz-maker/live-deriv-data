@@ -574,7 +574,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition">
+                  <a href="/contact" className="hover:text-white transition">
                     Contact
                   </a>
                 </li>
