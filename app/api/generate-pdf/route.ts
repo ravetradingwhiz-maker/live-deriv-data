@@ -511,7 +511,7 @@ export async function GET() {
         <div class="footer">
             <p>Live Deriv Data Analysis - Professional Trading Platform</p>
             <p>Document generated for educational and trading purposes</p>
-            <p>&copy; 2025 All rights reserved.</p>
+            <p>&copy; 2023 All rights reserved.</p>
         </div>
     </div>
 </body>

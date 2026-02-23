@@ -125,7 +125,7 @@ export function TermsConditionsModal({ isOpen, onClose }: TermsConditionsModalPr
 
         <CardContent className="overflow-y-auto flex-1 p-6 space-y-4">
           <p className="text-slate-300 text-sm mb-6">
-            Last updated: {new Date().toLocaleDateString()} | Effective Date: January 1, 2025
+            Last updated: {new Date().toLocaleDateString()} | Effective Date: January 1, 2023
           </p>
 
           <div className="space-y-3">

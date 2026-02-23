@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star } from "lucide-react"
 import { TermsConditionsModal } from "@/components/terms-conditions-modal"
 import { FloatingContactButtons } from "@/components/floating-contact-buttons"
+import { SignUpModal } from "@/components/signup-modal"
 import Image from "next/image"
 
 interface LandingPageProps {
@@ -99,6 +100,7 @@ const REAL_TIME_REVIEWS = [
 export function LandingPage({ onGetStarted }: LandingPageProps) {
   const [scrolled, setScrolled] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  const [showSignup, setShowSignup] = useState(false)
   const [scrollPosition, setScrollPosition] = useState(0)
 
   useEffect(() => {
@@ -508,7 +510,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 size="lg"
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               >
-                Sign Up
+                Login
               </Button>
             </a>
           </div>
@@ -574,7 +576,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition">
+                  <a href="/contact" className="hover:text-white transition">
                     Contact
                   </a>
                 </li>
