@@ -432,20 +432,20 @@ export function EnhancedPredictionModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-black/80 backdrop-blur border-border">
-        <CardHeader className="bg-muted">
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Calculator className="h-5 w-5 text-primary" />
+    <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50">
+      <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-white border-slate-200 shadow-2xl">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200">
+          <CardTitle className="flex items-center gap-2 text-slate-900">
+            <Calculator className="h-5 w-5 text-blue-600" />
             AI Prediction Analysis - Deriv.com Integration
             <div className="ml-auto flex items-center gap-2">
               {isConnected ? (
-                <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                <div className="flex items-center gap-1 text-green-600">
                   <Wifi className="h-4 w-4" />
                   <span className="text-xs">Connected</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                <div className="flex items-center gap-1 text-red-600">
                   <WifiOff className="h-4 w-4" />
                   <span className="text-xs">Disconnected</span>
                 </div>
@@ -453,21 +453,21 @@ export function EnhancedPredictionModal({
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 text-foreground">
-          <div className="bg-muted p-3 rounded-lg">
+        <CardContent className="space-y-4 text-slate-900">
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Deriv API Status:</span>
+              <span className="text-sm font-medium text-slate-700">Deriv API Status:</span>
               <Badge variant={isConnected ? "default" : "destructive"}>
                 {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
               </Badge>
             </div>
-            {error && <div className="text-xs text-destructive mt-1">Error: {error}</div>}
+            {error && <div className="text-xs text-red-600 mt-1">Error: {error}</div>}
             <div className="flex items-center justify-between mt-2">
-              <span className="text-sm">Trading Symbol:</span>
+              <span className="text-sm text-slate-700">Trading Symbol:</span>
               <select
                 value={selectedSymbol}
                 onChange={(e) => setSelectedSymbol(e.target.value)}
-                className="text-xs bg-background border border-input rounded px-2 py-1"
+                className="text-xs bg-white border border-slate-300 rounded px-2 py-1 text-slate-900"
               >
                 {VOLATILITY_INDICES.map((market) => (
                   <option key={market.symbol} value={market.symbol}>
@@ -480,7 +480,7 @@ export function EnhancedPredictionModal({
 
           {predictionType === "over_under" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-blue-700 bg-cyan-50 p-3 rounded-lg border border-cyan-200">
                 {getPredictionIcon("over_under")}
                 <span>
                   {isConnected
@@ -500,7 +500,7 @@ export function EnhancedPredictionModal({
 
           {predictionType === "even_odd" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-blue-700 bg-cyan-50 p-3 rounded-lg border border-cyan-200">
                 <Hash className="h-5 w-5" />
                 <span>
                   {isConnected
@@ -514,7 +514,7 @@ export function EnhancedPredictionModal({
 
           {predictionType === "rise_fall" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-blue-700 bg-cyan-50 p-3 rounded-lg border border-cyan-200">
                 <BarChart3 className="h-5 w-5" />
                 <span>
                   {isConnected
@@ -549,30 +549,30 @@ export function EnhancedPredictionModal({
                 </div>
 
                 {/* Animated progress steps */}
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-3">
+                <div className="flex items-center justify-center gap-2 text-xs text-slate-600 mt-3">
                   {isConnected ? (
                     <>
-                      <span className={countdown > 11 ? "text-primary font-medium" : ""}>Fetching live data</span>
+                      <span className={countdown > 11 ? "text-blue-600 font-medium" : ""}>Fetching live data</span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 11 && countdown > 7 ? "text-primary font-medium" : ""}>
+                      <span className={countdown <= 11 && countdown > 7 ? "text-blue-600 font-medium" : ""}>
                         Pattern analysis
                       </span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 7 && countdown > 3 ? "text-primary font-medium" : ""}>
+                      <span className={countdown <= 7 && countdown > 3 ? "text-blue-600 font-medium" : ""}>
                         Calculating probabilities
                       </span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 3 ? "text-primary font-medium" : ""}>Generating entry points</span>
+                      <span className={countdown <= 3 ? "text-blue-600 font-medium" : ""}>Generating entry points</span>
                     </>
                   ) : (
                     <>
-                      <span className={countdown > 9 ? "text-primary font-medium" : ""}>Local analysis</span>
+                      <span className={countdown > 9 ? "text-blue-600 font-medium" : ""}>Local analysis</span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 9 && countdown > 5 ? "text-primary font-medium" : ""}>
+                      <span className={countdown <= 9 && countdown > 5 ? "text-blue-600 font-medium" : ""}>
                         Pattern detection
                       </span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 5 ? "text-primary font-medium" : ""}>Probability calculation</span>
+                      <span className={countdown <= 5 ? "text-blue-600 font-medium" : ""}>Probability calculation</span>
                     </>
                   )}
                 </div>
@@ -581,12 +581,12 @@ export function EnhancedPredictionModal({
           )}
 
           {result && (
-            <div className="bg-muted p-4 rounded-lg space-y-3 border border-border">
+            <div className="bg-blue-50 p-4 rounded-lg space-y-3 border border-blue-200">
               <div className="space-y-3">
-                <div className="bg-background p-3 rounded space-y-2">
+                <div className="bg-white p-3 rounded space-y-2 border border-slate-200">
                   <div className="flex items-center justify-between">
-                    <strong className="text-foreground">Entry Point:</strong>
-                    <span className="font-semibold text-foreground">{result.entryPoints.primary}</span>
+                    <strong className="text-slate-900">Entry Point:</strong>
+                    <span className="font-semibold text-blue-600">{result.entryPoints.primary}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <strong className="text-foreground">Number of Runs:</strong>
@@ -624,11 +624,11 @@ export function EnhancedPredictionModal({
             <Button
               onClick={runAnalysis}
               disabled={isAnalyzing}
-              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isAnalyzing ? "Analyzing..." : `Start ${isConnected ? "Live" : "Fallback"} Analysis (15s)`}
             </Button>
-            <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent">
+            <Button variant="outline" onClick={onClose} className="flex-1 bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-900">
               Close
             </Button>
           </div>
