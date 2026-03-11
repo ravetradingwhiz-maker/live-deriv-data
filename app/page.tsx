@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import { AuthProvider, useAuth } from "@/contexts/auth-context"
-import { LoginForm } from "@/components/login-form"
+import { LoginModal } from "@/components/login-modal"
 import { LandingPage } from "@/components/landing-page"
 import TradingDashboard from "../trading-dashboard"
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth()
-  const [showLogin, setShowLogin] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
   if (isLoading) {
     return (
@@ -25,11 +25,12 @@ function AppContent() {
     return <TradingDashboard />
   }
 
-  if (showLogin) {
-    return <LoginForm onBackClick={() => setShowLogin(false)} />
-  }
-
-  return <LandingPage onGetStarted={() => setShowLogin(true)} />
+  return (
+    <>
+      <LandingPage onGetStarted={() => setShowLoginModal(true)} />
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+    </>
+  )
 }
 
 export default function Page() {

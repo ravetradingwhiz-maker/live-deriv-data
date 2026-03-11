@@ -20,17 +20,17 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-sm mx-auto max-h-[85vh] overflow-y-auto bg-black/90 backdrop-blur rounded-full shadow-2xl border border-slate-700">
+      <div className="relative w-[360px] h-[480px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-full shadow-2xl border border-slate-700 overflow-hidden flex items-center justify-center">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 transition-colors"
+          className="absolute top-4 right-4 z-10 p-2 rounded-lg bg-slate-700/60 hover:bg-slate-600 transition-colors"
         >
           <X className="h-5 w-5 text-white" />
         </button>
 
-        {/* Login Form */}
-        <div>
+        {/* Login Form - Scrollable Content */}
+        <div className="w-full h-full overflow-y-auto pt-8 px-6 pb-6 flex flex-col items-center justify-center">
           <LoginForm onBackClick={onClose} />
         </div>
       </div>

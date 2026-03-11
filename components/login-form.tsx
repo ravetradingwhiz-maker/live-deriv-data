@@ -40,34 +40,22 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black/20 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        {onBackClick && (
-          <button
-            onClick={onBackClick}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
+    <div className="w-full space-y-4">
+      {onBackClick && (
+        <button
+          onClick={onBackClick}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
+        >
+          <ArrowLeft className="h-4 w-4" />
             Back
           </button>
         )}
 
-        {/* Logo and Branding */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Image src="/deriv-logo.png" alt="Deriv Pro Logo" width={48} height={48} className="rounded-lg" />
-            <div>
-              <h1 className="text-2xl font-bold text-white">Live Deriv Data Analysis</h1>
-              <p className="text-sm text-slate-400">Professional Trading Platform</p>
-            </div>
-          </div>
-        </div>
-
         {/* Login Card */}
-        <Card className="bg-slate-800/90 border-slate-700 backdrop-blur-sm">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center text-white">Welcome Back</CardTitle>
-            <p className="text-center text-slate-400">Sign in with your access code</p>
+        <Card className="bg-slate-800/90 border-slate-700 backdrop-blur-sm w-full">
+          <CardHeader className="space-y-1 pb-3">
+            <CardTitle className="text-xl text-center text-white">Welcome Back</CardTitle>
+            <p className="text-center text-sm text-slate-400">Sign in with your access code</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -138,34 +126,12 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
           </CardContent>
         </Card>
 
-        {/* Features */}
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="space-y-2">
-            <div className="bg-green-600/20 p-3 rounded-lg mx-auto w-fit">
-              <Shield className="h-6 w-6 text-green-400" />
-            </div>
-            <div className="text-xs text-slate-400">Secure Trading</div>
-          </div>
-          <div className="space-y-2">
-            <div className="bg-blue-600/20 p-3 rounded-lg mx-auto w-fit">
-              <Lock className="h-6 w-6 text-blue-400" />
-            </div>
-            <div className="text-xs text-slate-400">Real-time Data</div>
-          </div>
-          <div className="space-y-2">
-            <div className="bg-purple-600/20 p-3 rounded-lg mx-auto w-fit">
-              <Zap className="h-6 w-6 text-purple-400" />
-            </div>
-            <div className="text-xs text-slate-400">Advanced Tools</div>
-          </div>
-        </div>
+
 
         {/* Footer */}
-        <div className="text-center text-xs text-slate-500">
-          <p>© 2023 Live Deriv Data Analysis Platform. All rights reserved.</p>
-          <p className="mt-1">Professional trading tools for serious traders.</p>
+        <div className="text-center text-xs text-slate-500 mt-2">
+          <p>© 2023 Live Deriv Data Analysis Platform.</p>
         </div>
-      </div>
     </div>
   )
 }
