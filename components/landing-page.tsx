@@ -7,6 +7,7 @@ import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star }
 import { TermsConditionsModal } from "@/components/terms-conditions-modal"
 import { FloatingContactButtons } from "@/components/floating-contact-buttons"
 import { SignUpModal } from "@/components/signup-modal"
+import { LoginModal } from "@/components/login-modal"
 import Image from "next/image"
 
 interface LandingPageProps {
@@ -101,6 +102,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   const [scrolled, setScrolled] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const [scrollPosition, setScrollPosition] = useState(0)
 
   useEffect(() => {
@@ -266,7 +268,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             precision and profitability on Deriv.com
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
+            <Button size="lg" onClick={() => setShowLoginModal(true)} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
               Start Trading Now
             </Button>
           </div>
@@ -680,8 +682,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* Terms and Conditions Modal */}
       <TermsConditionsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
-      {/* Floating Contact Buttons */}
       <FloatingContactButtons />
     </div>
   )
