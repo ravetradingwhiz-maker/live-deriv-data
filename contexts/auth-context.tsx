@@ -14,7 +14,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const MOCK_ACCESS_CODES: Record<string, User> = {
   "Rave_Fx": {
     id: "1",
-    username: "Rave_Fx",
+    username: "",
     email: "ravefx@liveDerivData.com",
     role: "admin",
     subscription: "enterprise",

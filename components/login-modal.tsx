@@ -20,7 +20,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-sm mx-auto max-h-[85vh] overflow-y-auto bg-black/90 backdrop-blur rounded-2xl shadow-2xl border border-slate-700">
+      <div className="relative w-full max-w-sm mx-auto max-h-[85vh] overflow-y-auto bg-black/90 backdrop-blur rounded-full shadow-2xl border border-slate-700">
         {/* Close Button */}
         <button
           onClick={onClose}
