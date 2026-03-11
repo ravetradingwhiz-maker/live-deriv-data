@@ -231,7 +231,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               </div>
 
               <div className="md:hidden">
-                <a href="https://track.deriv.me/_CNojBBdK_CsUBGj1nD25y2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
+                <a href="https://track.deriv.com/_CNojBBdK_Cu6tyDIijdDK2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
                   <Button
                     className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-5 py-2 text-xs font-bold"
                   >
@@ -242,7 +242,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             </div>
 
             <div className="hidden md:block">
-              <a href="https://track.deriv.me/_CNojBBdK_CsUBGj1nD25y2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
+              <a href="https://track.deriv.com/_CNojBBdK_Cu6tyDIijdDK2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
                 <Button
                   className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-8 py-2.5 font-bold transition-all hover:scale-105 active:scale-95"
                 >
