@@ -52,26 +52,26 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
         )}
 
         {/* Login Card */}
-        <Card className="bg-slate-800/90 border-slate-700 backdrop-blur-sm w-full">
-          <CardHeader className="space-y-1 pb-3">
-            <CardTitle className="text-xl text-center text-white">Welcome Back</CardTitle>
-            <p className="text-center text-sm text-slate-400">Sign in with your access code</p>
+        <Card className="bg-slate-800/80 border-slate-600 backdrop-blur-sm w-full shadow-xl">
+          <CardHeader className="space-y-2 pb-4">
+            <CardTitle className="text-3xl text-center text-white font-bold">Welcome Back</CardTitle>
+            <p className="text-center text-base text-slate-300">Enter your access code</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="accessCode" className="text-white">
+          <CardContent className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="accessCode" className="text-white text-lg font-semibold">
                   Access Code
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                   <Input
                     id="accessCode"
                     type="text"
                     placeholder="Enter your access code"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
-                    className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                    className="pl-12 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 h-12 text-lg rounded-lg"
                   />
                 </div>
               </div>
@@ -82,7 +82,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
                 </Alert>
               )}
 
-              <Button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 text-lg rounded-lg transition-all duration-200 disabled:opacity-50">
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
