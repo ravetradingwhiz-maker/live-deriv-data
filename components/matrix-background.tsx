@@ -80,26 +80,23 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
 
       // Draw text columns
       columns.forEach((column) => {
-        // Matrix green color with enhanced brightness
-        ctx.fillStyle = `rgba(0, 255, 0, ${Math.min(column.brightness * opacity * 1.5, 1)})`
-        ctx.font = 'bold 13px "Courier New", monospace'
+        // Subtle dark theme - reduced green opacity for premium look
+        ctx.fillStyle = `rgba(34, 197, 94, ${Math.min(column.brightness * opacity * 0.6, 0.5)})`
+        ctx.font = '12px "Courier New", monospace'
         ctx.textAlign = 'left'
-        ctx.letterSpacing = '2px'
+        ctx.letterSpacing = '1px'
 
-        // Draw text fragments with glow effect
+        // Draw text fragments without glow for subtlety
         column.text.forEach((text, index) => {
           const textY = column.y + index * 16
           if (textY > canvas.height + 100) {
             // Reset column
             column.y = -column.text.length * 16
-            column.brightness = Math.random() * 0.5 + 0.7
+            column.brightness = Math.random() * 0.4 + 0.4
             column.speed = (Math.random() * 3.5 + 1.5) * 5
           }
-          // Add glow effect
-          ctx.shadowBlur = 8
-          ctx.shadowColor = 'rgba(0, 255, 0, 0.8)'
+          // No glow - keep it subtle for professional look
           ctx.fillText(text, column.x, textY)
-          ctx.shadowBlur = 0
         })
 
         // Move column down with increased speed
@@ -107,7 +104,7 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
 
         // Random brightness flicker for authenticity
         if (Math.random() > 0.95) {
-          column.brightness = Math.random() * 0.5 + 0.7
+          column.brightness = Math.random() * 0.4 + 0.4
         }
       })
 
