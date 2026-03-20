@@ -433,43 +433,54 @@ export function EnhancedPredictionModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-[520px] max-h-[85vh] overflow-y-auto bg-slate-900 border-slate-700 shadow-2xl rounded-2xl">
-        <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-800 border-b border-slate-700 rounded-t-2xl text-center py-4">
-          <CardTitle className="flex flex-col items-center gap-2 text-white">
-            <div className="flex items-center justify-center gap-2">
-              <Calculator className="h-5 w-5 text-cyan-400" />
-              <span className="text-lg font-bold">AI Prediction</span>
+      {/* Fixed-size modal that never grows */}
+      <Card className="w-[500px] bg-card border-border shadow-2xl rounded-lg flex flex-col">
+        {/* Header - Fixed */}
+        <CardHeader className="border-b border-border px-4 py-3 flex-shrink-0">
+          <CardTitle className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-primary" />
+              <span className="text-base font-bold">AI Prediction</span>
             </div>
-            <div className="flex items-center justify-center gap-2 mt-1">
-              {isConnected ? (
-                <div className="flex items-center gap-1 text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full text-xs border border-green-500/30">
-                  <Wifi className="h-3 w-3" />
-                  <span>Connected</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full text-xs border border-red-500/30">
-                  <WifiOff className="h-3 w-3" />
-                  <span>Disconnected</span>
-                </div>
-              )}
-            </div>
+            {/* Status badge - single, clear indicator */}
+            {isConnecting && (
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="font-medium">Connecting...</span>
+              </div>
+            )}
+            {error && !isConnecting && (
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700">
+                <WifiOff className="h-3 w-3" />
+                <span className="font-medium">Fallback Mode</span>
+              </div>
+            )}
+            {isConnected && !error && !isConnecting && (
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
+                <Wifi className="h-3 w-3" />
+                <span className="font-medium">Live Deriv API</span>
+              </div>
+            )}
+            {!isConnected && !error && !isConnecting && (
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700">
+                <WifiOff className="h-3 w-3" />
+                <span className="font-medium">Offline</span>
+              </div>
+            )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-slate-100 px-4 py-4">
-          <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-300">API Status:</span>
-              <Badge variant={isConnected ? "default" : "destructive"} className="rounded-full px-2 py-0.5 text-xs">
-                {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
-              </Badge>
-            </div>
-            {error && <div className="text-xs text-red-400 mt-1 bg-red-500/10 p-1.5 rounded border border-red-500/30">Error: {error}</div>}
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-slate-300">Symbol:</span>
+
+        {/* Content - Fixed height with no scroll for normal cases */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <CardContent className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+            {/* Symbol Control */}
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="symbol" className="text-xs font-medium">Market:</Label>
               <select
+                id="symbol"
                 value={selectedSymbol}
                 onChange={(e) => setSelectedSymbol(e.target.value)}
-                className="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 text-slate-100"
+                className="text-xs bg-input border border-border rounded px-2 py-1 text-foreground w-40"
               >
                 {VOLATILITY_INDICES.map((market) => (
                   <option key={market.symbol} value={market.symbol}>
@@ -478,184 +489,126 @@ export function EnhancedPredictionModal({
                 ))}
               </select>
             </div>
-          </div>
 
-          {predictionType === "over_under" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
-                  {getPredictionIcon("over_under")}
-                </div>
-                <span className="leading-tight">
-                  {isConnected
-                    ? "AI analyzing Deriv data for predictions"
-                    : "Using fallback analysis"}
+            {/* Unified analysis info section */}
+            <div className="bg-muted/50 p-2.5 rounded border border-border">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                {getPredictionIcon(predictionType)}
+                <span className="font-medium">
+                  {predictionType === "over_under" && "Over/Under Analysis"}
+                  {predictionType === "even_odd" && "Even/Odd Analysis"}
+                  {predictionType === "rise_fall" && "Rise/Fall Analysis"}
+                  {predictionType === "matches_differs" && "Matches/Differs Analysis"}
                 </span>
               </div>
-              <div className="bg-slate-800/50 p-2.5 rounded border border-slate-700">
+              <p className="text-xs text-muted-foreground mb-2">
+                {isConnected
+                  ? "Using live Deriv data for enhanced accuracy"
+                  : "Using historical data analysis"}
+              </p>
+              {error && (
+                <div className="text-xs text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/30 mb-2">
+                  {error}
+                </div>
+              )}
+              {/* Prediction options */}
+              <div className="space-y-1.5">
                 {renderPredictionOptions()}
               </div>
             </div>
-          )}
 
-          {predictionType === "matches_differs" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
-                  {getPredictionIcon("matches_differs")}
+            {/* Analyzing state - replaces content */}
+            {isAnalyzing && (
+              <div className="bg-muted/50 p-3 rounded border border-border text-center space-y-2">
+                <div className="flex justify-center">
+                  <AnimatedAnalysisCircle countdown={countdown} isConnected={isConnected} />
                 </div>
-                <span>
-                  AI will analyze Deriv.com data and provide exact digit predictions with entry points
-                </span>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                {renderPredictionOptions()}
-              </div>
-            </div>
-          )}
-
-          {predictionType === "even_odd" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
-                  <Hash className="h-4 w-4" />
-                </div>
-                <span className="leading-tight">
-                  {isConnected
-                    ? "AI predicting even/odd digits"
-                    : "Fallback analysis active"}
-                </span>
-              </div>
-              <div className="bg-slate-800/50 p-2.5 rounded border border-slate-700">
-                {renderPredictionOptions()}
-              </div>
-            </div>
-          )}
-
-          {predictionType === "rise_fall" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
-                  <BarChart3 className="h-4 w-4" />
-                </div>
-                <span>
-                  {isConnected
-                    ? "AI will analyze live price momentum and provide precise entry points"
-                    : "Trend analysis available - API recommended for accuracy"}
-                </span>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                {renderPredictionOptions()}
-              </div>
-            </div>
-          )}
-
-          {isAnalyzing && (
-            <div className="text-center py-4 bg-slate-800/50 p-4 rounded border border-slate-700">
-              <div className="relative inline-flex items-center justify-center mb-3">
-                {/* Animated analysis circle with flowing particles */}
-                <AnimatedAnalysisCircle countdown={countdown} isConnected={isConnected} />
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm font-bold text-cyan-300">
+                <div className="text-sm font-semibold text-foreground">
                   {countdown > 0 ? (
-                    <span className="animate-pulse">
-                      {isConnected ? "Analyzing Data" : "Processing Data"}
-                    </span>
+                    <span className="animate-pulse">Analyzing...</span>
                   ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Zap className="h-4 w-4 text-cyan-400 animate-pulse" />
-                      Generating Predictions
-                      <Zap className="h-4 w-4 text-cyan-400 animate-pulse" />
-                    </span>
+                    <span>Generating predictions</span>
                   )}
                 </div>
-
-                {/* Animated progress steps */}
-                <div className="flex flex-col items-center justify-center gap-1 text-xs text-slate-400 mt-2">
+                <div className="text-xs text-muted-foreground flex flex-wrap justify-center gap-1">
                   {isConnected ? (
-                    <div className="flex flex-wrap items-center justify-center gap-1 text-xs">
-                      <span className={countdown > 11 ? "text-cyan-300 font-medium" : "text-slate-500"}>Fetching</span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 11 && countdown > 7 ? "text-cyan-300 font-medium" : "text-slate-500"}>
-                        Analyze
-                      </span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 7 && countdown > 3 ? "text-cyan-300 font-medium" : "text-slate-500"}>
-                        Calculate
-                      </span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 3 ? "text-cyan-300 font-medium" : "text-slate-500"}>Generate</span>
-                    </div>
+                    <>
+                      <span className={countdown > 11 ? "font-medium text-foreground" : ""}>Fetch</span>
+                      <span>•</span>
+                      <span className={countdown <= 11 && countdown > 7 ? "font-medium text-foreground" : ""}>Analyze</span>
+                      <span>•</span>
+                      <span className={countdown <= 7 && countdown > 3 ? "font-medium text-foreground" : ""}>Calc</span>
+                      <span>•</span>
+                      <span className={countdown <= 3 ? "font-medium text-foreground" : ""}>Gen</span>
+                    </>
                   ) : (
-                    <div className="flex flex-wrap items-center justify-center gap-1 text-xs">
-                      <span className={countdown > 9 ? "text-cyan-300 font-medium" : "text-slate-500"}>Analyze</span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 9 && countdown > 5 ? "text-cyan-300 font-medium" : "text-slate-500"}>
-                        Detect
-                      </span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 5 ? "text-cyan-300 font-medium" : "text-slate-500"}>Compute</span>
-                    </div>
+                    <>
+                      <span className={countdown > 9 ? "font-medium text-foreground" : ""}>Analyze</span>
+                      <span>•</span>
+                      <span className={countdown <= 9 && countdown > 5 ? "font-medium text-foreground" : ""}>Process</span>
+                      <span>•</span>
+                      <span className={countdown <= 5 ? "font-medium text-foreground" : ""}>Complete</span>
+                    </>
                   )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {result && (
-            <div className="bg-slate-800/50 p-3 rounded space-y-2 border border-slate-700">
-              <div className="space-y-2">
-                <div className="bg-slate-700/50 p-2.5 rounded space-y-1.5 border border-slate-600">
-                  <div className="flex items-center justify-between text-xs">
-                    <strong className="text-slate-200">Entry:</strong>
-                    <span className="font-bold text-cyan-400">{result.entryPoints.primary}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <strong className="text-slate-200">Runs:</strong>
-                    <Badge className="bg-cyan-600/60 text-cyan-100 text-xs">{result.runs}</Badge>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <strong className="text-slate-200">Confidence:</strong>
-                    <span className="font-bold text-cyan-400">{result.confidence}%</span>
-                  </div>
+            {/* Results display - compact */}
+            {result && !isAnalyzing && (
+              <div className="bg-muted/50 p-2.5 rounded border border-border space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">Entry Point:</span>
+                  <span className="font-bold text-primary">{result.entryPoints.primary}</span>
                 </div>
-
-                <div className="bg-slate-700/30 p-2 rounded space-y-1 border border-slate-600/50">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300">Market: {result.marketCondition}</span>
-                    <Badge className={`rounded px-1.5 py-0.5 text-xs ${
-                      result.riskLevel === "LOW"
-                        ? "bg-green-600/60 text-green-100"
-                        : result.riskLevel === "MEDIUM"
-                          ? "bg-yellow-600/60 text-yellow-100"
-                          : "bg-red-600/60 text-red-100"
-                    }`}>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">Confidence:</span>
+                  <span className="font-bold text-primary">{result.confidence}%</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">Runs:</span>
+                  <Badge variant="secondary" className="text-xs">{result.runs}</Badge>
+                </div>
+                <div className="border-t border-border pt-1.5">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">{result.marketCondition}</span>
+                    <Badge
+                      variant={
+                        result.riskLevel === "LOW"
+                          ? "secondary"
+                          : result.riskLevel === "MEDIUM"
+                            ? "outline"
+                            : "destructive"
+                      }
+                      className="text-xs"
+                    >
                       {result.riskLevel}
                     </Badge>
                   </div>
-                  <div className="text-xs text-slate-400 italic">{result.entryPoints.timing}</div>
+                  <div className="text-xs text-muted-foreground italic">{result.entryPoints.timing}</div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </CardContent>
+        </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={runAnalysis}
-              disabled={isAnalyzing}
-              className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded py-2 text-sm"
-            >
-              {isAnalyzing ? "Analyzing..." : "Analyze"}
-            </Button>
-            <Button variant="outline" onClick={onClose} className="flex-1 bg-slate-700/50 hover:bg-slate-700 border-slate-600 text-slate-100 font-semibold rounded py-2 text-sm">
-              Close
-            </Button>
-          </div>
-        </CardContent>
+        {/* Footer Buttons - Fixed, always visible */}
+        <div className="border-t border-border bg-muted/30 px-4 py-3 flex gap-2 flex-shrink-0">
+          <Button
+            onClick={runAnalysis}
+            disabled={isAnalyzing}
+            className="flex-1"
+          >
+            {isAnalyzing ? "Analyzing..." : "Start Analysis"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+          >
+            Close
+          </Button>
+        </div>
       </Card>
     </div>
   )
