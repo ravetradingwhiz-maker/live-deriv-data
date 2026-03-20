@@ -433,41 +433,44 @@ export function EnhancedPredictionModal({
 
   return (
     <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50">
-      <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-white border-slate-200 shadow-2xl">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200">
-          <CardTitle className="flex items-center gap-2 text-slate-900">
-            <Calculator className="h-5 w-5 text-blue-600" />
-            AI Prediction Analysis - Deriv.com Integration
-            <div className="ml-auto flex items-center gap-2">
+      <Card className="w-[600px] max-h-[90vh] overflow-y-auto bg-white border-slate-200 shadow-2xl rounded-3xl">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200 rounded-t-3xl text-center py-6">
+          <CardTitle className="flex flex-col items-center gap-3 text-slate-900">
+            <div className="flex items-center justify-center gap-2">
+              <Calculator className="h-5 w-5 text-blue-600" />
+              <span>AI Prediction Analysis</span>
+            </div>
+            <div className="text-sm font-normal text-slate-600">Deriv.com Integration</div>
+            <div className="flex items-center justify-center gap-2 mt-2">
               {isConnected ? (
-                <div className="flex items-center gap-1 text-green-600">
+                <div className="flex items-center gap-1 text-green-600 bg-green-50 px-3 py-1 rounded-full text-xs">
                   <Wifi className="h-4 w-4" />
-                  <span className="text-xs">Connected</span>
+                  <span>Connected</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-red-600">
+                <div className="flex items-center gap-1 text-red-600 bg-red-50 px-3 py-1 rounded-full text-xs">
                   <WifiOff className="h-4 w-4" />
-                  <span className="text-xs">Disconnected</span>
+                  <span>Disconnected</span>
                 </div>
               )}
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 text-slate-900">
-          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-2">
+        <CardContent className="space-y-4 text-slate-900 px-6 py-6">
+          <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200">
+            <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-slate-700">Deriv API Status:</span>
-              <Badge variant={isConnected ? "default" : "destructive"}>
+              <Badge variant={isConnected ? "default" : "destructive"} className="rounded-full px-3 py-1">
                 {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
               </Badge>
             </div>
-            {error && <div className="text-xs text-red-600 mt-1">Error: {error}</div>}
-            <div className="flex items-center justify-between mt-2">
+            {error && <div className="text-xs text-red-600 mt-1 bg-red-50 p-2 rounded-lg">Error: {error}</div>}
+            <div className="flex items-center justify-between mt-3">
               <span className="text-sm text-slate-700">Trading Symbol:</span>
               <select
                 value={selectedSymbol}
                 onChange={(e) => setSelectedSymbol(e.target.value)}
-                className="text-xs bg-white border border-slate-300 rounded px-2 py-1 text-slate-900"
+                className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-medium"
               >
                 {VOLATILITY_INDICES.map((market) => (
                   <option key={market.symbol} value={market.symbol}>
@@ -480,60 +483,82 @@ export function EnhancedPredictionModal({
 
           {predictionType === "over_under" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-blue-700 bg-cyan-50 p-3 rounded-lg border border-cyan-200">
-                {getPredictionIcon("over_under")}
+              <div className="flex items-center gap-3 text-sm text-blue-700 bg-cyan-50 p-4 rounded-2xl border border-cyan-200">
+                <div className="flex-shrink-0 w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
+                  {getPredictionIcon("over_under")}
+                </div>
                 <span>
                   {isConnected
                     ? "AI will analyze live Deriv data and predict exact digits with entry points"
                     : "Using fallback analysis - connect to API for optimal results"}
                 </span>
               </div>
-              {renderPredictionOptions()}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                {renderPredictionOptions()}
+              </div>
             </div>
           )}
 
           {predictionType === "matches_differs" && (
             <div className="space-y-4">
-              {renderPredictionOptions()}
+              <div className="flex items-center gap-3 text-sm text-blue-700 bg-cyan-50 p-4 rounded-2xl border border-cyan-200">
+                <div className="flex-shrink-0 w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
+                  {getPredictionIcon("matches_differs")}
+                </div>
+                <span>
+                  AI will analyze Deriv.com data and provide exact digit predictions with entry points
+                </span>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                {renderPredictionOptions()}
+              </div>
             </div>
           )}
 
           {predictionType === "even_odd" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-blue-700 bg-cyan-50 p-3 rounded-lg border border-cyan-200">
-                <Hash className="h-5 w-5" />
+              <div className="flex items-center gap-3 text-sm text-blue-700 bg-cyan-50 p-4 rounded-2xl border border-cyan-200">
+                <div className="flex-shrink-0 w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
+                  <Hash className="h-5 w-5" />
+                </div>
                 <span>
                   {isConnected
                     ? "AI will predict specific even/odd digits with live data entry recommendations"
                     : "Basic analysis available - API connection recommended"}
                 </span>
               </div>
-              {renderPredictionOptions()}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                {renderPredictionOptions()}
+              </div>
             </div>
           )}
 
           {predictionType === "rise_fall" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-blue-700 bg-cyan-50 p-3 rounded-lg border border-cyan-200">
-                <BarChart3 className="h-5 w-5" />
+              <div className="flex items-center gap-3 text-sm text-blue-700 bg-cyan-50 p-4 rounded-2xl border border-cyan-200">
+                <div className="flex-shrink-0 w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5" />
+                </div>
                 <span>
                   {isConnected
                     ? "AI will analyze live price momentum and provide precise entry points"
                     : "Trend analysis available - API recommended for accuracy"}
                 </span>
               </div>
-              {renderPredictionOptions()}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                {renderPredictionOptions()}
+              </div>
             </div>
           )}
 
           {isAnalyzing && (
-            <div className="text-center py-8">
-              <div className="relative inline-flex items-center justify-center mb-4">
+            <div className="text-center py-8 bg-gradient-to-b from-cyan-50 to-white p-6 rounded-2xl border border-cyan-100">
+              <div className="relative inline-flex items-center justify-center mb-6">
                 {/* Animated analysis circle with flowing particles */}
                 <AnimatedAnalysisCircle countdown={countdown} isConnected={isConnected} />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="text-xl font-bold text-foreground">
                   {countdown > 0 ? (
                     <span className="animate-pulse">
@@ -549,31 +574,31 @@ export function EnhancedPredictionModal({
                 </div>
 
                 {/* Animated progress steps */}
-                <div className="flex items-center justify-center gap-2 text-xs text-slate-600 mt-3">
+                <div className="flex flex-col items-center justify-center gap-2 text-xs text-slate-600 mt-4 bg-white p-3 rounded-xl border border-slate-100">
                   {isConnected ? (
-                    <>
-                      <span className={countdown > 11 ? "text-blue-600 font-medium" : ""}>Fetching live data</span>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <span className={countdown > 11 ? "text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full" : ""}>Fetching live data</span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 11 && countdown > 7 ? "text-blue-600 font-medium" : ""}>
+                      <span className={countdown <= 11 && countdown > 7 ? "text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full" : ""}>
                         Pattern analysis
                       </span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 7 && countdown > 3 ? "text-blue-600 font-medium" : ""}>
+                      <span className={countdown <= 7 && countdown > 3 ? "text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full" : ""}>
                         Calculating probabilities
                       </span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 3 ? "text-blue-600 font-medium" : ""}>Generating entry points</span>
-                    </>
+                      <span className={countdown <= 3 ? "text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full" : ""}>Generating entry points</span>
+                    </div>
                   ) : (
-                    <>
-                      <span className={countdown > 9 ? "text-blue-600 font-medium" : ""}>Local analysis</span>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <span className={countdown > 9 ? "text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full" : ""}>Local analysis</span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 9 && countdown > 5 ? "text-blue-600 font-medium" : ""}>
+                      <span className={countdown <= 9 && countdown > 5 ? "text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full" : ""}>
                         Pattern detection
                       </span>
                       <span className="opacity-50">•</span>
-                      <span className={countdown <= 5 ? "text-blue-600 font-medium" : ""}>Probability calculation</span>
-                    </>
+                      <span className={countdown <= 5 ? "text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full" : ""}>Probability calculation</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -581,54 +606,54 @@ export function EnhancedPredictionModal({
           )}
 
           {result && (
-            <div className="bg-blue-50 p-4 rounded-lg space-y-3 border border-blue-200">
+            <div className="bg-blue-50 p-4 rounded-2xl space-y-3 border border-blue-200">
               <div className="space-y-3">
-                <div className="bg-white p-3 rounded space-y-2 border border-slate-200">
-                  <div className="flex items-center justify-between">
+                <div className="bg-white p-4 rounded-xl space-y-3 border border-slate-200">
+                  <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-lg">
                     <strong className="text-slate-900">Entry Point:</strong>
-                    <span className="font-semibold text-blue-600">{result.entryPoints.primary}</span>
+                    <span className="font-bold text-lg text-blue-600 bg-white px-4 py-1 rounded-full">{result.entryPoints.primary}</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-lg">
                     <strong className="text-foreground">Number of Runs:</strong>
-                    <Badge className="bg-primary text-primary-foreground text-lg px-3 py-1">{result.runs}</Badge>
+                    <Badge className="bg-primary text-primary-foreground text-lg px-4 py-1 rounded-full">{result.runs}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg">
                     <strong className="text-foreground">Probability:</strong>
-                    <span className="font-semibold text-lg text-foreground">{result.confidence}%</span>
+                    <span className="font-bold text-lg text-foreground bg-white px-4 py-1 rounded-full">{result.confidence}%</span>
                   </div>
                 </div>
 
-                <div className="text-sm text-muted-foreground bg-background p-3 rounded">
-                  <div className="flex items-center justify-between mb-1">
-                    <span>Market: {result.marketCondition}</span>
+                <div className="text-sm text-muted-foreground bg-background p-4 rounded-xl border border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">Market: {result.marketCondition}</span>
                     <Badge
                       variant="outline"
-                      className={
+                      className={`rounded-full px-3 py-1 ${
                         result.riskLevel === "LOW"
                           ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-700"
                           : result.riskLevel === "MEDIUM"
                             ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700"
                             : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-300 dark:border-red-700"
-                      }
+                      }`}
                     >
                       {result.riskLevel} Risk
                     </Badge>
                   </div>
-                  <div className="text-xs mt-2">{result.entryPoints.timing}</div>
+                  <div className="text-xs mt-2 bg-slate-50 p-2 rounded-lg italic">{result.entryPoints.timing}</div>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex gap-3 pt-4">
             <Button
               onClick={runAnalysis}
               disabled={isAnalyzing}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full py-5 text-base"
             >
               {isAnalyzing ? "Analyzing..." : `Start ${isConnected ? "Live" : "Fallback"} Analysis (15s)`}
             </Button>
-            <Button variant="outline" onClick={onClose} className="flex-1 bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-900">
+            <Button variant="outline" onClick={onClose} className="flex-1 bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-900 font-semibold rounded-full py-5 text-base">
               Close
             </Button>
           </div>
