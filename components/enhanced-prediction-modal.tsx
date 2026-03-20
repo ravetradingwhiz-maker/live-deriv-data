@@ -367,64 +367,63 @@ export function EnhancedPredictionModal({
   }
 
   const renderPredictionOptions = () => {
+    const radioClasses = "space-y-1.5"
+    const itemClasses = "flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+    const labelClasses = "text-sm font-medium text-foreground cursor-pointer"
+
     switch (predictionType) {
       case "over_under":
         return (
-          <RadioGroup value={choice} onValueChange={setChoice}>
-            <div className="flex items-center space-x-2">
+          <RadioGroup value={choice} onValueChange={setChoice} className={radioClasses}>
+            <div className={itemClasses}>
               <RadioGroupItem value="over" id="over" />
-              <Label htmlFor="over">Over</Label>
+              <Label htmlFor="over" className={labelClasses}>Over 4.5</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className={itemClasses}>
               <RadioGroupItem value="under" id="under" />
-              <Label htmlFor="under">Under</Label>
+              <Label htmlFor="under" className={labelClasses}>Under 5</Label>
             </div>
           </RadioGroup>
         )
 
       case "matches_differs":
         return (
-          <div className="space-y-4">
-            <div className="text-sm text-primary bg-muted p-3 rounded-lg">
-              AI will analyze Deriv.com data and provide exact digit predictions with entry points
+          <RadioGroup value={choice} onValueChange={setChoice} className={radioClasses}>
+            <div className={itemClasses}>
+              <RadioGroupItem value="matches" id="matches" />
+              <Label htmlFor="matches" className={labelClasses}>Matches Last</Label>
             </div>
-            <RadioGroup value={choice} onValueChange={setChoice}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="matches" id="matches" />
-                <Label htmlFor="matches">Matches</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="differs" id="differs" />
-                <Label htmlFor="differs">Differs</Label>
-              </div>
-            </RadioGroup>
-          </div>
+            <div className={itemClasses}>
+              <RadioGroupItem value="differs" id="differs" />
+              <Label htmlFor="differs" className={labelClasses}>Differs from Last</Label>
+            </div>
+          </RadioGroup>
         )
 
       case "even_odd":
         return (
-          <RadioGroup value={choice} onValueChange={setChoice}>
-            <div className="flex items-center space-x-2">
+          <RadioGroup value={choice} onValueChange={setChoice} className={radioClasses}>
+            <div className={itemClasses}>
               <RadioGroupItem value="even" id="even" />
-              <Label htmlFor="even">Even</Label>
+              <Label htmlFor="even" className={labelClasses}>Even</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className={itemClasses}>
               <RadioGroupItem value="odd" id="odd" />
-              <Label htmlFor="odd">Odd</Label>
+              <Label htmlFor="odd" className={labelClasses}>Odd</Label>
             </div>
           </RadioGroup>
         )
 
       case "rise_fall":
         return (
-          <RadioGroup value={choice} onValueChange={setChoice}>
-            <div className="flex items-center space-x-2">
+          <RadioGroup value={choice} onValueChange={setChoice} className={radioClasses}>
+            <div className={itemClasses}>
               <RadioGroupItem value="rise" id="rise" />
-              <Label htmlFor="rise">Rise</Label>
+              <Label htmlFor="rise" className={labelClasses}>Rise</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className={itemClasses}>
               <RadioGroupItem value="fall" id="fall" />
-              <Label htmlFor="fall">Fall</Label>
+              <Label htmlFor="fall" className={labelClasses}>Fall</Label>
             </div>
           </RadioGroup>
         )
@@ -432,44 +431,47 @@ export function EnhancedPredictionModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-[520px] max-h-[85vh] overflow-y-auto bg-slate-900 border-slate-700 shadow-2xl rounded-2xl">
-        <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-800 border-b border-slate-700 rounded-t-2xl text-center py-4">
-          <CardTitle className="flex flex-col items-center gap-2 text-white">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center z-50">
+      <Card className="w-[520px] max-h-[80vh] overflow-hidden bg-card border border-border shadow-2xl rounded-lg flex flex-col">
+        {/* Header */}
+        <CardHeader className="border-b border-border bg-muted/30 px-4 py-3 flex-shrink-0">
+          <CardTitle className="flex flex-col items-center gap-1.5 text-card-foreground">
             <div className="flex items-center justify-center gap-2">
-              <Calculator className="h-5 w-5 text-cyan-400" />
-              <span className="text-lg font-bold">AI Prediction</span>
+              <Calculator className="h-5 w-5 text-primary" />
+              <span className="text-base font-bold">AI Prediction Analysis</span>
             </div>
-            <div className="flex items-center justify-center gap-2 mt-1">
-              {isConnected ? (
-                <div className="flex items-center gap-1 text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full text-xs border border-green-500/30">
+            {/* Single, clear status badge */}
+            <div className="flex items-center justify-center">
+              {isConnected && !error ? (
+                <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-950 px-2 py-1 rounded-full border border-green-300 dark:border-green-700">
                   <Wifi className="h-3 w-3" />
-                  <span>Connected</span>
+                  <span>Connected to Deriv</span>
+                </div>
+              ) : error ? (
+                <div className="flex items-center gap-1 text-xs text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950 px-2 py-1 rounded-full border border-red-300 dark:border-red-700">
+                  <WifiOff className="h-3 w-3" />
+                  <span>Using fallback mode</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full text-xs border border-red-500/30">
-                  <WifiOff className="h-3 w-3" />
-                  <span>Disconnected</span>
+                <div className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-1 rounded-full border border-amber-300 dark:border-amber-700">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Connecting...</span>
                 </div>
               )}
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-slate-100 px-4 py-4">
-          <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-300">API Status:</span>
-              <Badge variant={isConnected ? "default" : "destructive"} className="rounded-full px-2 py-0.5 text-xs">
-                {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
-              </Badge>
-            </div>
-            {error && <div className="text-xs text-red-400 mt-1 bg-red-500/10 p-1.5 rounded border border-red-500/30">Error: {error}</div>}
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-slate-300">Symbol:</span>
+
+        {/* Scrollable content area */}
+        <CardContent className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+          {/* Symbol and API Status - Compact Control Panel */}
+          <div className="bg-muted/50 p-2.5 rounded border border-border">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-xs font-medium text-muted-foreground">Market:</span>
               <select
                 value={selectedSymbol}
                 onChange={(e) => setSelectedSymbol(e.target.value)}
-                className="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 text-slate-100"
+                className="text-xs bg-background border border-input rounded px-2 py-1 text-foreground"
               >
                 {VOLATILITY_INDICES.map((market) => (
                   <option key={market.symbol} value={market.symbol}>
@@ -478,125 +480,73 @@ export function EnhancedPredictionModal({
                 ))}
               </select>
             </div>
+            {error && (
+              <div className="text-xs text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950 p-1.5 rounded border border-red-300 dark:border-red-700">
+                {error}
+              </div>
+            )}
           </div>
 
-          {predictionType === "over_under" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
-                  {getPredictionIcon("over_under")}
-                </div>
-                <span className="leading-tight">
-                  {isConnected
-                    ? "AI analyzing Deriv data for predictions"
-                    : "Using fallback analysis"}
-                </span>
+          {/* Prediction Type Options - Unified Section */}
+          <div className="bg-muted/50 p-2.5 rounded border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                {getPredictionIcon(predictionType)}
               </div>
-              <div className="bg-slate-800/50 p-2.5 rounded border border-slate-700">
-                {renderPredictionOptions()}
-              </div>
+              <span className="text-xs font-medium text-foreground">
+                {predictionType === "over_under" && "Over/Under"}
+                {predictionType === "even_odd" && "Even/Odd"}
+                {predictionType === "rise_fall" && "Rise/Fall"}
+                {predictionType === "matches_differs" && "Matches/Differs"}
+              </span>
             </div>
-          )}
-
-          {predictionType === "matches_differs" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
-                  {getPredictionIcon("matches_differs")}
-                </div>
-                <span>
-                  AI will analyze Deriv.com data and provide exact digit predictions with entry points
-                </span>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                {renderPredictionOptions()}
-              </div>
+            <div className="text-xs text-muted-foreground mb-2">
+              {isConnected ? "Live Deriv data analysis" : "Using historical data"}
             </div>
-          )}
-
-          {predictionType === "even_odd" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
-                  <Hash className="h-4 w-4" />
-                </div>
-                <span className="leading-tight">
-                  {isConnected
-                    ? "AI predicting even/odd digits"
-                    : "Fallback analysis active"}
-                </span>
-              </div>
-              <div className="bg-slate-800/50 p-2.5 rounded border border-slate-700">
-                {renderPredictionOptions()}
-              </div>
+            <div className="space-y-1.5">
+              {renderPredictionOptions()}
             </div>
-          )}
-
-          {predictionType === "rise_fall" && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-500/10 p-2.5 rounded border border-cyan-500/30">
-                <div className="flex-shrink-0 w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
-                  <BarChart3 className="h-4 w-4" />
-                </div>
-                <span>
-                  {isConnected
-                    ? "AI will analyze live price momentum and provide precise entry points"
-                    : "Trend analysis available - API recommended for accuracy"}
-                </span>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                {renderPredictionOptions()}
-              </div>
-            </div>
-          )}
+          </div>
 
           {isAnalyzing && (
-            <div className="text-center py-4 bg-slate-800/50 p-4 rounded border border-slate-700">
-              <div className="relative inline-flex items-center justify-center mb-3">
-                {/* Animated analysis circle with flowing particles */}
+            <div className="text-center bg-muted p-3 rounded border border-border space-y-2">
+              <div className="relative inline-flex items-center justify-center h-16">
                 <AnimatedAnalysisCircle countdown={countdown} isConnected={isConnected} />
               </div>
 
-              <div className="space-y-2">
-                <div className="text-sm font-bold text-cyan-300">
-                  {countdown > 0 ? (
-                    <span className="animate-pulse">
-                      {isConnected ? "Analyzing Data" : "Processing Data"}
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Zap className="h-4 w-4 text-cyan-400 animate-pulse" />
-                      Generating Predictions
-                      <Zap className="h-4 w-4 text-cyan-400 animate-pulse" />
-                    </span>
-                  )}
-                </div>
+              <div className="text-sm font-bold text-foreground">
+                {countdown > 0 ? (
+                  <span className="animate-pulse">
+                    {isConnected ? "Analyzing live data..." : "Processing data..."}
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5 text-xs">
+                    <Zap className="h-4 w-4 text-primary animate-pulse" />
+                    Generating predictions
+                    <Zap className="h-4 w-4 text-primary animate-pulse" />
+                  </span>
+                )}
+              </div>
 
-                {/* Animated progress steps */}
-                <div className="flex flex-col items-center justify-center gap-1 text-xs text-slate-400 mt-2">
-                  {isConnected ? (
-                    <div className="flex flex-wrap items-center justify-center gap-1 text-xs">
-                      <span className={countdown > 11 ? "text-cyan-300 font-medium" : "text-slate-500"}>Fetching</span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 11 && countdown > 7 ? "text-cyan-300 font-medium" : "text-slate-500"}>
-                        Analyze
-                      </span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 7 && countdown > 3 ? "text-cyan-300 font-medium" : "text-slate-500"}>
-                        Calculate
-                      </span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 3 ? "text-cyan-300 font-medium" : "text-slate-500"}>Generate</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap items-center justify-center gap-1 text-xs">
-                      <span className={countdown > 9 ? "text-cyan-300 font-medium" : "text-slate-500"}>Analyze</span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 9 && countdown > 5 ? "text-cyan-300 font-medium" : "text-slate-500"}>
-                        Detect
-                      </span>
-                      <span className="opacity-30">•</span>
-                      <span className={countdown <= 5 ? "text-cyan-300 font-medium" : "text-slate-500"}>Compute</span>
+              {/* Progress steps - condensed */}
+              <div className="flex flex-wrap items-center justify-center gap-1 text-xs text-muted-foreground mt-1">
+                {isConnected ? (
+                  <>
+                    <span className={countdown > 11 ? "font-medium text-foreground" : ""}>Fetch</span>
+                    <span>•</span>
+                    <span className={countdown <= 11 && countdown > 7 ? "font-medium text-foreground" : ""}>Analyze</span>
+                    <span>•</span>
+                    <span className={countdown <= 7 && countdown > 3 ? "font-medium text-foreground" : ""}>Calc</span>
+                    <span>•</span>
+                    <span className={countdown <= 3 ? "font-medium text-foreground" : ""}>Gen</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={countdown > 9 ? "font-medium text-foreground" : ""}>Analyze</span>
+                    <span>•</span>
+                    <span className={countdown <= 9 && countdown > 5 ? "font-medium text-foreground" : ""}>Detect</span>
+                    <span>•</span>
+                    <span className={countdown <= 5 ? "font-medium text-foreground" : ""}>Compute</span>
                     </div>
                   )}
                 </div>
@@ -604,58 +554,54 @@ export function EnhancedPredictionModal({
             </div>
           )}
 
+          {/* Results Section */}
           {result && (
-            <div className="bg-slate-800/50 p-3 rounded space-y-2 border border-slate-700">
-              <div className="space-y-2">
-                <div className="bg-slate-700/50 p-2.5 rounded space-y-1.5 border border-slate-600">
-                  <div className="flex items-center justify-between text-xs">
-                    <strong className="text-slate-200">Entry:</strong>
-                    <span className="font-bold text-cyan-400">{result.entryPoints.primary}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <strong className="text-slate-200">Runs:</strong>
-                    <Badge className="bg-cyan-600/60 text-cyan-100 text-xs">{result.runs}</Badge>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <strong className="text-slate-200">Confidence:</strong>
-                    <span className="font-bold text-cyan-400">{result.confidence}%</span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-700/30 p-2 rounded space-y-1 border border-slate-600/50">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300">Market: {result.marketCondition}</span>
-                    <Badge className={`rounded px-1.5 py-0.5 text-xs ${
-                      result.riskLevel === "LOW"
-                        ? "bg-green-600/60 text-green-100"
-                        : result.riskLevel === "MEDIUM"
-                          ? "bg-yellow-600/60 text-yellow-100"
-                          : "bg-red-600/60 text-red-100"
-                    }`}>
-                      {result.riskLevel}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-slate-400 italic">{result.entryPoints.timing}</div>
-                </div>
+            <div className="bg-muted p-2.5 rounded border border-border space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <strong className="text-foreground">Entry Point:</strong>
+                <span className="font-bold text-primary">{result.entryPoints.primary}</span>
               </div>
+              <div className="flex items-center justify-between text-xs">
+                <strong className="text-foreground">Runs:</strong>
+                <Badge variant="secondary" className="text-xs">{result.runs}</Badge>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <strong className="text-foreground">Confidence:</strong>
+                <span className="font-bold text-primary">{result.confidence}%</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-border">
+                <span className="text-muted-foreground">{result.marketCondition}</span>
+                <Badge variant={
+                  result.riskLevel === "LOW" ? "secondary" :
+                  result.riskLevel === "MEDIUM" ? "outline" : "destructive"
+                } className="text-xs">
+                  {result.riskLevel} Risk
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground italic mt-1">{result.entryPoints.timing}</div>
             </div>
           )}
 
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={runAnalysis}
-              disabled={isAnalyzing}
-              className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded py-2 text-sm"
-            >
-              {isAnalyzing ? "Analyzing..." : "Analyze"}
-            </Button>
-            <Button variant="outline" onClick={onClose} className="flex-1 bg-slate-700/50 hover:bg-slate-700 border-slate-600 text-slate-100 font-semibold rounded py-2 text-sm">
-              Close
-            </Button>
-          </div>
+          {/* Action Buttons - Fixed at bottom, no scroll */}
         </CardContent>
+
+        {/* Footer - Fixed buttons */}
+        <div className="border-t border-border bg-muted/30 px-4 py-3 flex gap-2 flex-shrink-0">
+          <Button
+            onClick={runAnalysis}
+            disabled={isAnalyzing}
+            className="flex-1 font-semibold py-2"
+          >
+            {isAnalyzing ? "Analyzing..." : "Start Analysis"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1 font-semibold py-2"
+          >
+            Close
+          </Button>
+        </div>
       </Card>
     </div>
   )
