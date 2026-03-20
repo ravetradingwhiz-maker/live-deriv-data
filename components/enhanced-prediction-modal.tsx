@@ -314,9 +314,23 @@ export function EnhancedPredictionModal({
   }
 
   const runAnalysis = async () => {
+    // Validate prerequisites before starting analysis
+    if (!selectedSymbol || !selectedSymbol.trim()) {
+      console.error("[v0] Cannot start analysis: No market symbol selected")
+      return
+    }
+
+    if (!choice) {
+      console.error("[v0] Cannot start analysis: No prediction choice selected")
+      return
+    }
+
+    // Clear previous results to prevent showing stale data
+    setResult(null)
     setIsAnalyzing(true)
     let seconds = 15
 
+    // Countdown animation during analysis
     while (seconds > 0) {
       setCountdown(seconds)
       await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -324,29 +338,34 @@ export function EnhancedPredictionModal({
     }
 
     try {
+      console.log(`[v0] Starting analysis for ${predictionType} on ${selectedSymbol}...`)
       const analysisResult = await fetchDerivDataAndPredict(predictionType, choice)
       setResult(analysisResult)
       onRunComplete(analysisResult.runs)
+      console.log("[v0] Analysis completed successfully")
     } catch (error) {
       console.error("[v0] Analysis failed:", error)
+      const errorMessage = error instanceof Error ? error.message : "Analysis failed - please try again"
+      
+      // Show error result
       setResult({
         type: choice as any,
         digit: null,
-        confidence: 25,
-        runs: 1,
+        confidence: 0,
+        runs: 0,
         recommendation: "WEAK",
-        analysis: error instanceof Error ? error.message : "Analysis failed - please try again",
+        analysis: errorMessage,
         exactDigit: undefined,
         entryPoints: {
-          primary: "Connection issue detected",
-          secondary: "Please check your internet connection",
-          timing: "Retry when connected",
+          primary: "Analysis Error",
+          secondary: "Please check market selection and try again",
+          timing: "Ready for retry",
         },
-        marketCondition: "Connection Error",
+        marketCondition: "Error",
         riskLevel: "HIGH",
-        expectedOutcome: "Unable to complete analysis",
+        expectedOutcome: "Failed",
       })
-      onRunComplete(1)
+      onRunComplete(0)
     } finally {
       setIsAnalyzing(false)
       setCountdown(0)
