@@ -77,23 +77,26 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
 
       // Draw text columns
       columns.forEach((column) => {
-        // Subtle dark theme - reduced green opacity for premium look
-        ctx.fillStyle = `rgba(34, 197, 94, ${Math.min(column.brightness * opacity * 0.6, 0.5)})`
-        ctx.font = '12px "Courier New", monospace'
+        // Enhanced green matrix effect with better visibility
+        ctx.fillStyle = `rgba(34, 197, 94, ${Math.min(column.brightness * opacity * 1.2, 1)})`
+        ctx.font = 'bold 13px "Courier New", monospace'
         ctx.textAlign = 'left'
-        ctx.letterSpacing = '1px'
+        ctx.letterSpacing = '2px'
 
-        // Draw text fragments without glow for subtlety
+        // Draw text fragments with subtle glow for premium look
         column.text.forEach((text, index) => {
           const textY = column.y + index * 16
           if (textY > canvas.height + 100) {
             // Reset column
             column.y = -column.text.length * 16
-            column.brightness = Math.random() * 0.4 + 0.4
+            column.brightness = Math.random() * 0.6 + 0.5
             column.speed = (Math.random() * 3.5 + 1.5) * 5
           }
-          // No glow - keep it subtle for professional look
+          // Add subtle glow for enhanced visibility
+          ctx.shadowBlur = 4
+          ctx.shadowColor = 'rgba(34, 197, 94, 0.3)'
           ctx.fillText(text, column.x, textY)
+          ctx.shadowBlur = 0
         })
 
         // Move column down with increased speed
