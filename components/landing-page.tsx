@@ -9,6 +9,7 @@ import { FloatingContactButtons } from "@/components/floating-contact-buttons"
 import { SignUpModal } from "@/components/signup-modal"
 import { LoginModal } from "@/components/login-modal"
 import Image from "next/image"
+import Link from "next/link"
 
 interface LandingPageProps {
   onGetStarted: () => void
@@ -507,14 +508,14 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             market.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <a href="https://track.deriv.me/_CNojBBdK_CsUBGj1nD25y2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
+            <Link href="/login">
               <Button
                 size="lg"
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               >
                 Login
               </Button>
-            </a>
+            </Link>
           </div>
           <p className="text-sm text-slate-400 pt-4">Limited resale licenses available — for serious traders only</p>
         </div>
