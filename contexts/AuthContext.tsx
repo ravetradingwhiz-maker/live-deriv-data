@@ -1,9 +1,17 @@
 "use client"
 
-import { createContext, useContext, useState } from "react"
+import React, { createContext, useContext, useState } from "react"
 
-const AuthContext = createContext<any>(null)
+// Define type
+type AuthContextType = {
+  user: any
+  setUser: React.Dispatch<React.SetStateAction<any>>
+}
 
+// Create context
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+// Provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState(null)
 
@@ -14,12 +22,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Hook
 export function useAuth() {
   const context = useContext(AuthContext)
 
-  // 🔥 IMPORTANT: DO NOT THROW ERROR (this was breaking build)
+  // 🔥 SAFE fallback (no crashing build)
   if (!context) {
-    return { user: null, setUser: () => {} }
+    return {
+      user: null,
+      setUser: () => {},
+    }
   }
 
   return context
