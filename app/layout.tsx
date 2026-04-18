@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ContextMenuHandler } from "@/components/context-menu-handler"
 import { MatrixBackground } from "@/components/matrix-background"
 import "./globals.css"
-import { AuthProvider } from "@/context/AuthContext"
+import { AuthProvider } from "@/contexts/AuthContext"
 const geistSans = Geist({ subsets: ["latin"] })
 const geistMono = Geist_Mono({ subsets: ["latin"] })
 
