@@ -2,18 +2,15 @@
 
 import React, { createContext, useContext, useState } from "react"
 
-// Define type
 type AuthContextType = {
   user: any
   setUser: React.Dispatch<React.SetStateAction<any>>
 }
 
-// Create context
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | null>(null)
 
-// Provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<any>(null)
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
@@ -22,11 +19,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-// Hook
 export function useAuth() {
   const context = useContext(AuthContext)
 
-  // 🔥 SAFE fallback (no crashing build)
+  // ✅ DO NOT throw error (prevents build crash)
   if (!context) {
     return {
       user: null,
