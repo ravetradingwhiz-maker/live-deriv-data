@@ -20,9 +20,6 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
-      // Ensure canvas covers entire viewport without scrollbars
-      canvas.style.width = '100vw'
-      canvas.style.height = '100vh'
     }
 
     resizeCanvas()

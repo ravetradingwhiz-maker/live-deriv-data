@@ -28,12 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>{/* Font variables are now applied via CSS custom properties */}</head>
-      <body className="relative w-full h-screen overflow-x-hidden bg-black" style={{ margin: 0, padding: 0 }}>
-        {/* Matrix Background - full viewport cover */}
-        <MatrixBackground intensity="high" opacity={0.15} />
+      <body className="relative w-full min-h-screen overflow-x-hidden bg-black" style={{ margin: 0, padding: 0 }}>
+        {/* Matrix Background - full viewport cover with proper visibility */}
+        <MatrixBackground intensity="high" opacity={0.4} />
         
         {/* Main Application Content - positioned above matrix with proper layering */}
-        <div className="relative z-20 w-full h-full">
+        <div className="relative z-10">
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <DerivConnectionProvider>
               <ContextMenuHandler />
