@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ContextMenuHandler } from "@/components/context-menu-handler"
 import { MatrixBackground } from "@/components/matrix-background"
 import "./globals.css"
-
+import { AuthProvider } from "@/context/AuthContext"
 const geistSans = Geist({ subsets: ["latin"] })
 const geistMono = Geist_Mono({ subsets: ["latin"] })
 
@@ -34,14 +34,15 @@ export default function RootLayout({
         
         {/* Main Application Content - positioned above matrix with proper layering */}
         <div className="relative z-10">
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            <DerivConnectionProvider>
-              <ContextMenuHandler />
-              {children}
-            </DerivConnectionProvider>
-          </ThemeProvider>
-        </div>
-      </body>
-    </html>
-  )
-}
+         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+
+  <AuthProvider>
+
+    <DerivConnectionProvider>
+      <ContextMenuHandler />
+      {children}
+    </DerivConnectionProvider>
+
+  </AuthProvider>
+
+</ThemeProvider>
