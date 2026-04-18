@@ -20,9 +20,6 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
-      // Ensure canvas covers entire viewport without scrollbars
-      canvas.style.width = '100vw'
-      canvas.style.height = '100vh'
     }
 
     resizeCanvas()
@@ -80,31 +77,34 @@ export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBa
 
       // Draw text columns
       columns.forEach((column) => {
-        // Subtle dark theme - reduced green opacity for premium look
-        ctx.fillStyle = `rgba(34, 197, 94, ${Math.min(column.brightness * opacity * 0.6, 0.5)})`
-        ctx.font = '12px "Courier New", monospace'
+        // Bright, vibrant green matrix - maximum visibility
+        ctx.fillStyle = `rgba(0, 255, 100, ${Math.min(column.brightness * opacity * 1.8, 1)})`
+        ctx.font = 'bold 14px "Courier New", monospace'
         ctx.textAlign = 'left'
-        ctx.letterSpacing = '1px'
+        ctx.letterSpacing = '2px'
 
-        // Draw text fragments without glow for subtlety
+        // Draw text fragments with strong glow for premium look
         column.text.forEach((text, index) => {
           const textY = column.y + index * 16
           if (textY > canvas.height + 100) {
             // Reset column
             column.y = -column.text.length * 16
-            column.brightness = Math.random() * 0.4 + 0.4
+            column.brightness = Math.random() * 0.7 + 0.6
             column.speed = (Math.random() * 3.5 + 1.5) * 5
           }
-          // No glow - keep it subtle for professional look
+          // Add strong glow for enhanced visibility and premium feel
+          ctx.shadowBlur = 12
+          ctx.shadowColor = 'rgba(0, 255, 100, 0.6)'
           ctx.fillText(text, column.x, textY)
+          ctx.shadowBlur = 0
         })
 
         // Move column down with increased speed
         column.y += column.speed
 
         // Random brightness flicker for authenticity
-        if (Math.random() > 0.95) {
-          column.brightness = Math.random() * 0.4 + 0.4
+        if (Math.random() > 0.92) {
+          column.brightness = Math.random() * 0.5 + 0.5
         }
       })
 
