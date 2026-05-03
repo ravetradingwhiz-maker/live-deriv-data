@@ -16,7 +16,7 @@ type AuthContextType = {
 const STORAGE_KEY = "livederiv.auth.user"
 
 const ACCESS_CODE_USERS: Record<string, User> = {
-  minangedwa: {
+  rave_fx: {
     id: "u-admin-1",
     username: "minangedwa",
     email: "minangedwa@livederivdataanalysis.com",
