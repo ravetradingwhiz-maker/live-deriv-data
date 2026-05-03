@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AuthProvider, useAuth } from "@/contexts/auth-context"
+import { AuthProvider, useAuth } from "@/contexts/AuthContext"
 import { LoginModal } from "@/components/login-modal"
 import { LandingPage } from "@/components/landing-page"
 import TradingDashboard from "../trading-dashboard"

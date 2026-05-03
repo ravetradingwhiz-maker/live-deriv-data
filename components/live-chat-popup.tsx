@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { X, Send, Home, MessageSquare, ExternalLink, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/AuthContext"
 import { cn } from "@/lib/utils"
 
 interface Message {

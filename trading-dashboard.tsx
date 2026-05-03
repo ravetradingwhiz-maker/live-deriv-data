@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDerivWebSocket } from "@/hooks/use-deriv-websocket"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/AuthContext"
 import { EnhancedPredictionModal } from "@/components/enhanced-prediction-modal"
 import { PredictionButtons } from "@/components/prediction-buttons"
 import { DashboardHeader } from "@/components/dashboard-header"
