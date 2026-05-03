@@ -12,7 +12,7 @@ import { EnhancedPredictionModal } from "@/components/enhanced-prediction-modal"
 import { PredictionButtons } from "@/components/prediction-buttons"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { FloatingContactButtons } from "@/components/floating-contact-buttons"
-import { TrendingUp, TrendingDown, Wifi, WifiOff, Lock, RefreshCw } from "lucide-react"
+import { TrendingUp, TrendingDown, Wifi, WifiOff, Lock, RefreshCw, LineChart, CandlestickChart as CandlestickIcon, FlaskConical } from "lucide-react"
 import { CandlestickChart } from "@/components/candlestick-chart"
 import { PriceAnalysis } from "@/components/price-analysis"
 import { TechnicalIndicators } from "@/components/technical-indicators"
@@ -72,24 +72,27 @@ export default function TradingDashboard() {
 
       <div className="max-w-6xl mx-auto p-4 space-y-4">
         <Tabs defaultValue="analysis" className="w-full">
-          <TabsList className="flex gap-3 bg-transparent justify-center py-4">
+          <TabsList className="mx-auto flex h-auto w-full max-w-2xl items-center justify-center gap-2 rounded-2xl border border-cyan-500/20 bg-slate-900/70 p-2 shadow-[0_0_24px_rgba(0,217,217,0.08)] backdrop-blur-md">
             <TabsTrigger
               value="analysis"
-              className="rounded-full px-6 py-2 font-medium transition-all duration-200 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg"
+              className="group flex min-w-[140px] items-center justify-center gap-2 rounded-xl border border-transparent px-4 py-2.5 font-semibold tracking-wide text-slate-300 transition-all duration-200 hover:border-cyan-400/30 hover:bg-slate-800/80 hover:text-white data-[state=active]:border-cyan-300/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/90 data-[state=active]:to-blue-500/90 data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_rgba(14,165,233,0.35)]"
             >
+              <LineChart className="h-4 w-4" />
               Analysis
             </TabsTrigger>
             <TabsTrigger
               value="trading"
-              className="rounded-full px-6 py-2 font-medium transition-all duration-200 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg"
+              className="group flex min-w-[140px] items-center justify-center gap-2 rounded-xl border border-transparent px-4 py-2.5 font-semibold tracking-wide text-slate-300 transition-all duration-200 hover:border-cyan-400/30 hover:bg-slate-800/80 hover:text-white data-[state=active]:border-cyan-300/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/90 data-[state=active]:to-blue-500/90 data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_rgba(14,165,233,0.35)]"
             >
+              <CandlestickIcon className="h-4 w-4" />
               Trading
             </TabsTrigger>
             <TabsTrigger
               value="backtesting"
               disabled={!canBacktest}
-              className="rounded-full px-6 py-2 font-medium transition-all duration-200 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              className="group flex min-w-[140px] items-center justify-center gap-2 rounded-xl border border-transparent px-4 py-2.5 font-semibold tracking-wide text-slate-300 transition-all duration-200 hover:border-cyan-400/30 hover:bg-slate-800/80 hover:text-white data-[state=active]:border-cyan-300/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/90 data-[state=active]:to-blue-500/90 data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_rgba(14,165,233,0.35)] disabled:cursor-not-allowed disabled:opacity-45"
             >
+              <FlaskConical className="h-4 w-4" />
               Backtesting {!canBacktest && <Lock className="h-3 w-3 ml-1" />}
             </TabsTrigger>
           </TabsList>

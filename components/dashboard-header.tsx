@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/AuthContext"
-import { User, LogOut, Crown, Eye, Download, TrendingUp } from "lucide-react"
+import { User, LogOut, Crown, Eye, Download, TrendingUp, ChevronDown } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
@@ -79,13 +79,16 @@ export function DashboardHeader() {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-3 hover:bg-accent">
+                <Button
+                  variant="ghost"
+                  className="h-11 px-3 flex items-center gap-3 rounded-xl hover:bg-accent/70 data-[state=open]:bg-accent"
+                >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="text-left hidden md:block">
+                  <div className="hidden md:flex flex-col items-start justify-center leading-tight">
                     <div className="text-sm font-medium text-foreground">{user.username}</div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
@@ -99,16 +102,31 @@ export function DashboardHeader() {
                       </Badge>
                     </div>
                   </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-64 rounded-xl p-2">
                 <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
+                  <div className="flex flex-col items-center justify-center space-y-1 py-1">
+                    <Avatar className="h-10 w-10 mb-1">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {user.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <p className="text-sm font-medium">{user.username}</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        <span className="flex items-center gap-1">
+                          {getRoleIcon(user.role)}
+                          <span>{user.role}</span>
+                        </span>
+                      </Badge>
+                      <Badge className={`text-xs ${getSubscriptionColor(user.subscription)}`}>VIP User</Badge>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive">
+                <DropdownMenuItem onClick={logout} className="text-destructive justify-center rounded-md">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>

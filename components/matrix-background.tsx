@@ -1,136 +1,142 @@
-'use client'
+"use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from "react"
 
 interface MatrixBackgroundProps {
-  intensity?: 'low' | 'medium' | 'high'
+  intensity?: "low" | "medium" | "high"
   opacity?: number
 }
 
-export function MatrixBackground({ intensity = 'low', opacity = 0.08 }: MatrixBackgroundProps) {
+interface RainColumn {
+  y: number
+  speed: number
+  length: number
+  flicker: number
+}
+
+const MATRIX_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%\"'#&_(),.;:?!\\|{}<>[]ァィゥェォカキクケコサシスセソタチツテトナニヌネノ"
+
+export function MatrixBackground({ intensity = "medium", opacity = 0.2 }: MatrixBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext("2d")
     if (!ctx) return
 
+    let animationFrame = 0
+    let lastFrameTime = 0
+    let drops: RainColumn[] = []
+    let columnsCount = 0
+    let width = 0
+    let height = 0
+
+    const baseFontSize = intensity === "low" ? 13 : intensity === "high" ? 15 : 14
+    const spacingMultiplier = intensity === "low" ? 1.45 : intensity === "high" ? 1.2 : 1.3
+    const targetFps = intensity === "high" ? 50 : 42
+    const frameDuration = 1000 / targetFps
+
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      width = window.innerWidth
+      height = window.innerHeight
+
+      canvas.width = Math.floor(width * dpr)
+      canvas.height = Math.floor(height * dpr)
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.textBaseline = "top"
+      ctx.font = `${baseFontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace`
+
+      const colWidth = Math.floor(baseFontSize * spacingMultiplier)
+      columnsCount = Math.ceil(width / colWidth)
+
+      drops = Array.from({ length: columnsCount }, () => ({
+        y: Math.random() * -height,
+        speed: (intensity === "low" ? 2.8 : intensity === "high" ? 5.4 : 4.2) + Math.random() * 2.2,
+        length: (intensity === "low" ? 10 : intensity === "high" ? 22 : 16) + Math.floor(Math.random() * 10),
+        flicker: 0.85 + Math.random() * 0.35,
+      }))
+    }
+
+    const drawFrame = (time: number) => {
+      if (time - lastFrameTime < frameDuration) {
+        animationFrame = requestAnimationFrame(drawFrame)
+        return
+      }
+      lastFrameTime = time
+
+      ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.16 + (1 - opacity) * 0.18, 0.36)})`
+      ctx.fillRect(0, 0, width, height)
+
+      const colWidth = Math.floor(baseFontSize * spacingMultiplier)
+
+      for (let i = 0; i < columnsCount; i++) {
+        const col = drops[i]
+        const x = i * colWidth
+
+        for (let j = 0; j < col.length; j++) {
+          const y = col.y - j * (baseFontSize + 1)
+          if (y < -baseFontSize || y > height + baseFontSize) continue
+
+          const char = MATRIX_CHARS[(Math.random() * MATRIX_CHARS.length) | 0]
+          const tailFactor = 1 - j / col.length
+          const alpha = Math.max(0.05, tailFactor * opacity * col.flicker)
+
+          if (j === 0) {
+            ctx.fillStyle = `rgba(210, 255, 225, ${Math.min(0.95, alpha + 0.25)})`
+            ctx.shadowBlur = 8
+            ctx.shadowColor = "rgba(90, 255, 160, 0.5)"
+          } else {
+            ctx.fillStyle = `rgba(34, 240, 120, ${alpha})`
+            ctx.shadowBlur = 0
+          }
+
+          ctx.fillText(char, x, y)
+        }
+
+        col.y += col.speed
+
+        if (Math.random() > 0.99) {
+          col.flicker = 0.75 + Math.random() * 0.45
+        }
+
+        if (col.y - col.length * (baseFontSize + 1) > height) {
+          col.y = -Math.random() * 180
+          col.speed = (intensity === "low" ? 2.8 : intensity === "high" ? 5.4 : 4.2) + Math.random() * 2.2
+          col.length = (intensity === "low" ? 10 : intensity === "high" ? 22 : 16) + Math.floor(Math.random() * 10)
+        }
+      }
+
+      ctx.shadowBlur = 0
+      animationFrame = requestAnimationFrame(drawFrame)
     }
 
     resizeCanvas()
+    animationFrame = requestAnimationFrame(drawFrame)
 
-    // Technical text strings - realistic error logs and system messages
-    const textFragments = [
-      '[INFO]', '[WARNING]', '[ERROR]', '[SUCCESS]', '[DEBUG]', '[CRITICAL]',
-      'Connecting to server...', 'Connection timeout', 'Data transmitted',
-      'Authentication failed', 'API key validated', 'Encryption enabled',
-      'Market volatility detected', 'High masked volatility', 'Analyzing signals',
-      'Fetching market data', 'Processing stream', 'Computing results',
-      'Data transmission complete', 'Stream established', 'Security enabled',
-      'Unstable connection detected', 'Retrying...', 'Signal processing',
-      'Predicting next digit', 'Compiling results', 'Backtesting tools',
-      'Real-time data', 'Advanced analytics', 'Professional trading',
-      '[OK]', '[FAILED]', 'Connection detected', 'Streaming data',
-      'Signal Scanner', 'QuantumSyn', 'Trading Platform',
-      'Deriv Connection', 'Live Update', 'Data Analysis',
-      'Socket connected', 'Receiving stream', 'Processing tick',
-    ]
+    const onResize = () => resizeCanvas()
+    window.addEventListener("resize", onResize)
 
-    interface Column {
-      x: number
-      y: number
-      speed: number
-      text: string[]
-      brightness: number
+    return () => {
+      window.removeEventListener("resize", onResize)
+      cancelAnimationFrame(animationFrame)
     }
-
-    const columnCount = intensity === 'low' ? Math.floor(canvas.width / 60) :
-      intensity === 'high' ? Math.floor(canvas.width / 40) :
-      Math.floor(canvas.width / 50)
-
-    const columns: Column[] = []
-
-    // Initialize columns with random text fragments
-    for (let i = 0; i < columnCount; i++) {
-      const randomFragments = Array.from(
-        { length: Math.floor(Math.random() * 25) + 20 },
-        () => textFragments[Math.floor(Math.random() * textFragments.length)]
-      )
-      columns.push({
-        x: i * (canvas.width / columnCount),
-        y: Math.random() * canvas.height,
-        speed: (Math.random() * 3.5 + 1.5) * 5,
-        text: randomFragments,
-        brightness: Math.random() * 0.5 + 0.7,
-      })
-    }
-
-    const animate = () => {
-      // Dark background with slight transparency for trail effect
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.98)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      // Draw text columns
-      columns.forEach((column) => {
-        // Bright, vibrant green matrix - maximum visibility
-        ctx.fillStyle = `rgba(0, 255, 100, ${Math.min(column.brightness * opacity * 1.8, 1)})`
-        ctx.font = 'bold 14px "Courier New", monospace'
-        ctx.textAlign = 'left'
-        ctx.letterSpacing = '2px'
-
-        // Draw text fragments with strong glow for premium look
-        column.text.forEach((text, index) => {
-          const textY = column.y + index * 16
-          if (textY > canvas.height + 100) {
-            // Reset column
-            column.y = -column.text.length * 16
-            column.brightness = Math.random() * 0.7 + 0.6
-            column.speed = (Math.random() * 3.5 + 1.5) * 5
-          }
-          // Add strong glow for enhanced visibility and premium feel
-          ctx.shadowBlur = 12
-          ctx.shadowColor = 'rgba(0, 255, 100, 0.6)'
-          ctx.fillText(text, column.x, textY)
-          ctx.shadowBlur = 0
-        })
-
-        // Move column down with increased speed
-        column.y += column.speed
-
-        // Random brightness flicker for authenticity
-        if (Math.random() > 0.92) {
-          column.brightness = Math.random() * 0.5 + 0.5
-        }
-      })
-
-      requestAnimationFrame(animate)
-    }
-
-    animate()
-
-    const handleResize = () => {
-      resizeCanvas()
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
   }, [intensity, opacity])
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed top-0 left-0 w-screen h-screen pointer-events-none z-0"
-      style={{ 
-        background: '#000000',
-        display: 'block',
-        margin: 0,
-        padding: 0
+      className="fixed inset-0 pointer-events-none z-0"
+      style={{
+        background: "radial-gradient(120% 80% at 50% 0%, #03120a 0%, #010302 45%, #000000 100%)",
+        display: "block",
       }}
+      aria-hidden="true"
     />
   )
 }

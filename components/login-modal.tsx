@@ -19,11 +19,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         onClick={onClose}
       />
 
-      {/* Modal Container - Circular with enhanced styling */}
-      <div className="relative w-[520px] h-[520px] bg-gradient-to-br from-slate-950 via-slate-800 to-slate-900 rounded-full shadow-2xl border-2 border-blue-500/30 overflow-hidden flex items-center justify-center group hover:border-blue-500/50 transition-all duration-300">
-        
-        {/* Circular glow effect */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-600/10 via-transparent to-cyan-600/10 pointer-events-none" />
+      {/* Modal Container */}
+      <div className="relative w-full max-w-xl bg-gradient-to-br from-slate-950 via-slate-800 to-slate-900 rounded-2xl shadow-2xl border border-blue-500/30 overflow-hidden group hover:border-blue-500/50 transition-all duration-300">
+        {/* Subtle panel glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-cyan-600/10 pointer-events-none" />
         
         {/* Close Button */}
         <button
@@ -34,7 +33,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </button>
 
         {/* Login Form - Scrollable Content */}
-        <div className="relative w-full h-full overflow-y-auto pt-12 px-10 pb-10 flex flex-col items-center justify-center">
+        <div className="relative w-full max-h-[85vh] overflow-y-auto pt-12 px-6 sm:px-10 pb-8">
           <LoginForm onBackClick={onClose} />
         </div>
       </div>

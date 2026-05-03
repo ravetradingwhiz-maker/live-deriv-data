@@ -7,9 +7,7 @@ import { TrendingUp, BarChart3, Brain, Bell, CheckCircle2, Target, Gauge, Star }
 import { TermsConditionsModal } from "@/components/terms-conditions-modal"
 import { FloatingContactButtons } from "@/components/floating-contact-buttons"
 import { SignUpModal } from "@/components/signup-modal"
-import { LoginModal } from "@/components/login-modal"
 import Image from "next/image"
-import Link from "next/link"
 
 interface LandingPageProps {
   onGetStarted: () => void
@@ -103,7 +101,6 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   const [scrolled, setScrolled] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
-  const [showLoginModal, setShowLoginModal] = useState(false)
   const [scrollPosition, setScrollPosition] = useState(0)
 
   useEffect(() => {
@@ -231,7 +228,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 </div>
               </div>
 
-              <div className="md:hidden">
+              <div className="md:hidden flex items-center gap-2">
+                <Button
+                  onClick={onGetStarted}
+                  className="bg-slate-700 hover:bg-slate-600 text-white shadow-lg shadow-slate-800/30 rounded-full px-5 py-2 text-xs font-bold"
+                >
+                  Login
+                </Button>
                 <a href="https://track.deriv.com/_CNojBBdK_Cu6tyDIijdDK2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
                   <Button
                     className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-5 py-2 text-xs font-bold"
@@ -242,7 +245,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               </div>
             </div>
 
-            <div className="hidden md:block">
+            <div className="hidden md:flex items-center gap-3">
+              <Button
+                onClick={onGetStarted}
+                className="bg-slate-700 hover:bg-slate-600 text-white shadow-lg shadow-slate-800/30 rounded-full px-8 py-2.5 font-bold transition-all hover:scale-105 active:scale-95"
+              >
+                Login
+              </Button>
               <a href="https://track.deriv.com/_CNojBBdK_Cu6tyDIijdDK2Nd7ZgqdRLk/1/" target="_blank" rel="noopener noreferrer">
                 <Button
                   className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 rounded-full px-8 py-2.5 font-bold transition-all hover:scale-105 active:scale-95"
@@ -269,7 +278,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             precision and profitability on Deriv.com
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" onClick={() => setShowLoginModal(true)} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
+            <Button size="lg" onClick={onGetStarted} className="bg-blue-600 hover:bg-blue-700 flex-shrink-0">
               Start Trading Now
             </Button>
           </div>
@@ -508,14 +517,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             market.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Link href="/login">
-              <Button
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-              >
-                Login
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              onClick={onGetStarted}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+            >
+              Login
+            </Button>
           </div>
           <p className="text-sm text-slate-400 pt-4">Limited resale licenses available — for serious traders only</p>
         </div>
@@ -683,7 +691,6 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* Terms and Conditions Modal */}
       <TermsConditionsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
       <FloatingContactButtons />
     </div>
