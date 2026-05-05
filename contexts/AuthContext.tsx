@@ -26,26 +26,6 @@ const ACCESS_CODE_USERS: Record<string, User> = {
     lastLogin: new Date().toISOString(),
     permissions: ["all", "trade", "backtest", "manage", "export"],
   },
-  premium123: {
-    id: "u-trader-1",
-    username: "premium_trader",
-    email: "premium@livederivdataanalysis.com",
-    role: "trader",
-    subscription: "premium",
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    permissions: ["trade", "backtest", "export"],
-  },
-  demo: {
-    id: "u-viewer-1",
-    username: "demo_user",
-    email: "demo@livederivdataanalysis.com",
-    role: "viewer",
-    subscription: "free",
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    permissions: ["view"],
-  },
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)

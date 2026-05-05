@@ -193,11 +193,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-black/20">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav
         className={`fixed top-0 w-full z-40 transition-all duration-300 ${
-          scrolled ? "bg-slate-900/90 backdrop-blur-md border-b border-slate-700/50" : "bg-transparent"
+          scrolled
+            ? "bg-white dark:bg-slate-900 border-b border-slate-300 dark:border-slate-700 shadow-sm"
+            : "bg-white dark:bg-slate-900 border-b border-slate-300 dark:border-slate-700"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -268,7 +270,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       <section className="pt-32 pb-20 px-4 text-center">
         <div className="max-w-4xl mx-auto space-y-6">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-            Trade Smarter.{" "}
+            <span className="inline-block bg-white dark:bg-transparent text-black dark:text-foreground px-2 rounded">
+              Trade Smarter.
+            </span>{" "}
             <span className="text-blue-400 font-bold">
               Win Consistently.
             </span>

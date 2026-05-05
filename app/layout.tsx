@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${geistSans.className} ${geistMono.className} dark`}>
+    <html lang="en" suppressHydrationWarning className={`${geistSans.className} ${geistMono.className}`}>
       <head>{/* Font variables are now applied via CSS custom properties */}</head>
       <body className="relative w-full min-h-screen overflow-x-hidden" style={{ margin: 0, padding: 0 }}>
         {/* Matrix Background - full viewport cover with enhanced visibility */}
@@ -35,7 +35,7 @@ export default function RootLayout({
 
         {/* Main Application Content - positioned above matrix with proper layering */}
         <div className="relative z-10">
-          <ThemeProvider attribute="class" forcedTheme="dark" disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
             <AuthProvider>
               <DerivConnectionProvider>
                 <ContextMenuHandler />

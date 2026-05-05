@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/AuthContext"
 import { User, LogOut, Crown, Eye, Download, TrendingUp, ChevronDown } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
 export function DashboardHeader() {
@@ -46,7 +47,7 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="bg-card border-b border-border backdrop-blur-sm">
+    <header className="bg-white dark:bg-black border-b border-border">
       <div className="max-w-6xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo and Title */}
@@ -62,6 +63,8 @@ export function DashboardHeader() {
 
           {/* User Info and Actions */}
           <div className="flex items-center gap-4">
+            <ThemeToggle />
+
             {/* Download Guide */}
             <Button
               variant="ghost"
@@ -98,7 +101,7 @@ export function DashboardHeader() {
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 rounded-xl p-2">
+              <DropdownMenuContent align="end" className="w-64 rounded-xl p-2 bg-white dark:bg-black">
                 <DropdownMenuLabel>
                   <div className="flex flex-col items-center justify-center space-y-1 py-1">
                     <Avatar className="h-10 w-10 mb-1">

@@ -118,7 +118,7 @@ export default function TradingDashboard() {
   const accumulatorRisk = accumulatorSafetyRaw > 0.68 ? "LOW" : accumulatorSafetyRaw > 0.48 ? "MEDIUM" : "HIGH"
 
   return (
-    <div className="min-h-screen bg-black relative">
+    <div className="min-h-screen bg-white dark:bg-black relative">
       {/* Matrix Background */}
       <MatrixBackground intensity={0.5} opacity={0.3} />
       
@@ -128,18 +128,18 @@ export default function TradingDashboard() {
 
       <div className="max-w-7xl mx-auto p-4 space-y-6">
         {/* Market Selection and Status */}
-        <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+        <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl font-bold text-cyan-400">Live Market Analysis</CardTitle>
+              <CardTitle className="text-2xl font-bold text-black dark:text-cyan-400">Live Market Analysis</CardTitle>
               <div className="flex items-center gap-3">
                 {!hasRealTimeData && (
-                  <Badge variant="outline" className={`text-xs ${isMinangedwaUser ? "text-green-500" : "text-yellow-500"}`}>
+                  <Badge variant="outline" className={`text-xs ${isMinangedwaUser ? "text-red-500 dark:text-green-500" : "text-yellow-500"}`}>
                     {accessLevel}
                   </Badge>
                 )}
                 {isConnected ? (
-                  <div className="flex items-center gap-2 text-lime-400">
+                  <div className="flex items-center gap-2 text-red-500 dark:text-lime-400">
                     <Wifi className="h-5 w-5" />
                     <span className="text-sm font-medium">Connected</span>
                   </div>
@@ -150,7 +150,7 @@ export default function TradingDashboard() {
                   </div>
                 )}
                 {!isConnected && connectionAttempts > 0 && (
-                  <Button size="sm" variant="ghost" onClick={reconnect} className="text-xs text-cyan-400 hover:text-cyan-300">
+                  <Button size="sm" variant="ghost" onClick={reconnect} className="text-xs text-black dark:text-cyan-400 hover:text-black dark:hover:text-cyan-300">
                     <RefreshCw className="h-4 w-4 mr-1" />
                     Retry
                   </Button>
@@ -162,14 +162,14 @@ export default function TradingDashboard() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm mb-2 block text-cyan-400">Market Symbol (Auto-connected)</label>
+                <label className="text-sm mb-2 block text-black dark:text-cyan-400">Market Symbol (Auto-connected)</label>
                 <Select value={selectedMarket} onValueChange={(val) => { setSelectedMarket(val); subscribeTicks(val); }}>
-                  <SelectTrigger className="bg-black border-2 border-cyan-500/50 text-cyan-400">
+                  <SelectTrigger className="bg-white dark:bg-black border-2 border-cyan-500/50 text-black dark:text-cyan-400">
                     <SelectValue placeholder="-- choose market --" />
                   </SelectTrigger>
-                  <SelectContent className="bg-black border-2 border-cyan-500">
+                  <SelectContent className="bg-white dark:bg-black border-2 border-cyan-500">
                     {markets.map((market) => (
-                      <SelectItem key={market.symbol} value={market.symbol} className="text-cyan-400">
+                      <SelectItem key={market.symbol} value={market.symbol} className="text-black dark:text-cyan-400">
                         {market.display_name} ({market.symbol})
                       </SelectItem>
                     ))}
@@ -178,30 +178,30 @@ export default function TradingDashboard() {
               </div>
 
               {lastTick && (
-                <div className="bg-black border-2 border-lime-500 p-4 rounded-lg">
+                <div className="bg-white dark:bg-black border-2 border-lime-500 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-cyan-400">Last Digit:</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Last Digit:</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-3xl font-bold text-lime-400">{lastTick.digit}</span>
+                      <span className="text-3xl font-bold text-red-500 dark:text-lime-400">{lastTick.digit}</span>
                       {lastTick.digit > 4 ? (
-                        <TrendingUp className="h-5 w-5 text-lime-400" />
+                        <TrendingUp className="h-5 w-5 text-red-500 dark:text-lime-400" />
                       ) : (
                         <TrendingDown className="h-5 w-5 text-red-400" />
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-cyan-400">Quote: {lastTick.quote.toFixed(5)}</div>
-                  <div className="text-xs text-cyan-400">
+                  <div className="text-xs text-black dark:text-cyan-400">Quote: {lastTick.quote.toFixed(5)}</div>
+                  <div className="text-xs text-black dark:text-cyan-400">
                     {lastTick.digit % 2 === 0 ? "Even" : "Odd"} | {lastTick.digit > 4 ? "Over" : "Under"} 4.5
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="flex gap-4 text-xs text-cyan-400">
-              <div>Status: <span className="text-lime-400">{status}</span></div>
-              <div>Buffer: <span className="text-lime-400">{ticksBuffer.length} ticks</span></div>
-              <div>Plan: <span className="text-lime-400">{user?.subscription}</span></div>
+            <div className="flex gap-4 text-xs text-black dark:text-cyan-400">
+              <div>Status: <span className="text-red-500 dark:text-lime-400">{status}</span></div>
+              <div>Buffer: <span className="text-red-500 dark:text-lime-400">{ticksBuffer.length} ticks</span></div>
+              <div>Plan: <span className="text-red-500 dark:text-lime-400">{user?.subscription}</span></div>
             </div>
           </CardContent>
         </Card>
@@ -209,9 +209,9 @@ export default function TradingDashboard() {
         {/* Contract Type Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Over/Under Card */}
-          <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+          <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-black dark:text-cyan-400">
                 <TrendingUp className="h-5 w-5" />
                 Over / Under
               </CardTitle>
@@ -220,18 +220,18 @@ export default function TradingDashboard() {
               {enoughDataForAdvanced ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Signal</span>
-                    <Badge variant="outline" className="text-lime-400 border-lime-500">
+                    <span className="text-sm text-black dark:text-cyan-400">Signal</span>
+                    <Badge variant="outline" className="text-red-500 dark:text-lime-400 border-lime-500">
                       {ticksBuffer.filter((d) => d > 4).length > ticksBuffer.length / 2 ? "Over" : "Under"}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Over Count</span>
-                    <span className="font-semibold text-lime-400">{ticksBuffer.filter((d) => d > 4).length}</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Over Count</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{ticksBuffer.filter((d) => d > 4).length}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Under Count</span>
-                    <span className="font-semibold text-lime-400">{ticksBuffer.filter((d) => d <= 4).length}</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Under Count</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{ticksBuffer.filter((d) => d <= 4).length}</span>
                   </div>
                   <Button 
                     onClick={() => handleOpenPrediction("over_under")}
@@ -248,9 +248,9 @@ export default function TradingDashboard() {
           </Card>
 
           {/* Matches/Differs Card */}
-          <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+          <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-black dark:text-cyan-400">
                 <Target className="h-5 w-5" />
                 Matches / Differs
               </CardTitle>
@@ -259,20 +259,20 @@ export default function TradingDashboard() {
               {enoughDataForAdvanced && lastTick ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Last Digit</span>
-                    <Badge variant="outline" className="text-lime-400 border-lime-500 text-lg">
+                    <span className="text-sm text-black dark:text-cyan-400">Last Digit</span>
+                    <Badge variant="outline" className="text-red-500 dark:text-lime-400 border-lime-500 text-lg">
                       {lastTick.digit}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Frequency</span>
-                    <span className="font-semibold text-lime-400">
+                    <span className="text-sm text-black dark:text-cyan-400">Frequency</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">
                       {((ticksBuffer.filter((d) => d === lastTick.digit).length / ticksBuffer.length) * 100).toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Pattern</span>
-                    <span className="text-xs text-lime-400">
+                    <span className="text-sm text-black dark:text-cyan-400">Pattern</span>
+                    <span className="text-xs text-red-500 dark:text-lime-400">
                       {ticksBuffer.filter((d) => d === lastTick.digit).length > 3 ? "Repeating" : "Scattered"}
                     </span>
                   </div>
@@ -291,9 +291,9 @@ export default function TradingDashboard() {
           </Card>
 
           {/* Even/Odd Card */}
-          <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+          <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-black dark:text-cyan-400">
                 <Hash className="h-5 w-5" />
                 Even / Odd
               </CardTitle>
@@ -302,18 +302,18 @@ export default function TradingDashboard() {
               {enoughDataForAdvanced ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Signal</span>
-                    <Badge variant="outline" className="text-lime-400 border-lime-500">
+                    <span className="text-sm text-black dark:text-cyan-400">Signal</span>
+                    <Badge variant="outline" className="text-red-500 dark:text-lime-400 border-lime-500">
                       {ticksBuffer.filter((d) => d % 2 === 0).length > ticksBuffer.length / 2 ? "Even" : "Odd"}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Even Count</span>
-                    <span className="font-semibold text-lime-400">{ticksBuffer.filter((d) => d % 2 === 0).length}</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Even Count</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{ticksBuffer.filter((d) => d % 2 === 0).length}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Odd Count</span>
-                    <span className="font-semibold text-lime-400">{ticksBuffer.filter((d) => d % 2 !== 0).length}</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Odd Count</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{ticksBuffer.filter((d) => d % 2 !== 0).length}</span>
                   </div>
                   <Button 
                     onClick={() => handleOpenPrediction("even_odd")}
@@ -330,9 +330,9 @@ export default function TradingDashboard() {
           </Card>
 
           {/* Rise/Fall Card */}
-          <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+          <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-black dark:text-cyan-400">
                 <BarChart3 className="h-5 w-5" />
                 Rise / Fall
               </CardTitle>
@@ -341,20 +341,20 @@ export default function TradingDashboard() {
               {enoughDataForAdvanced ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Trend</span>
-                    <Badge variant="outline" className={momentumPct >= 0 ? "text-lime-400 border-lime-500" : "text-red-400 border-red-500"}>
+                    <span className="text-sm text-black dark:text-cyan-400">Trend</span>
+                    <Badge variant="outline" className={momentumPct >= 0 ? "text-red-500 dark:text-lime-400 border-lime-500" : "text-red-400 border-red-500"}>
                       {momentumPct >= 0 ? "Rise" : "Fall"}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Momentum</span>
-                    <span className={`font-semibold ${momentumPct >= 0 ? "text-lime-400" : "text-red-400"}`}>
+                    <span className="text-sm text-black dark:text-cyan-400">Momentum</span>
+                    <span className={`font-semibold ${momentumPct >= 0 ? "text-red-500 dark:text-lime-400" : "text-red-400"}`}>
                       {momentumPct >= 0 ? "+" : ""}{momentumPct.toFixed(2)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Strength</span>
-                    <span className="text-xs text-lime-400">
+                    <span className="text-sm text-black dark:text-cyan-400">Strength</span>
+                    <span className="text-xs text-red-500 dark:text-lime-400">
                       {Math.abs(momentumPct) > 0.5 ? "Strong" : "Weak"}
                     </span>
                   </div>
@@ -373,9 +373,9 @@ export default function TradingDashboard() {
           </Card>
 
           {/* Accumulators Card */}
-          <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+          <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-black dark:text-cyan-400">
                 <CircleChevronUp className="h-5 w-5" />
                 Accumulators
               </CardTitle>
@@ -384,22 +384,22 @@ export default function TradingDashboard() {
               {enoughDataForAdvanced ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Stability</span>
-                    <Badge variant="outline" className="text-lime-400 border-lime-500">
+                    <span className="text-sm text-black dark:text-cyan-400">Stability</span>
+                    <Badge variant="outline" className="text-red-500 dark:text-lime-400 border-lime-500">
                       {accumulatorSignal}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Confidence</span>
-                    <span className="font-semibold text-lime-400">{accumulatorConfidence}%</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Confidence</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{accumulatorConfidence}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Risk</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Risk</span>
                     <Badge
                       variant="outline"
                       className={`${
                         accumulatorRisk === "LOW"
-                          ? "text-lime-400 border-lime-500"
+                          ? "text-red-500 dark:text-lime-400 border-lime-500"
                           : accumulatorRisk === "MEDIUM"
                             ? "text-yellow-400 border-yellow-500"
                             : "text-red-400 border-red-500"
@@ -423,9 +423,9 @@ export default function TradingDashboard() {
           </Card>
 
           {/* Only Ups Card */}
-          <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+          <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-black dark:text-cyan-400">
                 <ArrowUpRight className="h-5 w-5" />
                 Only Ups
               </CardTitle>
@@ -434,12 +434,12 @@ export default function TradingDashboard() {
               {enoughDataForAdvanced ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Signal</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Signal</span>
                     <Badge
                       variant="outline"
                       className={`${
                         onlyUpsSignal === "GO"
-                          ? "text-lime-400 border-lime-500"
+                          ? "text-red-500 dark:text-lime-400 border-lime-500"
                           : onlyUpsSignal === "WATCH"
                             ? "text-yellow-400 border-yellow-500"
                             : "text-red-400 border-red-500"
@@ -449,12 +449,12 @@ export default function TradingDashboard() {
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Confidence</span>
-                    <span className="font-semibold text-lime-400">{onlyUpsConfidence}%</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Confidence</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{onlyUpsConfidence}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Up-tick Ratio</span>
-                    <span className="font-semibold text-lime-400">{(upTickRatio * 100).toFixed(0)}%</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Up-tick Ratio</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{(upTickRatio * 100).toFixed(0)}%</span>
                   </div>
                   <Button 
                     onClick={() => handleOpenPrediction("only_ups")}
@@ -471,9 +471,9 @@ export default function TradingDashboard() {
           </Card>
 
           {/* Higher/Lower Card */}
-          <Card className="bg-black border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
+          <Card className="bg-white dark:bg-black border-[3px] border-cyan-500 cyan-glow">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-black dark:text-cyan-400">
                 <MoveUpRight className="h-5 w-5" />
                 Higher / Lower
               </CardTitle>
@@ -482,21 +482,21 @@ export default function TradingDashboard() {
               {enoughDataForAdvanced ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Bias</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Bias</span>
                     <Badge 
                       variant="outline" 
-                      className={higherLowerSignal === "Higher" ? "text-lime-400 border-lime-500" : "text-red-400 border-red-500"}
+                      className={higherLowerSignal === "Higher" ? "text-red-500 dark:text-lime-400 border-lime-500" : "text-red-400 border-red-500"}
                     >
                       {higherLowerSignal}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Confidence</span>
-                    <span className="font-semibold text-lime-400">{higherLowerConfidence}%</span>
+                    <span className="text-sm text-black dark:text-cyan-400">Confidence</span>
+                    <span className="font-semibold text-red-500 dark:text-lime-400">{higherLowerConfidence}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-400">Momentum</span>
-                    <span className={`font-semibold ${momentumPct >= 0 ? "text-lime-400" : "text-red-400"}`}>
+                    <span className="text-sm text-black dark:text-cyan-400">Momentum</span>
+                    <span className={`font-semibold ${momentumPct >= 0 ? "text-red-500 dark:text-lime-400" : "text-red-400"}`}>
                       {momentumPct >= 0 ? "+" : ""}{momentumPct.toFixed(2)}%
                     </span>
                   </div>

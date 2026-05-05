@@ -65,6 +65,7 @@ export function MatrixBackground({ intensity = 0.5, opacity = 0.3 }: MatrixBackg
       ref={containerRef}
       className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
       style={{
+        backgroundColor: "rgba(0, 0, 0, 0.92)",
         color: `rgba(0, 255, 0, ${opacity})`,
         fontSize: "14px",
         lineHeight: "1.2",
