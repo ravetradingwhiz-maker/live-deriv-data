@@ -789,11 +789,11 @@ export function EnhancedPredictionModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
       {/* Terminal-style modal with cyan borders */}
-      <Card className="w-[500px] bg-black/95 border-[4px] border-cyan-500 cyan-glow shadow-2xl rounded-lg flex flex-col">
+      <Card className="w-[500px] bg-white dark:bg-black border-[4px] border-cyan-500 cyan-glow shadow-2xl rounded-lg flex flex-col">
         {/* Terminal Header with red dots */}
-        <CardHeader className="border-b-[2px] border-cyan-500 px-4 py-3 flex-shrink-0 bg-black">
+        <CardHeader className="border-b-[2px] border-cyan-500 px-4 py-3 flex-shrink-0 bg-white dark:bg-black">
           <CardTitle className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
@@ -801,30 +801,30 @@ export function EnhancedPredictionModal({
                 <span className="h-3 w-3 rounded-full bg-red-500"></span>
                 <span className="h-3 w-3 rounded-full bg-red-500"></span>
               </div>
-              <Calculator className="h-5 w-5 text-cyan-500" />
-              <span className="text-base font-bold text-cyan-500">AI Prediction Terminal</span>
+              <Calculator className="h-5 w-5 text-red-500 dark:text-cyan-500" />
+              <span className="text-base font-bold text-red-500 dark:text-cyan-500">AI Prediction Terminal</span>
             </div>
             {/* Status badge - single, clear indicator */}
             {isConnecting && (
-              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-black/80 text-cyan-400 border-cyan-500">
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-white dark:bg-black text-red-500 dark:text-cyan-400 border-cyan-500">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 <span className="font-medium">Connecting...</span>
               </div>
             )}
             {error && !isConnecting && (
-              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-black/80 text-yellow-400 border-yellow-500">
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-white dark:bg-black text-yellow-600 dark:text-yellow-400 border-yellow-500">
                 <WifiOff className="h-3 w-3" />
                 <span className="font-medium">Fallback Mode</span>
               </div>
             )}
             {isConnected && !error && !isConnecting && (
-              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-black/80 text-lime-400 border-lime-500">
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-white dark:bg-black text-red-500 dark:text-lime-400 border-lime-500">
                 <Wifi className="h-3 w-3" />
                 <span className="font-medium">Live Deriv API</span>
               </div>
             )}
             {!isConnected && !error && !isConnecting && (
-              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-black/80 text-red-400 border-red-500">
+              <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border bg-white dark:bg-black text-red-500 dark:text-red-400 border-red-500">
                 <WifiOff className="h-3 w-3" />
                 <span className="font-medium">Offline</span>
               </div>
@@ -842,10 +842,10 @@ export function EnhancedPredictionModal({
                 id="symbol"
                 value={selectedSymbol}
                 onChange={(e) => setSelectedSymbol(e.target.value)}
-                className="text-xs bg-input border border-border rounded px-2 py-1 text-foreground w-40"
+                className="text-xs bg-white dark:bg-black border border-border rounded px-2 py-1 text-black dark:text-cyan-400 w-40"
               >
                 {VOLATILITY_INDICES.map((market) => (
-                  <option key={market.symbol} value={market.symbol}>
+                  <option key={market.symbol} value={market.symbol} className="bg-white dark:bg-black text-black dark:text-cyan-400">
                     {market.display_name}
                   </option>
                 ))}
@@ -882,9 +882,9 @@ export function EnhancedPredictionModal({
 
             {/* Analyzing state - replaces content with terminal-style animation */}
             {isAnalyzing && (
-              <div className="bg-black/90 border-[2px] border-cyan-500 p-4 rounded text-center space-y-3">
+              <div className="bg-white dark:bg-black border-[2px] border-cyan-500 p-4 rounded text-center space-y-3">
                 {/* Fast-moving random codes */}
-                <div className="h-24 overflow-hidden bg-black/80 border border-cyan-500/50 p-2 rounded">
+                <div className="h-24 overflow-hidden bg-slate-100 dark:bg-black border border-cyan-500/50 p-2 rounded">
                   <div className="analysis-matrix text-xs font-mono text-lime-400 whitespace-pre leading-tight text-left">
                     {`${randomCode}\n${randomCode}\n${randomCode}`}
                   </div>
@@ -913,17 +913,17 @@ export function EnhancedPredictionModal({
 
             {/* Results display - terminal-style */}
             {result && !isAnalyzing && (
-              <div className="bg-black/90 border-[2px] border-lime-500 p-3 rounded space-y-2">
+              <div className="bg-white dark:bg-black border-[2px] border-lime-500 p-3 rounded space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-cyan-400">Entry Point:</span>
+                  <span className="font-medium text-red-500 dark:text-cyan-400">Entry Point:</span>
                   <span className="font-bold text-lime-400">{result.entryPoints.primary}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-cyan-400">Confidence:</span>
+                  <span className="font-medium text-red-500 dark:text-cyan-400">Confidence:</span>
                   <span className="font-bold text-lime-400">{result.confidence}%</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-cyan-400">Runs:</span>
+                  <span className="font-medium text-red-500 dark:text-cyan-400">Runs:</span>
                   <Badge variant="secondary" className="text-xs bg-cyan-900 text-cyan-400 border-cyan-500">{result.runs}</Badge>
                 </div>
                 <div className="border-t-[2px] border-cyan-500/50 pt-2">
@@ -948,7 +948,7 @@ export function EnhancedPredictionModal({
                       {result.riskLevel}
                     </Badge>
                   </div>
-                  <div className="text-xs text-cyan-400 italic">{result.entryPoints.timing}</div>
+                  <div className="text-xs text-red-500 dark:text-cyan-400 italic">{result.entryPoints.timing}</div>
                 </div>
               </div>
             )}
@@ -956,7 +956,7 @@ export function EnhancedPredictionModal({
         </div>
 
         {/* Footer Buttons - Terminal-style */}
-        <div className="border-t-[2px] border-cyan-500 bg-black px-4 py-3 flex gap-2 flex-shrink-0">
+        <div className="border-t-[2px] border-cyan-500 bg-white dark:bg-black px-4 py-3 flex gap-2 flex-shrink-0">
           <Button
             onClick={runAnalysis}
             disabled={isAnalyzing}

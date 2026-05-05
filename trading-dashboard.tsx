@@ -170,7 +170,7 @@ export default function TradingDashboard() {
                   <SelectContent className="bg-white dark:bg-black border-2 border-cyan-500">
                     {markets.map((market) => (
                       <SelectItem key={market.symbol} value={market.symbol} className="text-black dark:text-cyan-400">
-                        {market.display_name} ({market.symbol})
+                        {market.display_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
