@@ -18,8 +18,8 @@ const STORAGE_KEY = "livederiv.auth.user"
 const ACCESS_CODE_USERS: Record<string, User> = {
   rave_fx: {
     id: "u-admin-1",
-    username: "minangedwa",
-    email: "minangedwa@livederivdataanalysis.com",
+    username: "Rave Fx",
+    email: "rave_fx@livederivdataanalysis.com",
     role: "admin",
     subscription: "enterprise",
     createdAt: new Date().toISOString(),
