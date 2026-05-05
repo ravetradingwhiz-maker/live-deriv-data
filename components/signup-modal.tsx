@@ -57,7 +57,7 @@ export function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
           <div className="p-8 md:p-12 space-y-6">
             {/* Logo and Title */}
             <div className="flex items-center gap-3 justify-center mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">d</span>
               </div>
               <div>

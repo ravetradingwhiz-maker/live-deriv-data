@@ -226,9 +226,10 @@ export function useDerivWebSocket() {
   )
 
   const unsubscribeTicks = useCallback(() => {
-    if (!isAuthorized) return
+    if (!isAuthorized || !subscribedSymbol) return
 
-    derivApi.unsubscribeTicks(subscribedSymbol)
+    const symbol = subscribedSymbol
+    derivApi.unsubscribeTicks(symbol)
 
     setSubscribedSymbol(null)
     setTicksBuffer([])

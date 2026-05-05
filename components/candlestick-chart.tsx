@@ -112,7 +112,7 @@ export function CandlestickChart({ data, currentCandle, symbol }: CandlestickCha
   }
 
   return (
-    <Card className="bg-card/90 border-border">
+    <Card className="bg-black/80 border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">

@@ -212,7 +212,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   className="rounded-xl flex-shrink-0 shadow-lg shadow-blue-500/10"
                 />
                 <div className="flex flex-col">
-                  <h1 className="text-sm sm:text-base md:text-lg font-extrabold text-white tracking-tight">
+                  <h1 className="text-sm sm:text-base md:text-lg font-extrabold text-foreground tracking-tight">
                     Live Deriv Data Analysis
                   </h1>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -267,9 +267,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 text-center">
         <div className="max-w-4xl mx-auto space-y-6">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
             Trade Smarter.{" "}
-            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="text-blue-400 font-bold">
               Win Consistently.
             </span>
           </h2>
@@ -413,7 +413,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   className="flex-shrink-0 w-96 bg-slate-800/80 backdrop-blur border border-slate-600 rounded-lg p-6 hover:border-blue-500 transition-colors"
                 >
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
                       {review.avatar}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -460,7 +460,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   className="flex-shrink-0 w-96 bg-slate-800/80 backdrop-blur border border-slate-600 rounded-lg p-6 hover:border-blue-500 transition-colors"
                 >
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
                       {review.avatar}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -501,16 +501,14 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               ))}
             </div>
 
-            {/* Gradient fade on edges */}
-            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-slate-900 to-transparent pointer-events-none"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none"></div>
+            {/* Edge shadows removed - clean design */}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
       <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-12 text-center space-y-6">
+        <div className="max-w-4xl mx-auto bg-blue-600/20 border border-blue-500/30 rounded-xl p-12 text-center space-y-6">
           <h3 className="text-3xl font-bold text-white">Ready to Trade Smarter?</h3>
           <p className="text-slate-300 max-w-2xl mx-auto">
             Get access to Live Deriv Data Analysis and unlock the data advantage professionals use to stay ahead in the
@@ -617,7 +615,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           <div className="border-t border-slate-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <Image src="/deriv-logo.png" alt="Deriv Pro Logo" width={32} height={32} className="rounded-lg" />
-              <span className="font-semibold text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
+              <span className="font-semibold text-xs sm:text-sm md:text-base text-foreground whitespace-nowrap">
                 Live Deriv Data Analysis
               </span>
             </div>

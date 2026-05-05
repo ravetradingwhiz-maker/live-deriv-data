@@ -13,7 +13,7 @@ interface PriceAnalysisProps {
 export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
   if (data.length < 2) {
     return (
-      <Card className="bg-card/90 border-border">
+      <Card className="bg-black/80 border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-lg">Price Analysis</CardTitle>
         </CardHeader>
@@ -45,7 +45,7 @@ export function PriceAnalysis({ data, ticksBuffer }: PriceAnalysisProps) {
   const trend = priceChange > 0 ? "up" : priceChange < 0 ? "down" : "neutral"
 
   return (
-    <Card className="bg-card/90 border-border">
+    <Card className="bg-black/80 border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="text-lg">Price Analysis</CardTitle>
       </CardHeader>

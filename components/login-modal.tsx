@@ -20,9 +20,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-xl bg-gradient-to-br from-slate-950 via-slate-800 to-slate-900 rounded-2xl shadow-2xl border border-blue-500/30 overflow-hidden group hover:border-blue-500/50 transition-all duration-300">
-        {/* Subtle panel glow */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-cyan-600/10 pointer-events-none" />
+      <div className="relative w-full max-w-xl bg-slate-900 rounded-2xl shadow-2xl border border-blue-500/30 overflow-hidden hover:border-blue-500/50 transition-all duration-300">
         
         {/* Close Button */}
         <button

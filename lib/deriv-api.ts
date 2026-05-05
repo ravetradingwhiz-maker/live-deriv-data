@@ -112,25 +112,27 @@ class DerivAPI {
           console.log("[v0] Deriv WebSocket connected successfully")
           this.reconnectAttempts = 0
 
+          // Mark as connected immediately - authorization is optional for public endpoints
+          this.isConnected = true
+          this.startHeartbeat()
+
+          // Try to authorize, but don't fail the connection if it fails
           if (!this.authorizedAccount && !this.isAuthorizing && !this.authRequestInFlight) {
             this.authorize()
               .then(() => {
-                this.isConnected = true
+                console.log("[v0] Authorization successful")
                 this.isAuthorizing = false
-                this.startHeartbeat()
                 this.connectionPromise = null
                 resolve()
               })
               .catch((err) => {
-                console.error("[v0] Authorization failed during connection:", err)
+                console.warn("[v0] Authorization failed, continuing with public access only:", err)
+                // Don't close connection - allow public endpoint access
                 this.isAuthorizing = false
                 this.connectionPromise = null
-                this.ws?.close()
-                reject(err)
+                resolve() // Still resolve - connection is OK for public endpoints
               })
           } else {
-            this.isConnected = true
-            this.startHeartbeat()
             this.connectionPromise = null
             resolve()
           }
@@ -240,14 +242,14 @@ class DerivAPI {
       const reqId = this.messageId++
       let timeoutId: NodeJS.Timeout | null = null
 
-      // Set a timeout for the authorization request
+      // Set a shorter timeout for the authorization request (reduced from 10s to 5s)
       timeoutId = setTimeout(() => {
         this.callbacks.delete(reqId)
         this.isAuthorizing = false
         this.authRequestInFlight = false
-        console.error("[v0] Authorization request timed out")
+        console.warn("[v0] Authorization request timed out - continuing with public access")
         reject(new Error("Authorization request timed out"))
-      }, 10000) // 10 second timeout
+      }, 5000) // 5 second timeout
 
       this.callbacks.set(reqId, (data) => {
         // Clear the timeout if we got a response
@@ -259,7 +261,7 @@ class DerivAPI {
         this.authRequestInFlight = false
 
         if (data.error) {
-          console.error("[v0] Deriv API authorization failed:", data.error.message)
+          console.warn("[v0] Deriv API authorization failed - using public access:", data.error.message)
           this.authorizedAccount = null
           reject(new Error(`Authorization failed: ${data.error.message}`))
         } else if (data.authorize) {
@@ -269,7 +271,7 @@ class DerivAPI {
           resolve()
         } else {
           // Handle unexpected response format
-          console.warn("[v0] Unexpected authorization response:", data)
+          console.warn("[v0] Unexpected authorization response - using public access:", data)
           this.authorizedAccount = null
           reject(new Error("Authorization response missing expected data"))
         }

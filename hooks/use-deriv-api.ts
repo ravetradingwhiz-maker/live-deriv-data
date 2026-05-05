@@ -91,17 +91,17 @@ export const useDerivAPI = () => {
         console.log("[v0] Not connected, attempting to reconnect before prediction...")
         try {
           await connect()
-          // Wait for connection to stabilize
-          await new Promise((resolve) => setTimeout(resolve, 1000))
+          // Wait for connection to stabilize (increased from 1s to 2s)
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+          
+          // Verify connection after waiting
+          if (!derivAPI.isConnectedToAPI()) {
+            console.warn("[v0] Connection not stable after reconnect, but attempting prediction anyway...")
+          }
         } catch (error) {
-          console.error("[v0] Failed to reconnect:", error)
-          throw new Error("Unable to establish connection to Deriv API. Please try again.")
+          console.warn("[v0] Reconnection error (will try prediction anyway):", error)
+          // Don't throw here - let the prediction attempt proceed
         }
-      }
-
-      // Final validation before attempting prediction
-      if (!derivAPI.isConnectedToAPI()) {
-        throw new Error("Connection lost. Please try again.")
       }
 
       try {

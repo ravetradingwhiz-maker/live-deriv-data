@@ -36,7 +36,7 @@ export default function LoginPage() {
           {/* Header section */}
           <div className="text-center mb-8 space-y-3">
             <div className="flex justify-center mb-4">
-              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary to-cyan-400 dark:from-cyan-400 dark:to-blue-500 flex items-center justify-center shadow-lg shadow-primary/30 dark:shadow-cyan-500/20">
+              <div className="h-12 w-12 rounded-lg bg-primary dark:bg-cyan-500 flex items-center justify-center shadow-lg">
                 <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>

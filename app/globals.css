@@ -4,84 +4,68 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light Mode - Warm, professional palette */
-  --background: oklch(0.98 0.005 90);
-  --foreground: oklch(0.2 0.015 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.015 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.015 250);
-  --primary: oklch(0.55 0.15 220);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.92 0.01 240);
-  --secondary-foreground: oklch(0.25 0.015 250);
-  --muted: oklch(0.95 0.008 240);
-  --muted-foreground: oklch(0.5 0.01 250);
-  --accent: oklch(0.6 0.18 195);
-  --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.58 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.6 0.18 145);
-  --success-foreground: oklch(0.99 0 0);
-  --warning: oklch(0.7 0.18 75);
-  --warning-foreground: oklch(0.2 0.015 250);
-  --border: oklch(0.88 0.01 240);
-  --input: oklch(0.88 0.01 240);
-  --ring: oklch(0.55 0.15 220);
-  --chart-1: oklch(0.6 0.18 195);
-  --chart-2: oklch(0.55 0.15 220);
-  --chart-3: oklch(0.65 0.2 280);
-  --chart-4: oklch(0.7 0.18 75);
-  --chart-5: oklch(0.6 0.18 145);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.99 0.002 240);
-  --sidebar-foreground: oklch(0.2 0.015 250);
-  --sidebar-primary: oklch(0.55 0.15 220);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.95 0.008 240);
-  --sidebar-accent-foreground: oklch(0.25 0.015 250);
-  --sidebar-border: oklch(0.88 0.01 240);
-  --sidebar-ring: oklch(0.55 0.15 220);
+  /* Terminal/Hacker Style - Light mode fallback */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 0%;
+  --primary: 180 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 10%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 120 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 120 100% 50%;
+  --success-foreground: 0 0% 0%;
+  --warning: 60 100% 50%;
+  --warning-foreground: 0 0% 0%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 180 100% 50%;
+  --chart-1: 180 100% 50%;
+  --chart-2: 120 100% 50%;
+  --chart-3: 240 100% 50%;
+  --chart-4: 60 100% 50%;
+  --chart-5: 0 84% 60%;
+  --radius: 0.5rem;
 }
 
 .dark {
-  /* Dark Mode - Deep, sophisticated palette optimized for night trading */
-  --background: oklch(0.15 0.02 250);
-  --foreground: oklch(0.95 0.01 240);
-  --card: oklch(0.18 0.025 250);
-  --card-foreground: oklch(0.95 0.01 240);
-  --popover: oklch(0.18 0.025 250);
-  --popover-foreground: oklch(0.95 0.01 240);
-  --primary: oklch(0.65 0.2 195);
-  --primary-foreground: oklch(0.15 0.02 250);
-  --secondary: oklch(0.25 0.03 250);
-  --secondary-foreground: oklch(0.95 0.01 240);
-  --muted: oklch(0.22 0.025 250);
-  --muted-foreground: oklch(0.65 0.015 240);
-  --accent: oklch(0.7 0.22 210);
-  --accent-foreground: oklch(0.15 0.02 250);
-  --destructive: oklch(0.6 0.25 25);
-  --destructive-foreground: oklch(0.95 0.01 240);
-  --success: oklch(0.65 0.2 145);
-  --success-foreground: oklch(0.15 0.02 250);
-  --warning: oklch(0.75 0.2 75);
-  --warning-foreground: oklch(0.15 0.02 250);
-  --border: oklch(0.28 0.03 250);
-  --input: oklch(0.28 0.03 250);
-  --ring: oklch(0.65 0.2 195);
-  --chart-1: oklch(0.65 0.2 195);
-  --chart-2: oklch(0.7 0.22 210);
-  --chart-3: oklch(0.7 0.22 280);
-  --chart-4: oklch(0.75 0.2 75);
-  --chart-5: oklch(0.65 0.2 145);
-  --sidebar: oklch(0.17 0.022 250);
-  --sidebar-foreground: oklch(0.95 0.01 240);
-  --sidebar-primary: oklch(0.65 0.2 195);
-  --sidebar-primary-foreground: oklch(0.15 0.02 250);
-  --sidebar-accent: oklch(0.22 0.025 250);
-  --sidebar-accent-foreground: oklch(0.95 0.01 240);
-  --sidebar-border: oklch(0.28 0.03 250);
-  --sidebar-ring: oklch(0.65 0.2 195);
+  /* Terminal/Hacker Style - Black background, Cyan borders, Green/Red accents */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 0%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 0%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 180 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 7%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 7%;
+  --muted-foreground: 120 100% 50%;
+  --accent: 180 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 120 100% 50%;
+  --success-foreground: 0 0% 0%;
+  --warning: 60 100% 50%;
+  --warning-foreground: 0 0% 0%;
+  --border: 180 100% 50%;
+  --input: 0 0% 7%;
+  --ring: 180 100% 50%;
+  --chart-1: 180 100% 50%;
+  --chart-2: 120 100% 50%;
+  --chart-3: 240 100% 50%;
+  --chart-4: 60 100% 50%;
+  --chart-5: 0 84% 60%;
 }
 
 @theme inline {
@@ -131,11 +115,26 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  body::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  body,
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
   html {
     margin: 0;
     padding: 0;
     width: 100%;
     height: auto;
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground;
@@ -145,4 +144,59 @@
     min-height: 100vh;
     overflow-x: hidden;
   }
+  
+  /* Cyan glow effect */
+  .cyan-glow {
+    box-shadow: 0 0 20px hsl(var(--primary)), 0 0 40px hsl(var(--primary));
+  }
+  
+  .cyan-border {
+    border: 3px solid hsl(var(--primary));
+  }
+  
+  /* Green terminal text */
+  .terminal-text {
+    color: hsl(var(--success));
+    text-shadow: 0 0 5px hsl(var(--success));
+  }
+}
+
+@keyframes scroll-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes scroll-down {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes analysis-scroll-down {
+  from {
+    transform: translateY(-20%);
+  }
+  to {
+    transform: translateY(20%);
+  }
+}
+
+@keyframes terminal-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.scrolling-matrix {
+  animation: scroll-down 3s linear infinite;
+}
+
+.analysis-matrix {
+  animation: analysis-scroll-down 0.9s linear infinite;
 }

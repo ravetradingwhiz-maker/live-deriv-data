@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.className} ${geistMono.className}`}>
       <head>{/* Font variables are now applied via CSS custom properties */}</head>
-      <body className="relative w-full min-h-screen overflow-x-hidden bg-black" style={{ margin: 0, padding: 0 }}>
+      <body className="relative w-full min-h-screen overflow-x-hidden" style={{ margin: 0, padding: 0 }}>
         {/* Matrix Background - full viewport cover with enhanced visibility */}
         <MatrixBackground intensity="high" opacity={0.8} />
 

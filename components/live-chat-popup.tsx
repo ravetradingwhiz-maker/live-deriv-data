@@ -96,8 +96,7 @@ export function LiveChatPopup({ isOpen, onClose }: { isOpen: boolean; onClose: (
           </h2>
         </div>
 
-        {/* Decorative white-to-transparent fade */}
-        <div className="absolute bottom-0 left-0 h-16 w-full bg-gradient-to-t from-white to-transparent" />
+        {/* Clean bottom edge */}
       </div>
 
       {/* Content Area */}

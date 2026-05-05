@@ -14,7 +14,7 @@ interface TechnicalIndicatorsProps {
 export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicatorsProps) {
   if (data.length === 0) {
     return (
-      <Card className="bg-card/90 border-border">
+      <Card className="bg-black/80 border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-lg">Technical Indicators</CardTitle>
         </CardHeader>
@@ -65,7 +65,7 @@ export function TechnicalIndicators({ data, currentCandle }: TechnicalIndicators
   const bollingerSignal = getBollingerSignal(currentPrice, latest.bollingerUpper, latest.bollingerLower)
 
   return (
-    <Card className="bg-card/90 border-border">
+    <Card className="bg-black/80 border-[3px] border-cyan-500 cyan-glow backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="text-lg">Technical Indicators</CardTitle>
       </CardHeader>

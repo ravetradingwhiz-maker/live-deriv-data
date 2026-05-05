@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/AuthContext"
 import { User, LogOut, Crown, Eye, Download, TrendingUp, ChevronDown } from "lucide-react"
-import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
 export function DashboardHeader() {
@@ -63,9 +62,6 @@ export function DashboardHeader() {
 
           {/* User Info and Actions */}
           <div className="flex items-center gap-4">
-            {/* Theme Toggle */}
-            <ThemeToggle />
-
             {/* Download Guide */}
             <Button
               variant="ghost"
@@ -81,26 +77,23 @@ export function DashboardHeader() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-11 px-3 flex items-center gap-3 rounded-xl hover:bg-accent/70 data-[state=open]:bg-accent"
+                  className="h-11 px-3 flex items-center gap-2 rounded-xl hover:bg-accent data-[state=open]:bg-accent"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="hidden md:flex flex-col items-start justify-center leading-tight">
-                    <div className="text-sm font-medium text-foreground">{user.username}</div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        <span className="flex items-center gap-1">
-                          {getRoleIcon(user.role)}
-                          <span>{user.role}</span>
-                        </span>
-                      </Badge>
-                      <Badge className={`text-xs ${getSubscriptionColor(user.subscription)}`}>
-                        VIP User
-                      </Badge>
-                    </div>
+                  <div className="hidden md:flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      <span className="flex items-center gap-1">
+                        {getRoleIcon(user.role)}
+                        <span>{user.role}</span>
+                      </span>
+                    </Badge>
+                    <Badge className={`text-xs ${getSubscriptionColor(user.subscription)}`}>
+                      VIP User
+                    </Badge>
                   </div>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>

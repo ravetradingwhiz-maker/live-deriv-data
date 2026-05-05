@@ -71,25 +71,16 @@ export function AnimatedAnalysisCircle({ countdown }: AnimatedAnalysisCircleProp
         ctx.restore()
       }
 
-      // Draw outer ring with rotating glow
-      const outerGradient = ctx.createLinearGradient(centerX - 70, centerY, centerX + 70, centerY)
-      outerGradient.addColorStop(0, 'rgba(0, 217, 217, 0)')
-      outerGradient.addColorStop(0.5, 'rgba(0, 217, 217, 0.8)')
-      outerGradient.addColorStop(1, 'rgba(0, 217, 217, 0)')
-
-      ctx.strokeStyle = outerGradient
+      // Draw outer ring with solid glow
+      ctx.strokeStyle = 'rgba(0, 217, 217, 0.8)'
       ctx.lineWidth = 4
       ctx.beginPath()
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
       ctx.stroke()
 
-      // Draw pulsing center glow
-      const pulseGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 50)
+      // Draw pulsing center glow with solid color
       const glowIntensity = 0.2 + Math.sin(time * 0.08) * 0.2
-      pulseGlow.addColorStop(0, `rgba(0, 217, 217, ${glowIntensity})`)
-      pulseGlow.addColorStop(1, 'rgba(0, 217, 217, 0)')
-
-      ctx.fillStyle = pulseGlow
+      ctx.fillStyle = `rgba(0, 217, 217, ${glowIntensity})`
       ctx.beginPath()
       ctx.arc(centerX, centerY, 50, 0, Math.PI * 2)
       ctx.fill()
