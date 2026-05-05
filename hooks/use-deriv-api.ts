@@ -149,7 +149,8 @@ export const useDerivAPI = () => {
     connect()
 
     return () => {
-      disconnect()
+      // Do not disconnect shared API instance on unmount - it's used across multiple components
+      // The API connection should persist for the lifetime of the app
     }
   }, [connect, disconnect])
 
