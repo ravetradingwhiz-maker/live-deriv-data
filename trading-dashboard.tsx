@@ -12,7 +12,21 @@ import { EnhancedPredictionModal } from "@/components/enhanced-prediction-modal"
 import { PredictionButtons } from "@/components/prediction-buttons"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { FloatingContactButtons } from "@/components/floating-contact-buttons"
-import { TrendingUp, TrendingDown, Wifi, WifiOff, Lock, RefreshCw, LineChart, CandlestickChart as CandlestickIcon, FlaskConical } from "lucide-react"
+import {
+  TrendingUp,
+  TrendingDown,
+  Wifi,
+  WifiOff,
+  Lock,
+  RefreshCw,
+  LineChart,
+  CandlestickChart as CandlestickIcon,
+  FlaskConical,
+  CircleChevronUp,
+  ArrowUpRight,
+  MoveUpRight,
+  ShieldAlert,
+} from "lucide-react"
 import { CandlestickChart } from "@/components/candlestick-chart"
 import { PriceAnalysis } from "@/components/price-analysis"
 import { TechnicalIndicators } from "@/components/technical-indicators"
@@ -65,6 +79,35 @@ export default function TradingDashboard() {
   // Check if user is Minangedwa123 for full access display
   const isMinangedwaUser = user?.username === "minangedwa"
   const accessLevel = isMinangedwaUser ? "full access" : "Limited"
+
+  const advancedWindow = candleData.slice(-20)
+  const enoughDataForAdvanced = advancedWindow.length >= 8 && ticksBuffer.length >= 20
+
+  const lastClose = advancedWindow.length ? advancedWindow[advancedWindow.length - 1].close : 0
+  const firstClose = advancedWindow.length ? advancedWindow[0].close : 0
+  const momentumPct = firstClose ? ((lastClose - firstClose) / firstClose) * 100 : 0
+
+  const upTickRatio = ticksBuffer.length ? ticksBuffer.filter((d) => d > 4).length / ticksBuffer.length : 0
+  const recentReturns = advancedWindow
+    .slice(1)
+    .map((c, i) => (advancedWindow[i].close ? (c.close - advancedWindow[i].close) / advancedWindow[i].close : 0))
+  const meanReturn = recentReturns.length ? recentReturns.reduce((a, b) => a + b, 0) / recentReturns.length : 0
+  const returnVariance = recentReturns.length
+    ? recentReturns.reduce((sum, r) => sum + Math.pow(r - meanReturn, 2), 0) / recentReturns.length
+    : 0
+  const volatility = Math.sqrt(returnVariance)
+
+  const higherLowerSignal = momentumPct >= 0 ? "Higher" : "Lower"
+  const higherLowerConfidence = Math.min(96, Math.max(52, Math.round(50 + Math.abs(momentumPct) * 7 + upTickRatio * 14)))
+
+  const onlyUpsBiasScore = upTickRatio * 0.55 + (momentumPct > 0 ? 0.45 : 0)
+  const onlyUpsSignal = onlyUpsBiasScore > 0.68 ? "GO" : onlyUpsBiasScore > 0.55 ? "WATCH" : "WAIT"
+  const onlyUpsConfidence = Math.min(95, Math.max(45, Math.round(onlyUpsBiasScore * 100)))
+
+  const accumulatorSafetyRaw = 1 - Math.min(1, volatility * 180)
+  const accumulatorSignal = accumulatorSafetyRaw > 0.68 ? "Stable" : accumulatorSafetyRaw > 0.48 ? "Moderate" : "Risky"
+  const accumulatorConfidence = Math.round(Math.min(95, Math.max(35, accumulatorSafetyRaw * 100)))
+  const accumulatorRisk = accumulatorSafetyRaw > 0.68 ? "LOW" : accumulatorSafetyRaw > 0.48 ? "MEDIUM" : "HIGH"
 
   return (
     <div className="min-h-screen bg-black/20">
@@ -219,6 +262,133 @@ export default function TradingDashboard() {
 
               {/* Price Analysis Panel */}
               <PriceAnalysis data={candleData} ticksBuffer={ticksBuffer} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-card/90 border-border backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <CircleChevronUp className="h-4 w-4 text-cyan-400" />
+                    Accumulators
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {enoughDataForAdvanced ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Stability</span>
+                        <Badge variant="outline" className="text-cyan-400">
+                          {accumulatorSignal}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Confidence</span>
+                        <span className="font-semibold">{accumulatorConfidence}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Risk</span>
+                        <span
+                          className={`text-xs font-semibold ${
+                            accumulatorRisk === "LOW"
+                              ? "text-green-500"
+                              : accumulatorRisk === "MEDIUM"
+                                ? "text-yellow-500"
+                                : "text-red-500"
+                          }`}
+                        >
+                          {accumulatorRisk}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Best in low-volatility phases with smooth tick behavior.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Waiting for more live data...</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/90 border-border backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <ArrowUpRight className="h-4 w-4 text-green-400" />
+                    Only Ups
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {enoughDataForAdvanced ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Signal</span>
+                        <Badge
+                          variant="outline"
+                          className={`${
+                            onlyUpsSignal === "GO"
+                              ? "text-green-500"
+                              : onlyUpsSignal === "WATCH"
+                                ? "text-yellow-500"
+                                : "text-red-500"
+                          }`}
+                        >
+                          {onlyUpsSignal}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Confidence</span>
+                        <span className="font-semibold">{onlyUpsConfidence}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Up-tick Ratio</span>
+                        <span className="text-xs font-semibold text-green-500">{(upTickRatio * 100).toFixed(0)}%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Entry quality improves when momentum and up-tick pressure align.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Waiting for more live data...</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/90 border-border backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <MoveUpRight className="h-4 w-4 text-blue-400" />
+                    Higher / Lower
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {enoughDataForAdvanced ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Bias</span>
+                        <Badge variant="outline" className={higherLowerSignal === "Higher" ? "text-green-500" : "text-red-500"}>
+                          {higherLowerSignal}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Confidence</span>
+                        <span className="font-semibold">{higherLowerConfidence}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Momentum</span>
+                        <span className={`text-xs font-semibold ${momentumPct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                          {momentumPct >= 0 ? "+" : ""}
+                          {momentumPct.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        Use with short horizon confirmation before entry.
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Waiting for more live data...</p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 

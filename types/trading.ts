@@ -11,7 +11,21 @@ export interface TickData {
 }
 
 export interface PredictionResult {
-  type: "over" | "under" | "matches" | "differs" | "even" | "odd" | "rise" | "fall"
+  type:
+    | "over"
+    | "under"
+    | "matches"
+    | "differs"
+    | "even"
+    | "odd"
+    | "rise"
+    | "fall"
+    | "accumulate"
+    | "reset"
+    | "only_up"
+    | "not_only_up"
+    | "higher"
+    | "lower"
   digit?: number | null
   confidence: number
   runs: number
@@ -82,7 +96,14 @@ export interface IndicatorSettings {
   showBollinger: boolean
 }
 
-export type PredictionType = "over_under" | "matches_differs" | "even_odd" | "rise_fall"
+export type PredictionType =
+  | "over_under"
+  | "matches_differs"
+  | "even_odd"
+  | "rise_fall"
+  | "accumulators"
+  | "only_ups"
+  | "higher_lower"
 
 export const VOLATILITY_INDICES = [
   { symbol: "1HZ10V", display_name: "Volatility 10 (1s) Index" },

@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import type { PredictionResult, PredictionType } from "@/types/trading"
-import { TrendingUp, Target, Hash, BarChart3, Zap, Wifi, WifiOff, Loader2 } from "lucide-react"
+import { TrendingUp, Target, Hash, BarChart3, Zap, ArrowUpRight, ArrowUpDown, Wifi, WifiOff, Loader2 } from "lucide-react"
 import { useDerivAPI } from "@/hooks/use-deriv-api"
 import { Calculator } from "lucide-react" // Import Calculator component
 import { VOLATILITY_INDICES } from "@/types/trading" // Added import to use standardized names
@@ -45,6 +45,8 @@ export function EnhancedPredictionModal({
   onRunComplete,
 }: EnhancedPredictionModalProps) {
   const { isConnected, isConnecting, error, getPrediction, getActiveSymbols } = useDerivAPI()
+  const SHARED_TICK_WINDOW = 1000
+  const LOCAL_ONLY_TYPES: PredictionType[] = ["accumulators", "only_ups", "higher_lower"]
 
   // Set initial choice based on prediction type
   const getInitialChoice = (type: PredictionType) => {
@@ -57,6 +59,12 @@ export function EnhancedPredictionModal({
         return "even"
       case "rise_fall":
         return "rise"
+      case "accumulators":
+        return "accumulate"
+      case "only_ups":
+        return "only_up"
+      case "higher_lower":
+        return "higher"
       default:
         return "over"
     }
@@ -72,6 +80,11 @@ export function EnhancedPredictionModal({
     predictionType: PredictionType,
     selection: string,
   ): Promise<EnhancedPredictionResult> => {
+    if (LOCAL_ONLY_TYPES.includes(predictionType)) {
+      // These contract types are intentionally analyzed from the shared local tick window.
+      return await fallbackAnalysis(predictionType, selection)
+    }
+
     console.log(`[v0] Fetching live data from Deriv.com for ${predictionType} prediction...`)
 
     try {
@@ -126,9 +139,29 @@ export function EnhancedPredictionModal({
     predictionType: PredictionType,
     selection: string,
   ): Promise<EnhancedPredictionResult> => {
-    // Use existing simulated logic as fallback
-    const recentData = ticksBuffer.slice(-100)
-    const veryRecentData = ticksBuffer.slice(-20)
+    // All local analysis uses the same shared 1000-tick buffer.
+    const recentData = ticksBuffer.slice(-SHARED_TICK_WINDOW)
+    const veryRecentData = ticksBuffer.slice(-80)
+
+    if (recentData.length < 20) {
+      return {
+        type: selection as EnhancedPredictionResult["type"],
+        confidence: 0,
+        runs: 0,
+        recommendation: "WEAK",
+        analysis: "Not enough buffered tick data yet. Please wait for more ticks.",
+        digit: null,
+        exactDigit: undefined,
+        entryPoints: {
+          primary: "Insufficient data",
+          secondary: "Need at least 20 ticks to run analysis",
+          timing: "Retry shortly",
+        },
+        marketCondition: "Data warming up",
+        riskLevel: "HIGH",
+        expectedOutcome: "No estimate available",
+      }
+    }
 
     let confidence = 50
     let recommendation = "WEAK"
@@ -282,6 +315,85 @@ export function EnhancedPredictionModal({
         analysis = `Fallback Analysis: ${confidence}% confidence for digit ${exactDigit} to ${selection}. Last digit was ${lastDigitInBuffer}.`
         break
 
+      case "accumulators":
+        const repeatPairs = recentData.slice(1).filter((digit, i) => digit === recentData[i]).length
+        const repeatRate = repeatPairs / Math.max(1, recentData.length - 1)
+
+        confidence =
+          selection === "accumulate"
+            ? Math.round(55 + repeatRate * 35)
+            : Math.round(50 + (1 - repeatRate) * 35)
+
+        confidence = Math.max(35, Math.min(92, confidence))
+        runs = confidence >= 82 ? 3 : confidence >= 66 ? 2 : 1
+        recommendation = confidence >= 76 ? "STRONG" : confidence >= 60 ? "MODERATE" : "WEAK"
+
+        entryPoints = {
+          primary: selection === "accumulate" ? "Continue" : "Reset",
+          secondary: `Streak persistence ${Math.round(repeatRate * 100)}%`,
+          timing: "Best within next 2-4 ticks",
+        }
+
+        marketCondition = "Accumulator structure from shared 1000-tick history"
+        riskLevel = confidence > 70 ? "LOW" : confidence > 55 ? "MEDIUM" : "HIGH"
+        expectedOutcome = `${confidence}% probability for ${selection}`
+        analysis = `Local Analysis: ${confidence}% confidence for ${selection.toUpperCase()} using repeat-pattern persistence.`
+        break
+
+      case "only_ups":
+        const recentMoves = recentData.slice(1).map((d, i) => d - recentData[i])
+        const upMoves = recentMoves.filter((m) => m > 0).length
+        const flatMoves = recentMoves.filter((m) => m === 0).length
+        const upBias = (upMoves + flatMoves * 0.35) / Math.max(1, recentMoves.length)
+
+        confidence =
+          selection === "only_up"
+            ? Math.round(52 + upBias * 40)
+            : Math.round(52 + (1 - upBias) * 35)
+
+        confidence = Math.max(30, Math.min(90, confidence))
+        runs = confidence >= 80 ? 3 : confidence >= 64 ? 2 : 1
+        recommendation = confidence >= 74 ? "STRONG" : confidence >= 58 ? "MODERATE" : "WEAK"
+
+        entryPoints = {
+          primary: selection === "only_up" ? "Only Up" : "Break Up",
+          secondary: `Up-bias ${Math.round(upBias * 100)}%`,
+          timing: "Trigger on low pullback ticks",
+        }
+
+        marketCondition = "Momentum check from shared 1000-tick history"
+        riskLevel = confidence > 68 ? "LOW" : confidence > 52 ? "MEDIUM" : "HIGH"
+        expectedOutcome = `${confidence}% directional persistence estimate`
+        analysis = `Local Analysis: ${confidence}% confidence for ${selection.toUpperCase()} based on momentum persistence.`
+        break
+
+      case "higher_lower":
+        const currentDigit = recentData[recentData.length - 1]
+        const higherCount = recentData.filter((d) => d > currentDigit).length
+        const lowerCount = recentData.filter((d) => d < currentDigit).length
+        const relativeTotal = Math.max(1, higherCount + lowerCount)
+
+        confidence =
+          selection === "higher"
+            ? Math.round((higherCount / relativeTotal) * 100)
+            : Math.round((lowerCount / relativeTotal) * 100)
+
+        confidence = Math.max(35, Math.min(88, confidence))
+        runs = confidence >= 78 ? 3 : confidence >= 62 ? 2 : 1
+        recommendation = confidence >= 72 ? "STRONG" : confidence >= 56 ? "MODERATE" : "WEAK"
+
+        entryPoints = {
+          primary: selection === "higher" ? "Higher" : "Lower",
+          secondary: `Ref digit ${currentDigit}`,
+          timing: "Next tick window preferred",
+        }
+
+        marketCondition = "Relative-position model from shared 1000-tick history"
+        riskLevel = confidence > 66 ? "LOW" : confidence > 50 ? "MEDIUM" : "HIGH"
+        expectedOutcome = `${confidence}% relative move probability`
+        analysis = `Local Analysis: ${confidence}% confidence for ${selection.toUpperCase()} versus reference digit ${currentDigit}.`
+        break
+
       default:
         confidence = Math.floor(Math.random() * 30) + 35 // Random between 35-65
         runs = 1
@@ -382,6 +494,12 @@ export function EnhancedPredictionModal({
         return <Hash className="h-5 w-5" />
       case "rise_fall":
         return <BarChart3 className="h-5 w-5" />
+      case "accumulators":
+        return <Zap className="h-5 w-5" />
+      case "only_ups":
+        return <ArrowUpRight className="h-5 w-5" />
+      case "higher_lower":
+        return <ArrowUpDown className="h-5 w-5" />
     }
   }
 
@@ -444,6 +562,48 @@ export function EnhancedPredictionModal({
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="fall" id="fall" />
               <Label htmlFor="fall">Fall</Label>
+            </div>
+          </RadioGroup>
+        )
+
+      case "accumulators":
+        return (
+          <RadioGroup value={choice} onValueChange={setChoice}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="accumulate" id="accumulate" />
+              <Label htmlFor="accumulate">Accumulate</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="reset" id="reset" />
+              <Label htmlFor="reset">Reset</Label>
+            </div>
+          </RadioGroup>
+        )
+
+      case "only_ups":
+        return (
+          <RadioGroup value={choice} onValueChange={setChoice}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="only_up" id="only_up" />
+              <Label htmlFor="only_up">Only Up</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="not_only_up" id="not_only_up" />
+              <Label htmlFor="not_only_up">Break Up</Label>
+            </div>
+          </RadioGroup>
+        )
+
+      case "higher_lower":
+        return (
+          <RadioGroup value={choice} onValueChange={setChoice}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="higher" id="higher" />
+              <Label htmlFor="higher">Higher</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="lower" id="lower" />
+              <Label htmlFor="lower">Lower</Label>
             </div>
           </RadioGroup>
         )
@@ -518,12 +678,13 @@ export function EnhancedPredictionModal({
                   {predictionType === "even_odd" && "Even/Odd Analysis"}
                   {predictionType === "rise_fall" && "Rise/Fall Analysis"}
                   {predictionType === "matches_differs" && "Matches/Differs Analysis"}
+                  {predictionType === "accumulators" && "Accumulators Analysis"}
+                  {predictionType === "only_ups" && "Only Ups Analysis"}
+                  {predictionType === "higher_lower" && "Higher/Lower Analysis"}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mb-2">
-                {isConnected
-                  ? "Using live Deriv data for enhanced accuracy"
-                  : "Using historical data analysis"}
+                Using shared last {Math.min(SHARED_TICK_WINDOW, ticksBuffer.length)} ticks for analysis.
               </p>
               {error && (
                 <div className="text-xs text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/30 mb-2">

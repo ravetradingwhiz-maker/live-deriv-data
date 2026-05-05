@@ -9,6 +9,7 @@ import DerivAPI from "@/lib/deriv-api" // Fixed import: DerivAPI is a default ex
 const WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=115912"
 const CANDLE_INTERVAL = 60000 // 1 minute in milliseconds
 const API_TOKEN = "2jJrchpytEWU9Ef" // Updated API token
+const PRELOAD_TICKS_COUNT = 1000
 
 const derivApi = new DerivAPI(API_TOKEN)
 
@@ -48,7 +49,7 @@ export function useDerivWebSocket() {
     macdHistory: number[]
   }>({ macdHistory: [] })
 
-  const MAX_BUFFER = 200
+  const MAX_BUFFER = PRELOAD_TICKS_COUNT
   const MAX_RECONNECT_ATTEMPTS = 5
   const RECONNECT_DELAY = 3000
 
@@ -127,6 +128,43 @@ export function useDerivWebSocket() {
     [calculateIndicatorsForCandles],
   )
 
+  const preloadRecentTicks = useCallback(
+    async (symbol: string) => {
+      try {
+        setStatus(`Fetching last ${PRELOAD_TICKS_COUNT} ticks for ${symbol}...`)
+
+        const history = await derivApi.getTicks(symbol, PRELOAD_TICKS_COUNT)
+        const prices = Array.isArray(history?.prices)
+          ? history.prices.map((p: unknown) => Number(p)).filter((p: number) => Number.isFinite(p))
+          : []
+        const times = Array.isArray(history?.times)
+          ? history.times.map((t: unknown) => Number(t)).filter((t: number) => Number.isFinite(t))
+          : []
+
+        if (!prices.length) {
+          return
+        }
+
+        const preloadedDigits = prices.map((quote: number) => extractLastDigit(quote)).slice(-MAX_BUFFER)
+        setTicksBuffer(preloadedDigits)
+
+        const lastQuote = prices[prices.length - 1]
+        setLastTick({
+          digit: extractLastDigit(lastQuote),
+          quote: lastQuote,
+        })
+
+        prices.forEach((quote: number, index: number) => {
+          const epochSeconds = times[index] ?? Math.floor(Date.now() / 1000) - (prices.length - index)
+          processTick(quote, epochSeconds * 1000)
+        })
+      } catch (error) {
+        console.error("[v0] Failed to preload ticks history:", error)
+      }
+    },
+    [processTick],
+  )
+
   const connect = useCallback(async () => {
     if (isAuthorizing.current) return
 
@@ -157,7 +195,7 @@ export function useDerivWebSocket() {
   }, [connectionAttempts])
 
   const subscribeTicks = useCallback(
-    (symbol: string) => {
+    async (symbol: string) => {
       if (!isAuthorized) {
         setStatus("Not connected - Cannot start analysis")
         return
@@ -171,18 +209,20 @@ export function useDerivWebSocket() {
       setTicksBuffer([])
       setLastTick(null)
 
+      await preloadRecentTicks(symbol)
+
       derivApi.subscribeTicks(symbol, (data) => {
         const quote = data.tick.quote
         const digit = extractLastDigit(quote)
 
         setLastTick({ digit, quote })
         setTicksBuffer((prev) => [...prev, digit].slice(-MAX_BUFFER))
-        processTick(quote, Date.now())
+        processTick(quote, (data.tick.epoch ?? Math.floor(Date.now() / 1000)) * 1000)
       })
 
       setStatus(`Analyzing ${symbol}...`)
     },
-    [isAuthorized, subscribedSymbol, processTick],
+    [isAuthorized, subscribedSymbol, processTick, preloadRecentTicks],
   )
 
   const unsubscribeTicks = useCallback(() => {

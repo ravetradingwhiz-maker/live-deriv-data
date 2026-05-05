@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { TrendingUp, Target, Hash, BarChart3, Lock } from "lucide-react"
+import { TrendingUp, Target, Hash, BarChart3, Lock, Zap, ArrowUpRight, ArrowUpDown } from "lucide-react"
 
 interface PredictionButtonsProps {
   onOpenPrediction: (type: string) => void
@@ -48,6 +48,27 @@ export function PredictionButtons({
       icon: BarChart3,
       description: "Predict price direction",
       color: "bg-orange-600 hover:bg-orange-700",
+    },
+    {
+      id: "accumulators",
+      name: "Accumulators",
+      icon: Zap,
+      description: "Streak continuity vs reset",
+      color: "bg-cyan-600 hover:bg-cyan-700",
+    },
+    {
+      id: "only_ups",
+      name: "Only Ups",
+      icon: ArrowUpRight,
+      description: "Momentum persistence check",
+      color: "bg-emerald-600 hover:bg-emerald-700",
+    },
+    {
+      id: "higher_lower",
+      name: "Higher/Lower",
+      icon: ArrowUpDown,
+      description: "Predict next tick relative move",
+      color: "bg-rose-600 hover:bg-rose-700",
     },
   ]
 
