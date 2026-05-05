@@ -251,7 +251,8 @@ export function useDerivWebSocket() {
 
     return () => {
       mounted = false
-      derivApi.disconnect()
+      // Do not disconnect shared API instance on unmount - it's used by other components
+      // derivApi.disconnect() should only be called on app shutdown, not component unmount
     }
   }, []) // Empty dependency array to run only once on mount
 

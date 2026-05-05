@@ -350,7 +350,15 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="max-w-6xl mx-auto">
           <h3 className="text-3xl font-bold text-white text-center mb-12">Multi-Strategy Support</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {["Matches / Differs", "Over / Under", "Rise / Fall", "Even / Odd"].map((strategy, idx) => (
+            {[
+              "Over / Under",
+              "Matches / Differs",
+              "Even / Odd",
+              "Rise / Fall",
+              "Accumulators",
+              "Only Ups",
+              "Higher / Lower",
+            ].map((strategy, idx) => (
               <Card key={idx} className="bg-slate-800/50 border-slate-700 hover:border-blue-500 transition-colors">
                 <CardContent className="p-6 text-center">
                   <div className="inline-block bg-blue-600/20 p-3 rounded-lg mb-3">
