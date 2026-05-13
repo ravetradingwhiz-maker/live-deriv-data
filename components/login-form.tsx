@@ -107,11 +107,8 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
           {/* Get Access Button */}
           <button
             onClick={() => {
-              const phoneNumber = "447453756837"
-              const message = "Hello, I'm interested in accessing your trading platform."
-              const encodedMessage = encodeURIComponent(message)
-              const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
-              window.open(whatsappURL, "_blank")
+              const telegramURL = "https://t.me/live_deriv"
+              window.open(telegramURL, "_blank")
             }}
             className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
           >
