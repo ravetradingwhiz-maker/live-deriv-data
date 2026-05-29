@@ -9,6 +9,21 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/contexts/AuthContext"
 import { Lock, Zap, Check } from "lucide-react"
 
+const ACCESS_MESSAGE =
+  "Hello, I've seen your trading videos and I'm interested in buying your software and joining your mentorship. What's the price and how do I get started?"
+
+const openTelegramWithMessage = () => {
+  // Copy to clipboard as a fallback — Telegram pre-fill via t.me ?text= is best-effort
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    navigator.clipboard.writeText(ACCESS_MESSAGE).catch(() => {})
+  }
+  window.open(`https://t.me/live_deriv?text=${encodeURIComponent(ACCESS_MESSAGE)}`, "_blank")
+}
+
+const openWhatsAppWithMessage = () => {
+  window.open(`https://wa.me/61421883113?text=${encodeURIComponent(ACCESS_MESSAGE)}`, "_blank")
+}
+
 interface LoginFormProps {
   onBackClick?: () => void
 }
@@ -108,7 +123,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => window.open("https://t.me/live_deriv", "_blank")}
+                onClick={openTelegramWithMessage}
                 className="h-11 bg-[#0088CC] hover:bg-[#0077B5] text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
               >
                 {/* Telegram paper-plane icon */}
@@ -118,7 +133,7 @@ export function LoginForm({ onBackClick }: LoginFormProps) {
                 Telegram
               </button>
               <button
-                onClick={() => window.open("https://wa.me/61421883113", "_blank")}
+                onClick={openWhatsAppWithMessage}
                 className="h-11 bg-[#25D366] hover:bg-[#20BA5A] text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
               >
                 {/* WhatsApp icon */}

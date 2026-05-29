@@ -35,7 +35,7 @@ export default function RootLayout({
 
         {/* Main Application Content - positioned above matrix with proper layering */}
         <div className="relative z-10">
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
             <AuthProvider>
               <DerivConnectionProvider>
                 <ContextMenuHandler />

@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/AuthContext"
 
 const TELEGRAM_URL = "https://t.me/live_deriv"
 const WHATSAPP_URL = "https://wa.me/61421883113"
+const ACCESS_MESSAGE =
+  "Hello, I've seen your trading videos and I'm interested in buying your software and joining your mentorship. What's the price and how do I get started?"
 
 export function FloatingContactButtons() {
   const { isAuthenticated } = useAuth()
@@ -38,8 +40,18 @@ export function FloatingContactButtons() {
     setIsChooserOpen(prev => !prev)
   }
 
-  const openLink = (url: string) => {
-    window.open(url, "_blank")
+  const openTelegram = () => {
+    // Pre-fill via ?text= when the client supports it, plus copy to clipboard so
+    // the user can paste even if the Telegram client doesn't honour the param.
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(ACCESS_MESSAGE).catch(() => {})
+    }
+    window.open(`${TELEGRAM_URL}?text=${encodeURIComponent(ACCESS_MESSAGE)}`, "_blank")
+    setIsChooserOpen(false)
+  }
+
+  const openWhatsApp = () => {
+    window.open(`${WHATSAPP_URL}?text=${encodeURIComponent(ACCESS_MESSAGE)}`, "_blank")
     setIsChooserOpen(false)
   }
 
@@ -50,7 +62,7 @@ export function FloatingContactButtons() {
         <div className="flex flex-col items-end gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Telegram option (blue) */}
           <button
-            onClick={() => openLink(TELEGRAM_URL)}
+            onClick={openTelegram}
             className="flex items-center gap-2 px-4 h-11 rounded-full bg-[#0088CC] hover:bg-[#0077B5] text-white font-semibold shadow-lg transition-all"
             title="Contact via Telegram"
           >
@@ -61,7 +73,7 @@ export function FloatingContactButtons() {
           </button>
           {/* WhatsApp option (green) */}
           <button
-            onClick={() => openLink(WHATSAPP_URL)}
+            onClick={openWhatsApp}
             className="flex items-center gap-2 px-4 h-11 rounded-full bg-[#25D366] hover:bg-[#20BA5A] text-white font-semibold shadow-lg transition-all"
             title="Contact via WhatsApp"
           >
