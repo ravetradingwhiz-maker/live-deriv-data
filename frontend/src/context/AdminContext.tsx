@@ -15,6 +15,10 @@ const MULT: Record<string, number> = {
     DIGITODD: 1.94,
     DIGITMATCH: 9.3,
     DIGITDIFF: 1.06,
+    TICKHIGH: 5.0,
+    TICKLOW: 5.0,
+    RUNHIGH: 3.7, // Only Ups (2 ticks)
+    RUNLOW: 3.7, // Only Downs (2 ticks)
 };
 const OVER: Record<number, number> = { 0: 1.06, 1: 1.19, 2: 1.36, 3: 1.58, 4: 1.94, 5: 2.39, 6: 3.17, 7: 4.76, 8: 9.3 };
 const UNDER: Record<number, number> = { 1: 9.3, 2: 4.76, 3: 3.17, 4: 2.39, 5: 1.94, 6: 1.58, 7: 1.36, 8: 1.19, 9: 1.06 };

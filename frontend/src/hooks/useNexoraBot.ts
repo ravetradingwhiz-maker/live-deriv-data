@@ -32,9 +32,14 @@ const symbolDisplayName = (symbol: string): string =>
 
 /** A concrete contract family the engine can model and trade. */
 export type NexoraFamily = 'rise_fall' | 'even_odd' | 'over_under' | 'matches_differs';
-/** A user-selectable strategy: a single family, or a meta-strategy. */
-export type NexoraStrategy = NexoraFamily | 'mix' | 'smart_ai';
+/** Premium named bots, each locked to a fixed contract type. */
+export type NexoraPremiumStrategy = 'matches_printer' | 'over8_killer' | 'tickstrike_pro' | 'auto_switcher';
+/** A user-selectable strategy: a single family, a meta-strategy, or a premium bot. */
+export type NexoraStrategy = NexoraFamily | 'mix' | 'smart_ai' | NexoraPremiumStrategy;
 export type RiskLevel = 'low' | 'medium' | 'high';
+
+const PREMIUM_SET = new Set<NexoraStrategy>(['matches_printer', 'over8_killer', 'tickstrike_pro', 'auto_switcher']);
+export const isPremiumStrategy = (s: NexoraStrategy): s is NexoraPremiumStrategy => PREMIUM_SET.has(s);
 
 export interface NexoraConfig {
     strategy: NexoraStrategy;
@@ -79,7 +84,7 @@ export const riskStakingLabel = (risk: RiskLevel): string => {
 };
 
 export interface NexoraSignal {
-    family: NexoraFamily;
+    family: string;
     contract_type: string;
     label: string;
     predictionText: string;
@@ -87,8 +92,10 @@ export interface NexoraSignal {
     passes: boolean;
     /** Normalised edge in [0,1] so families can be ranked against each other. */
     strength: number;
-    /** Digit barrier for digit contracts (matches/differs, over/under). */
+    /** Digit barrier for digit contracts (matches/differs, over/under) or the selected tick (TICKHIGH). */
     barrier?: number;
+    /** Contract duration in ticks. Falls back to the family default when omitted. */
+    duration?: number;
 }
 
 export interface DigitStat {
@@ -293,10 +300,10 @@ const evaluateFamilies = (
     return { even_odd: eo, rise_fall: rf, over_under: ou, matches_differs: md };
 };
 
-/** Pick the signal a strategy would act on right now (no side effects). */
+/** Pick the signal a (non-premium) strategy would act on right now. */
 const selectSignal = (
     sigs: Record<NexoraFamily, NexoraSignal>,
-    strategy: NexoraStrategy,
+    strategy: NexoraFamily | 'mix' | 'smart_ai',
     families: NexoraFamily[]
 ): NexoraSignal => {
     if (strategy === 'mix' || strategy === 'smart_ai') {
@@ -304,6 +311,128 @@ const selectSignal = (
     }
     return sigs[strategy];
 };
+
+// ── Premium bots ───────────────────────────────────────────────────────────
+// Each premium strategy is one fixed contract type with its own signal logic.
+// Tick budgets: Matches 1, Over 8 5, TickStrike 5, Auto Switcher 2.
+const premiumSignal = (
+    strategy: NexoraPremiumStrategy,
+    quotes: number[],
+    decimals: number,
+    risk: RiskLevel
+): NexoraSignal | null => {
+    const digits = quotes.map(q => lastDigitOf(q, decimals));
+    const win = digits.slice(-DIGIT_WINDOW);
+    const n = win.length || 1;
+    if (win.length < 12) return null;
+
+    if (strategy === 'matches_printer') {
+        // Combine the stationary frequency with a 1st-order digit Markov
+        // (which digit most often follows the current one), then play the digit
+        // with the best blended score.
+        const counts = new Array(10).fill(0);
+        for (const d of win) counts[d]++;
+        const freq = counts.map(c => c / n);
+        const cur = win[win.length - 1];
+        const tCounts = new Array(10).fill(0);
+        let tTot = 0;
+        for (let i = 1; i < win.length; i++) {
+            if (win[i - 1] === cur) {
+                tCounts[win[i]]++;
+                tTot++;
+            }
+        }
+        const markov = tCounts.map(c => (tTot ? c / tTot : 0.1));
+        const blend = 0.6;
+        let best = 0;
+        let bestScore = -1;
+        for (let d = 0; d < 10; d++) {
+            const score = blend * markov[d] + (1 - blend) * freq[d];
+            if (score > bestScore) {
+                bestScore = score;
+                best = d;
+            }
+        }
+        const passes = bestScore - 0.1 >= MD_GATES[risk].match;
+        return {
+            family: 'matches_printer',
+            contract_type: 'DIGITMATCH',
+            label: `Matches ${best}`,
+            predictionText: `Next digit = ${best}`,
+            conf: bestScore,
+            barrier: best,
+            duration: 1,
+            passes,
+            strength: Math.max(0, (bestScore - 0.1) / 0.9),
+        };
+    }
+
+    if (strategy === 'over8_killer') {
+        // Over 8 → win only on digit 9. Fire when 9 is over-represented recently.
+        const p9 = win.filter(d => d === 9).length / n;
+        const need = { low: 0.14, medium: 0.12, high: 0.1 }[risk];
+        return {
+            family: 'over8_killer',
+            contract_type: 'DIGITOVER',
+            label: 'Over 8',
+            predictionText: 'Last digit > 8',
+            conf: Math.max(p9, 0.1),
+            barrier: 8,
+            duration: 5,
+            passes: p9 >= need,
+            strength: Math.max(0, (p9 - 0.1) / 0.9),
+        };
+    }
+
+    if (strategy === 'tickstrike_pro') {
+        // High tick → predict the 5th tick is the highest of the series. Favoured
+        // by upward momentum, so gate on a bullish direction model.
+        const dirs: number[] = [];
+        for (let i = 1; i < quotes.length; i++) dirs.push(quotes[i] > quotes[i - 1] ? 1 : 0);
+        const up = predictBinary(dirs);
+        return {
+            family: 'tickstrike_pro',
+            contract_type: 'TICKHIGH',
+            label: 'Tick High',
+            predictionText: 'Last of 5 ticks is the highest',
+            conf: up.pOne,
+            barrier: 5, // selected tick (the 5th)
+            duration: 5,
+            passes: up.pOne >= 0.5, // eager: any bullish lean
+            strength: Math.max(0, (up.pOne - 0.5) / 0.5),
+        };
+    }
+
+    // auto_switcher → Only Ups / Only Downs over 2 ticks, direction from the
+    // tick-direction Markov; it flips automatically with the trend.
+    const dirs: number[] = [];
+    for (let i = 1; i < quotes.length; i++) dirs.push(quotes[i] > quotes[i - 1] ? 1 : 0);
+    const dir = predictBinary(dirs);
+    const up = dir.pOne >= 0.5;
+    const conf = up ? dir.pOne : 1 - dir.pOne;
+    return {
+        family: 'auto_switcher',
+        contract_type: up ? 'RUNHIGH' : 'RUNLOW',
+        label: up ? 'Only Ups' : 'Only Downs',
+        predictionText: up ? '2 ticks all rise' : '2 ticks all fall',
+        conf,
+        duration: 2,
+        passes: true, // always picks a side and trades — it auto-switches each round
+        strength: Math.max(0, (conf - 0.5) / 0.5),
+    };
+};
+
+/** The signal the current config would act on right now (premium or family). */
+const currentSignal = (
+    strategy: NexoraStrategy,
+    quotes: number[],
+    decimals: number,
+    risk: RiskLevel,
+    families: NexoraFamily[]
+): NexoraSignal | null =>
+    isPremiumStrategy(strategy)
+        ? premiumSignal(strategy, quotes, decimals, risk)
+        : selectSignal(evaluateFamilies(quotes, decimals, risk), strategy, families);
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
@@ -399,8 +528,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
         });
 
         const cfg = cfgRef.current;
-        const sigs = evaluateFamilies(q, dec, cfg.risk);
-        setSignal(selectSignal(sigs, cfg.strategy, cfg.families ?? DEFAULT_FAMILIES));
+        setSignal(currentSignal(cfg.strategy, q, dec, cfg.risk, cfg.families ?? DEFAULT_FAMILIES));
     }, []);
 
     const onContractSettled = useCallback(
@@ -441,7 +569,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
             const cfg = cfgRef.current;
             const prof = RISK[cfg.risk];
             const stake = round2(cfg.stake * Math.pow(prof.martingale, Math.min(stepRef.current, prof.maxStep)));
-            const duration = sig.family === 'rise_fall' ? prof.riseDuration : 1;
+            const duration = sig.duration ?? (sig.family === 'rise_fall' ? prof.riseDuration : 1);
 
             setStatus({
                 kind: 'trading',
@@ -524,10 +652,18 @@ export const useNexoraBot = (config: NexoraConfig) => {
         const q = quotesRef.current;
         if (q.length < 18) return; // warm-up window
         const cfg = cfgRef.current;
-        const sigs = evaluateFamilies(q, decimalsRef.current, cfg.risk);
         const strat = cfg.strategy;
 
         let pick: NexoraSignal | null = null;
+        if (isPremiumStrategy(strat)) {
+            const s = premiumSignal(strat, q, decimalsRef.current, cfg.risk);
+            if (s?.passes) pick = s;
+            if (!pick) return;
+            void placeTrade(pick);
+            return;
+        }
+
+        const sigs = evaluateFamilies(q, decimalsRef.current, cfg.risk);
         if (strat === 'smart_ai') {
             // Trade the single highest-edge family that clears its gate.
             const fams = cfg.families ?? DEFAULT_FAMILIES;

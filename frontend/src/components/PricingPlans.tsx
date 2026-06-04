@@ -46,7 +46,7 @@ const PLANS: Plan[] = [
         cta: 'Start free',
         to: '/app/trade-pilot-free',
         features: [
-            'Rise/Fall, Even/Odd & Mix strategies',
+            'Even/Odd AI & Rise/Fall Expert bots',
             'Automated Markov engine',
             'Risk levels: Low / Medium / High',
             'Live P&L & trade history',
@@ -68,8 +68,8 @@ const PLANS: Plan[] = [
         tier: 'alpha',
         features: [
             'Everything in Free',
+            'Matches Printer bot — Matches strategy',
             'Trade on Real & Demo accounts',
-            '+ Over/Under & Matches/Differs',
             'Priority bot execution',
             'Email & Telegram support',
         ],
@@ -89,7 +89,7 @@ const PLANS: Plan[] = [
         highlighted: true,
         features: [
             'Everything in Alpha',
-            'Mix mode across all strategies',
+            'Over 8 Killer bot — Over 8 · 5 ticks',
             'All volatility markets',
             'Advanced risk profiles & analytics',
             'Priority support · email & Telegram',
@@ -109,9 +109,9 @@ const PLANS: Plan[] = [
         tier: 'apex',
         features: [
             'Everything in Quantum',
-            'Smart AI auto signal-selection',
+            'TickStrike Pro bot — high tick · 5 ticks',
+            'Auto Switcher bot — Only Ups/Downs',
             'Unlimited trading sessions',
-            'Early access to new strategies',
             '24/7 priority support + strategy calls',
         ],
     },

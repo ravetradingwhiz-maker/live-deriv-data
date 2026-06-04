@@ -1,42 +1,40 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ArrowUpDown,
     CheckCircle2,
     Crown,
     Equal,
-    Hash,
     Lock,
     Play,
     Shuffle,
-    Sparkles,
     Square,
-    TrendingUp,
+    Target,
     TriangleAlert,
+    Zap,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { useAdminOptional } from '@/context/AdminContext';
 import { getActiveCurrency } from '@/services/trade-api';
 import type { Tier } from '@/services/payments-api';
-import { useNexoraBot, type NexoraFamily, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
+import { useNexoraBot, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
 
-const TIERS: { id: Tier; label: string; tagline: string; offers: string[] }[] = [
-    { id: 'alpha', label: 'Alpha', tagline: 'Entry', offers: ['Real & Demo', 'Over/Under, Matches/Differs', 'Priority execution'] },
-    { id: 'quantum', label: 'Quantum', tagline: 'Popular', offers: ['Everything in Alpha', 'Mix all strategies', 'All markets'] },
-    { id: 'apex', label: 'Apex', tagline: 'Full power', offers: ['Everything in Quantum', 'Smart AI selection', '24/7 support'] },
+const TIER_LABEL: Record<Tier, string> = { alpha: 'Alpha', quantum: 'Quantum', apex: 'Apex' };
+
+// Premium bots, each a fixed contract type, unlocked by tier (cumulative rank).
+const PREMIUM_BOTS: {
+    id: NexoraStrategy;
+    label: string;
+    sub: string;
+    icon: LucideIcon;
+    tier: Tier;
+}[] = [
+    { id: 'matches_printer', label: 'Matches Printer', sub: 'Smart matches for consistent hits', icon: Equal, tier: 'alpha' },
+    { id: 'over8_killer', label: 'Over 8 Killer', sub: 'High-accuracy Over 8 sniper', icon: Target, tier: 'quantum' },
+    { id: 'tickstrike_pro', label: 'TickStrike Pro', sub: 'High-speed tick momentum plays', icon: Zap, tier: 'apex' },
+    { id: 'auto_switcher', label: 'Auto Switcher', sub: 'Auto-switches Ups/Downs to stay safe', icon: Shuffle, tier: 'apex' },
 ];
-
-const STRATEGIES: { id: NexoraStrategy; label: string; icon: typeof TrendingUp; accent?: boolean }[] = [
-    { id: 'smart_ai', label: 'Smart AI', icon: Sparkles, accent: true },
-    { id: 'rise_fall', label: 'Rise / Fall', icon: TrendingUp },
-    { id: 'even_odd', label: 'Even / Odd', icon: Hash },
-    { id: 'matches_differs', label: 'Matches / Differs', icon: Equal },
-    { id: 'over_under', label: 'Over 4 / Under 5', icon: ArrowUpDown },
-    { id: 'mix', label: 'Mix', icon: Shuffle },
-];
-
-const PREMIUM_FAMILIES: NexoraFamily[] = ['rise_fall', 'even_odd', 'over_under', 'matches_differs'];
 
 const MARKETS: { symbol: string; name: string }[] = [
     { symbol: '1HZ100V', name: 'Volatility 100 (1s)' },
@@ -93,8 +91,7 @@ const TradePilotPremium = () => {
     const isAdmin = !!admin?.eligible; // admins get every tier free
     const currency = balanceCurrency || getActiveCurrency();
 
-    const [tier, setTier] = useState<Tier>('alpha');
-    const [strategy, setStrategy] = useState<NexoraStrategy>('smart_ai');
+    const [strategy, setStrategy] = useState<NexoraStrategy>('matches_printer');
     const [symbol, setSymbol] = useState('1HZ100V');
     const [stake, setStake] = useState(1);
     const [profitTarget, setProfitTarget] = useState(20);
@@ -109,14 +106,16 @@ const TradePilotPremium = () => {
             profitTarget,
             maxLoss,
             currency,
-            families: PREMIUM_FAMILIES,
         }),
         [strategy, symbol, stake, profitTarget, maxLoss, currency]
     );
 
     const { ticksReady, isRunning, status, stats, start, stop } = useNexoraBot(config);
 
-    const unlocked = isAdmin || subscription.covers(tier); // admins + active sub of >= tier
+    // The selected bot's required tier gates running.
+    const selectedBot = PREMIUM_BOTS.find(b => b.id === strategy) ?? PREMIUM_BOTS[0];
+    const canRun = (b: Tier) => isAdmin || subscription.covers(b);
+    const unlocked = canRun(selectedBot.tier);
     const inputsValid = stake > 0 && profitTarget > 0 && maxLoss > 0;
 
     const showStatus = status.kind !== 'idle';
@@ -148,17 +147,13 @@ const TradePilotPremium = () => {
                             Real &amp; Demo
                         </span>
                     </div>
-                    {isAdmin ? (
-                        <p className='flex items-center gap-1 text-[11px] text-emerald-300'>
-                            <CheckCircle2 size={11} /> Admin access · all tiers unlocked
-                        </p>
-                    ) : subscription.active ? (
+                    {subscription.active ? (
                         <p className='flex items-center gap-1 text-[11px] text-emerald-300'>
                             <CheckCircle2 size={11} /> {subscription.label} active · until {fmtDate(subscription.expiresAt)}
                         </p>
-                    ) : (
+                    ) : !isAdmin ? (
                         <p className='text-[11px] text-amber-100/70'>Subscribe to activate the premium engine.</p>
-                    )}
+                    ) : null}
                 </div>
                 {!subscription.active && !isAdmin && (
                     <button
@@ -171,75 +166,40 @@ const TradePilotPremium = () => {
                 )}
             </div>
 
-            {/* Subscription tiers */}
+            {/* Bots (strategies) — unlocked by tier */}
             <div>
-                <h2 className='mb-1.5 text-[11px] font-medium text-slate-400'>Subscription tier</h2>
-                <div className='grid gap-1.5 sm:grid-cols-3'>
-                    {TIERS.map(t => {
-                        const active = t.id === tier;
-                        const owned = isAdmin || subscription.covers(t.id);
+                <h2 className='mb-1.5 text-[11px] font-medium text-slate-400'>Bot strategy</h2>
+                <div className='grid grid-cols-2 gap-1.5'>
+                    {PREMIUM_BOTS.map(b => {
+                        const Icon = b.icon;
+                        const active = b.id === strategy;
+                        const owned = canRun(b.tier);
                         return (
                             <button
-                                key={t.id}
+                                key={b.id}
                                 type='button'
                                 disabled={isRunning}
-                                onClick={() => setTier(t.id)}
-                                className={`flex flex-col gap-1.5 rounded-lg border p-2.5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
-                                    active
-                                        ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_14px_rgba(245,158,11,0.3)]'
-                                        : 'border-line bg-ink-800 hover:border-amber-700'
-                                }`}
-                            >
-                                <div className='flex items-baseline justify-between'>
-                                    <span className={`text-sm font-bold ${active ? 'text-amber-200' : 'text-slate-200'}`}>
-                                        {t.label}
-                                    </span>
-                                    {owned ? (
-                                        <CheckCircle2 size={12} className='text-emerald-400' />
-                                    ) : (
-                                        <Lock size={11} className='text-slate-500' />
-                                    )}
-                                </div>
-                                <ul className='flex flex-col gap-0.5'>
-                                    {t.offers.map(o => (
-                                        <li key={o} className='flex items-start gap-1 text-[10px] leading-tight text-slate-400'>
-                                            <span className='mt-1 h-1 w-1 shrink-0 rounded-full bg-amber-400' />
-                                            {o}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Strategy */}
-            <div>
-                <h2 className='mb-1.5 text-[11px] font-medium text-slate-400'>Strategy</h2>
-                <div className='grid grid-cols-3 gap-1.5'>
-                    {STRATEGIES.map(s => {
-                        const Icon = s.icon;
-                        const active = s.id === strategy;
-                        return (
-                            <button
-                                key={s.id}
-                                type='button'
-                                disabled={isRunning}
-                                onClick={() => setStrategy(s.id)}
-                                className={`flex flex-col items-center gap-0.5 rounded-lg border px-1.5 py-2 text-center transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                                onClick={() => setStrategy(b.id)}
+                                className={`relative flex flex-col gap-1 rounded-lg border p-2.5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                                     active
                                         ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_14px_rgba(245,158,11,0.25)]'
                                         : 'border-line bg-ink-800 hover:border-amber-700'
-                                }`}
+                                } ${!owned ? 'opacity-80' : ''}`}
                             >
-                                <Icon
-                                    size={15}
-                                    className={active ? 'text-amber-300' : s.accent ? 'text-violet-300' : 'text-slate-400'}
-                                />
-                                <span className={`text-[11px] font-semibold ${active ? 'text-white' : 'text-slate-300'}`}>
-                                    {s.label}
+                                <div className='flex items-center justify-between'>
+                                    <Icon size={16} className={active ? 'text-amber-300' : 'text-slate-400'} />
+                                    {owned ? (
+                                        <CheckCircle2 size={12} className='text-emerald-400' />
+                                    ) : (
+                                        <span className='flex items-center gap-0.5 rounded-full border border-slate-600 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-slate-400'>
+                                            <Lock size={8} /> {TIER_LABEL[b.tier]}
+                                        </span>
+                                    )}
+                                </div>
+                                <span className={`text-[12px] font-bold ${active ? 'text-white' : 'text-slate-200'}`}>
+                                    {b.label}
                                 </span>
+                                <span className='text-[10px] leading-tight text-slate-400'>{b.sub}</span>
                             </button>
                         );
                     })}
@@ -290,7 +250,7 @@ const TradePilotPremium = () => {
                     onClick={() => navigate('/app/pricing')}
                     className='flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-violet-500 px-6 py-3 text-sm font-bold text-ink-900 shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all hover:brightness-110'
                 >
-                    <Lock size={16} /> Unlock {TIERS.find(t => t.id === tier)?.label} to run
+                    <Lock size={16} /> Unlock {TIER_LABEL[selectedBot.tier]} to run
                 </button>
             ) : isRunning ? (
                 <button
