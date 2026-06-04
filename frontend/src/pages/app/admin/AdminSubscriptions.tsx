@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, RefreshCw, Save, Search, Trash2, Users } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Save, Search, Trash2, Users, X } from 'lucide-react';
 import {
     createSubscription,
     deleteSubscription,
@@ -21,7 +21,8 @@ const AdminSubscriptions = () => {
     const [busy, setBusy] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Create form
+    // Create form (in a modal)
+    const [addOpen, setAddOpen] = useState(false);
     const [newLoginid, setNewLoginid] = useState('');
     const [newTier, setNewTier] = useState<Tier>('alpha');
     const [newMonths, setNewMonths] = useState<number | ''>('');
@@ -61,6 +62,7 @@ const AdminSubscriptions = () => {
             setNewLoginid('');
             setNewEmail('');
             setNewMonths('');
+            setAddOpen(false);
             await load();
         } catch (e: any) {
             setError(e?.message ?? 'Create failed');
@@ -96,72 +98,39 @@ const AdminSubscriptions = () => {
 
     return (
         <div className='flex w-full flex-col gap-4'>
-            <div className='flex items-center justify-between'>
+            <div className='flex items-center justify-between gap-2'>
                 <h1 className='flex items-center gap-2 text-lg font-bold text-white'>
                     <Users size={20} className='text-cyan-400' /> Subscriptions
                 </h1>
-                <button onClick={load} className='flex items-center gap-1.5 text-xs text-slate-400 hover:text-white'>
-                    <RefreshCw size={14} /> Refresh
-                </button>
-            </div>
-
-            {/* Grant new */}
-            <div className='card grid gap-2 sm:grid-cols-5'>
-                <input
-                    value={newLoginid}
-                    onChange={e => setNewLoginid(e.target.value)}
-                    placeholder='Loginids (comma-sep)'
-                    className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
-                />
-                <select
-                    value={newTier}
-                    onChange={e => setNewTier(e.target.value as Tier)}
-                    className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
-                >
-                    {TIERS.map(t => (
-                        <option key={t} value={t}>
-                            {t}
-                        </option>
-                    ))}
-                </select>
-                <input
-                    type='number'
-                    value={newMonths}
-                    onChange={e => setNewMonths(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder='Months'
-                    className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
-                />
-                <input
-                    value={newEmail}
-                    onChange={e => setNewEmail(e.target.value)}
-                    placeholder='Email (optional)'
-                    className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
-                />
-                <button
-                    onClick={onCreate}
-                    disabled={busy === 'create' || !newLoginid.trim()}
-                    className='btn-admin'
-                >
-                    {busy === 'create' ? <Loader2 size={16} className='animate-spin' /> : <Plus size={16} />} Grant
-                </button>
+                <div className='flex items-center gap-3'>
+                    <button
+                        onClick={load}
+                        className='flex items-center gap-1.5 text-xs text-slate-400 hover:text-white'
+                    >
+                        <RefreshCw size={14} /> Refresh
+                    </button>
+                    <button onClick={() => setAddOpen(true)} className='btn-admin'>
+                        <Plus size={16} /> Add subscription
+                    </button>
+                </div>
             </div>
 
             {/* Search */}
-            <div className='flex gap-2'>
-                <div className='flex flex-1 items-center gap-2 rounded-lg border border-line bg-ink-800 px-3'>
-                    <Search size={15} className='text-slate-500' />
+            <div className='flex flex-wrap items-center gap-2'>
+                <div className='flex basis-full items-center gap-2 rounded-lg border border-line bg-ink-800 px-3 sm:basis-0 sm:flex-1'>
+                    <Search size={15} className='shrink-0 text-slate-500' />
                     <input
                         value={q}
                         onChange={e => setQ(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && load()}
                         placeholder='Search loginid or email'
-                        className='flex-1 bg-transparent py-2 text-sm text-white outline-none'
+                        className='min-w-0 flex-1 bg-transparent py-2 text-sm text-white outline-none'
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className='rounded-lg border border-line bg-ink-800 px-3 text-sm text-white outline-none'
+                    className='flex-1 rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none sm:flex-none'
                 >
                     <option value=''>All</option>
                     <option value='active'>Active</option>
@@ -234,6 +203,70 @@ const AdminSubscriptions = () => {
             <p className='flex items-center gap-1.5 text-[11px] text-slate-600'>
                 <Save size={12} /> Tier, status and expiry changes save instantly.
             </p>
+
+            {/* Add subscription modal */}
+            {addOpen && (
+                <div className='fixed inset-0 z-[60] flex items-center justify-center p-4'>
+                    <div className='absolute inset-0 bg-black/60' onClick={() => setAddOpen(false)} />
+                    <div className='relative w-full max-w-sm rounded-2xl border border-cyan-500/40 bg-ink-900 p-5 shadow-2xl'>
+                        <button
+                            type='button'
+                            onClick={() => setAddOpen(false)}
+                            className='absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-ink-800 hover:text-white'
+                        >
+                            <X size={18} />
+                        </button>
+                        <h2 className='flex items-center gap-2 text-base font-bold text-white'>
+                            <Plus size={18} className='text-cyan-400' /> Add subscription
+                        </h2>
+                        <div className='mt-4 flex flex-col gap-2'>
+                            <input
+                                value={newLoginid}
+                                onChange={e => setNewLoginid(e.target.value)}
+                                placeholder='Loginids (comma-sep)'
+                                autoFocus
+                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
+                            />
+                            <select
+                                value={newTier}
+                                onChange={e => setNewTier(e.target.value as Tier)}
+                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
+                            >
+                                {TIERS.map(t => (
+                                    <option key={t} value={t}>
+                                        {t}
+                                    </option>
+                                ))}
+                            </select>
+                            <input
+                                type='number'
+                                value={newMonths}
+                                onChange={e => setNewMonths(e.target.value === '' ? '' : Number(e.target.value))}
+                                placeholder='Months (optional — defaults to tier)'
+                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
+                            />
+                            <input
+                                value={newEmail}
+                                onChange={e => setNewEmail(e.target.value)}
+                                placeholder='Email (optional)'
+                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
+                            />
+                            <button
+                                onClick={onCreate}
+                                disabled={busy === 'create' || !newLoginid.trim()}
+                                className='btn-admin mt-1 w-full'
+                            >
+                                {busy === 'create' ? (
+                                    <Loader2 size={16} className='animate-spin' />
+                                ) : (
+                                    <Plus size={16} />
+                                )}{' '}
+                                Grant
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

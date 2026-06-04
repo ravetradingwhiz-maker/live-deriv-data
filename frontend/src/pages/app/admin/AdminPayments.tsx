@@ -65,21 +65,21 @@ const AdminPayments = () => {
                 </div>
             </div>
 
-            <div className='flex gap-2'>
-                <div className='flex flex-1 items-center gap-2 rounded-lg border border-line bg-ink-800 px-3'>
-                    <Search size={15} className='text-slate-500' />
+            <div className='flex flex-wrap items-center gap-2'>
+                <div className='flex basis-full items-center gap-2 rounded-lg border border-line bg-ink-800 px-3 sm:basis-0 sm:flex-1'>
+                    <Search size={15} className='shrink-0 text-slate-500' />
                     <input
                         value={q}
                         onChange={e => setQ(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && load()}
                         placeholder='Search order id or email'
-                        className='flex-1 bg-transparent py-2 text-sm text-white outline-none'
+                        className='min-w-0 flex-1 bg-transparent py-2 text-sm text-white outline-none'
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className='rounded-lg border border-line bg-ink-800 px-3 text-sm text-white outline-none'
+                    className='flex-1 rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none sm:flex-none'
                 >
                     <option value=''>All</option>
                     <option value='paid'>Paid</option>
