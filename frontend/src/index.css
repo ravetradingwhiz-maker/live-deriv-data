@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Logo wordmark font. Drop the file into public/fonts/ (gevora.woff2 / .ttf). */
+@font-face {
+    font-family: 'Gevora';
+    src: url('/fonts/gevora-font/GevoraRegular-yYR2q.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@layer base {
+    :root {
+        color-scheme: dark;
+    }
+
+    html,
+    body {
+        @apply bg-ink-900 text-slate-200 antialiased;
+    }
+
+    body {
+        font-family: theme('fontFamily.sans');
+    }
+
+    ::selection {
+        @apply bg-cyan-700 text-white;
+    }
+
+    /* Solid cyan scrollbar accents — no gradients anywhere. */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+        @apply bg-ink-800;
+    }
+    ::-webkit-scrollbar-thumb {
+        @apply bg-ink-500 rounded;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-cyan-800;
+    }
+}
+
+@layer components {
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-cyan-600 px-6 py-2.5
+            font-semibold text-white transition-all hover:bg-cyan-500 focus:outline-none
+            focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-ink-900
+            disabled:cursor-not-allowed disabled:opacity-60;
+        box-shadow: 0 0 16px rgba(34, 211, 238, 0.4), 0 0 36px rgba(34, 211, 238, 0.2);
+    }
+    .btn-primary:hover {
+        box-shadow: 0 0 24px rgba(34, 211, 238, 0.6), 0 0 54px rgba(34, 211, 238, 0.32);
+    }
+
+    .btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 rounded-full border border-cyan-700
+            bg-transparent px-6 py-2.5 font-semibold text-slate-200 transition-all
+            hover:border-cyan-400 hover:text-cyan-300 focus:outline-none focus:ring-2
+            focus:ring-cyan-600;
+        box-shadow: 0 0 14px rgba(34, 211, 238, 0.22);
+    }
+    .btn-ghost:hover {
+        box-shadow: 0 0 22px rgba(34, 211, 238, 0.45);
+    }
+
+    /* Extra-bright, glowing call-to-action (the Nexora AI access button). */
+    .btn-glow {
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-6 py-3
+            font-bold text-ink-900 transition-all hover:bg-cyan-300 focus:outline-none
+            focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-ink-900;
+        box-shadow: 0 0 22px rgba(34, 211, 238, 0.55), 0 0 48px rgba(34, 211, 238, 0.28);
+    }
+    .btn-glow:hover {
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.8), 0 0 70px rgba(34, 211, 238, 0.4);
+    }
+
+    /* Multi-color Nexora AI gradient button (cyan -> violet -> amber). */
+    .btn-nexora {
+        @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-bold
+            text-white transition-all focus:outline-none focus:ring-2 focus:ring-violet-300
+            focus:ring-offset-2 focus:ring-offset-ink-900;
+        background-image: linear-gradient(90deg, #22d3ee, #a855f7, #f59e0b);
+        box-shadow: 0 0 22px rgba(168, 85, 247, 0.5), 0 0 44px rgba(34, 211, 238, 0.3);
+    }
+    .btn-nexora:hover {
+        filter: brightness(1.08);
+        box-shadow: 0 0 30px rgba(168, 85, 247, 0.7), 0 0 64px rgba(34, 211, 238, 0.4);
+    }
+
+    /* Compact dark-cyan action button for the admin pages. */
+    .btn-admin {
+        @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2
+            text-sm font-semibold text-white transition-colors hover:bg-cyan-500 focus:outline-none
+            focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-ink-900
+            disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .card {
+        @apply rounded-xl border border-line bg-ink-800 p-6;
+    }
+
+    .container-page {
+        @apply mx-auto w-full max-w-[1200px] px-5;
+    }
+
+    /* Multi-color Nexora AI brand text (cyan -> violet -> amber). */
+    .text-nexora {
+        background-image: linear-gradient(90deg, #22d3ee, #a855f7, #f59e0b);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* Logo wordmark font. Falls back to a bold sans if "Gevora" isn't loaded. */
+    .font-logo {
+        font-family: 'Gevora', 'Poppins', system-ui, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+}

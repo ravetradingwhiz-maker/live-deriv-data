@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        // Emit to a temp dir so the compiled vite.config.js does NOT land next to
+        // vite.config.ts (Vite would load the stale .js instead of the .ts).
+        "outDir": "./node_modules/.tmp/tsc-node",
+        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+        "skipLibCheck": true,
+        "module": "ESNext",
+        "target": "ES2022",
+        "moduleResolution": "bundler",
+        "allowSyntheticDefaultImports": true,
+        "types": ["node"],
+        "strict": true
+    },
+    "include": ["vite.config.ts"]
+}
