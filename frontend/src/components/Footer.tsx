@@ -62,7 +62,7 @@ const Footer = () => {
                 <div className='mt-10 border-t border-line pt-6 text-xs text-slate-600'>
                     <p>
                         Trading involves risk. This product is not an official Deriv product and is provided for
-                        educational purposes. © {new Date().getFullYear()} Live Deriv Data.
+                        educational purposes. © {new Date().getFullYear()} Live Deriv Data Analysis.
                     </p>
                 </div>
             </div>

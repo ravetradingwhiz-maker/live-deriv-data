@@ -5,10 +5,10 @@
  * auth services can read the same shape (auth2_url, derivws.url, directories).
  */
 export const brandConfig = {
-    brand_name: 'Live Deriv Data',
-    brand_domain: 'https://deriveoptions.com',
+    brand_name: 'Live Deriv Data Analysis',
+    brand_domain: 'https://www.livederivdataanalysis.com',
     platform: {
-        name: 'Live Deriv Data',
+        name: 'Live Deriv Data Analysis',
         // OAuth 2.0 (PKCE) authorization server — production only.
         auth2_url: {
             production: 'https://auth.deriv.com/oauth2/',

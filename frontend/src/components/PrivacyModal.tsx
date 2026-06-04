@@ -75,7 +75,7 @@ const PrivacyModal = ({ open, onClose, requireAccept = false, onAccept }: Privac
                     <section className='space-y-2'>
                         <h3 className='font-semibold text-white'>Your privacy</h3>
                         <p>
-                            Live Deriv Data connects to your Deriv account through the official Deriv API using
+                            Live Deriv Data Analysis connects to your Deriv account through the official Deriv API using
                             OAuth. We never see or store your Deriv password. Authentication tokens are kept only in
                             your browser&apos;s local storage and are used solely to communicate with Deriv on your
                             behalf.

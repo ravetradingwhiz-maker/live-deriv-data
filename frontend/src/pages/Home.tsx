@@ -90,7 +90,7 @@ const STEPS = [
 const FAQS = [
     {
         q: 'Is this an official Deriv product?',
-        a: 'No. Live Deriv Data is an independent platform that connects to your Deriv account through the official Deriv API.',
+        a: 'No. Live Deriv Data Analysis is an independent platform that connects to your Deriv account through the official Deriv API.',
     },
     {
         q: 'How do you handle my login?',
