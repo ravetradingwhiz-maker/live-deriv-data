@@ -117,6 +117,45 @@ const PLANS: Plan[] = [
     },
 ];
 
+const Bar = ({ className = '' }: { className?: string }) => (
+    <span className={`block rounded bg-ink-700 ${className}`} />
+);
+
+/** Skeleton card — mirrors the real plan card layout while prices load. */
+const PlanCardSkeleton = ({ highlighted }: { highlighted?: boolean }) => (
+    <div
+        className={`flex animate-pulse flex-col rounded-2xl border bg-ink-800 p-6 ${
+            highlighted ? 'border-cyan-500/40 ring-1 ring-cyan-500/20' : 'border-line'
+        }`}
+    >
+        <div className='flex items-start justify-between'>
+            <div className='flex items-center gap-3'>
+                <span className='h-11 w-11 shrink-0 rounded-xl bg-ink-700' />
+                <div className='flex flex-col gap-1.5'>
+                    <Bar className='h-3 w-24' />
+                    <Bar className='h-2.5 w-16' />
+                </div>
+            </div>
+            <Bar className='h-5 w-16 rounded-full' />
+        </div>
+
+        <div className='mt-5 rounded-xl border border-line bg-ink-900 px-5 py-5'>
+            <Bar className='mb-3 h-4 w-20' />
+            <Bar className='h-10 w-32' />
+        </div>
+
+        <Bar className='mt-3 h-5 w-24 rounded-full' />
+
+        <div className='mt-5 grid flex-1 gap-x-4 gap-y-3 sm:grid-cols-2'>
+            {Array.from({ length: 6 }).map((_, i) => (
+                <Bar key={i} className='h-3 w-full' />
+            ))}
+        </div>
+
+        <Bar className='mt-6 h-11 w-full rounded-full' />
+    </div>
+);
+
 /** The pricing plan cards grid. Reused by the public page and the in-app tab. */
 const PricingPlans = () => {
     const { isAuthenticated, loginOAuth2 } = useAuth();
@@ -125,11 +164,13 @@ const PricingPlans = () => {
     const isAdmin = !!admin?.eligible;
     const navigate = useNavigate();
     const [prices, setPrices] = useState<Record<Tier, TierPricing> | null>(null);
+    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
         getPricing()
             .then(setPrices)
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => setLoaded(true));
     }, []);
 
     const handleStart = (to = '/app/manual') => {
@@ -141,6 +182,16 @@ const PricingPlans = () => {
         sessionStorage.setItem('post_login_redirect', to);
         loginOAuth2();
     };
+
+    if (!loaded) {
+        return (
+            <div className='mx-auto grid max-w-5xl gap-6 lg:grid-cols-2'>
+                {PLANS.map((plan, i) => (
+                    <PlanCardSkeleton key={i} highlighted={plan.highlighted} />
+                ))}
+            </div>
+        );
+    }
 
     return (
         <div className='mx-auto grid max-w-5xl gap-6 lg:grid-cols-2'>
