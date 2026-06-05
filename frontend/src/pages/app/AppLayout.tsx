@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import BrandLogo from '@/components/BrandLogo';
 import AccountSwitcher from '@/components/AccountSwitcher';
 import AdminMenu from '@/components/AdminMenu';
+import ThemeToggle from '@/components/ThemeToggle';
 import TabNav from '@/components/TabNav';
 import BottomTabNav from '@/components/BottomTabNav';
 import { PortfolioProvider } from '@/context/PortfolioContext';
@@ -31,7 +32,10 @@ const AppLayout = () => {
                             <AdminMenu />
                             <BrandLogo />
                         </div>
-                        <AccountSwitcher />
+                        <div className='flex items-center gap-2'>
+                            <ThemeToggle />
+                            <AccountSwitcher />
+                        </div>
                     </div>
                 </header>
 

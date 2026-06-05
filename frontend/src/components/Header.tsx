@@ -4,6 +4,7 @@ import { LayoutDashboard, LogOut, Menu, ShieldCheck, UserPlus, X } from 'lucide-
 import { useAuth } from '@/context/AuthContext';
 import BrandLogo from '@/components/BrandLogo';
 import AccountSwitcher from '@/components/AccountSwitcher';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const NAV_LINKS = [
     { label: 'Features', href: '#features' },
@@ -36,6 +37,7 @@ const Header = () => {
                 </nav>
 
                 <div className='hidden items-center gap-3 md:flex'>
+                    <ThemeToggle />
                     {isAuthenticated ? (
                         <>
                             <Link to='/app/manual' className='btn-ghost'>
@@ -58,13 +60,16 @@ const Header = () => {
                     )}
                 </div>
 
-                <button
-                    className='inline-flex h-10 w-10 items-center justify-center text-slate-200 md:hidden'
-                    onClick={() => setMenuOpen(o => !o)}
-                    aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-                >
-                    {menuOpen ? <X size={20} /> : <Menu size={20} />}
-                </button>
+                <div className='flex items-center gap-1.5 md:hidden'>
+                    <ThemeToggle />
+                    <button
+                        className='inline-flex h-10 w-10 items-center justify-center text-slate-200'
+                        onClick={() => setMenuOpen(o => !o)}
+                        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                    >
+                        {menuOpen ? <X size={20} /> : <Menu size={20} />}
+                    </button>
+                </div>
                 </div>
             </header>
 
@@ -79,8 +84,7 @@ const Header = () => {
 
             {/* Mobile drawer — starts below the header, slides in from the right */}
             <aside
-                style={{ backgroundColor: '#0f2730' }}
-                className={`fixed bottom-0 right-0 top-16 z-50 flex w-[82%] max-w-sm flex-col border-l-2 border-cyan-600 shadow-2xl shadow-black/70 transition-transform duration-300 ease-out md:hidden ${
+                className={`fixed bottom-0 right-0 top-16 z-50 flex w-[82%] max-w-sm flex-col border-l-2 border-cyan-600 bg-ink-700 shadow-2xl shadow-black/70 transition-transform duration-300 ease-out md:hidden ${
                     menuOpen ? 'translate-x-0' : 'pointer-events-none translate-x-full'
                 }`}
                 role='dialog'

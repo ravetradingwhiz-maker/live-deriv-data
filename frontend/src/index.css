@@ -11,11 +11,74 @@
     font-display: swap;
 }
 
-@layer base {
-    :root {
-        color-scheme: dark;
-    }
+/* Theme tokens (RGB triplets) — kept UNLAYERED so value changes update reliably
+   and always win the cascade. Dark is the default; `.light` on <html> overrides
+   (`:root.light` beats `:root` on specificity). */
+:root {
+    color-scheme: dark;
+    --ink-900: 6 20 26;
+    --ink-800: 10 28 36;
+    --ink-700: 15 39 48;
+    --ink-600: 21 51 61;
+    --ink-500: 29 67 79;
+    --line: 23 56 66;
+    --fg: 255 255 255;
+    --slate-200: 226 232 240;
+    --slate-300: 203 213 225;
+    --slate-400: 148 163 184;
+    --slate-500: 100 116 139;
+    --slate-600: 113 128 150;
+    --slate-700: 71 85 105;
+    /* Accents — bright (original) in dark. */
+    --cyan-200: 165 243 252;
+    --cyan-300: 103 232 249;
+    --cyan-400: 34 211 238;
+    --emerald-300: 110 231 183;
+    --emerald-400: 52 211 153;
+    --amber-200: 253 230 138;
+    --amber-300: 252 211 77;
+    --amber-400: 251 191 36;
+    --violet-200: 221 214 254;
+    --violet-300: 196 181 253;
+    --violet-400: 167 139 250;
+    --rose-300: 253 164 175;
+    --rose-400: 251 113 133;
+    --sky-400: 56 189 248;
+}
 
+:root.light {
+    color-scheme: light;
+    --ink-900: 255 255 255; /* page background */
+    --ink-800: 246 248 250; /* card / surface */
+    --ink-700: 237 241 245; /* raised surface */
+    --ink-600: 226 232 238;
+    --ink-500: 210 219 226;
+    --line: 210 219 228; /* borders */
+    --fg: 15 23 42; /* primary text (slate-900) */
+    --slate-200: 30 41 59; /* strongest muted */
+    --slate-300: 51 65 85;
+    --slate-400: 71 85 105; /* muted */
+    --slate-500: 100 116 139;
+    --slate-600: 148 163 184; /* subtle */
+    --slate-700: 100 116 139;
+    /* Accents — deep (≈800) so they read clearly as text on white. */
+    --cyan-200: 21 94 117; /* cyan-800 */
+    --cyan-300: 21 94 117; /* cyan-800 */
+    --cyan-400: 21 94 117; /* cyan-800 */
+    --emerald-300: 6 95 70; /* emerald-800 */
+    --emerald-400: 6 95 70; /* emerald-800 */
+    --amber-200: 146 64 14; /* amber-800 */
+    --amber-300: 146 64 14; /* amber-800 */
+    --amber-400: 146 64 14; /* amber-800 */
+    --violet-200: 91 33 182; /* violet-800 */
+    --violet-300: 91 33 182; /* violet-800 */
+    --violet-400: 91 33 182; /* violet-800 */
+    --rose-300: 159 18 57; /* rose-800 */
+    --rose-400: 159 18 57; /* rose-800 */
+    --sky-400: 7 89 133; /* sky-800 */
+}
+
+@layer base {
     html,
     body {
         @apply bg-ink-900 text-slate-200 antialiased;
@@ -48,7 +111,7 @@
 @layer components {
     .btn-primary {
         @apply inline-flex items-center justify-center gap-2 rounded-full bg-cyan-600 px-6 py-2.5
-            font-semibold text-white transition-all hover:bg-cyan-500 focus:outline-none
+            font-semibold text-[#fff] transition-all hover:bg-cyan-500 focus:outline-none
             focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-ink-900
             disabled:cursor-not-allowed disabled:opacity-60;
         box-shadow: 0 0 16px rgba(34, 211, 238, 0.4), 0 0 36px rgba(34, 211, 238, 0.2);
@@ -70,8 +133,8 @@
 
     /* Extra-bright, glowing call-to-action (the Nexora AI access button). */
     .btn-glow {
-        @apply inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-6 py-3
-            font-bold text-ink-900 transition-all hover:bg-cyan-300 focus:outline-none
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-[#22d3ee] px-6 py-3
+            font-bold text-[#06141a] transition-all hover:bg-[#67e8f9] focus:outline-none
             focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-ink-900;
         box-shadow: 0 0 22px rgba(34, 211, 238, 0.55), 0 0 48px rgba(34, 211, 238, 0.28);
     }
@@ -82,7 +145,7 @@
     /* Multi-color Nexora AI gradient button (cyan -> violet -> amber). */
     .btn-nexora {
         @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-bold
-            text-white transition-all focus:outline-none focus:ring-2 focus:ring-violet-300
+            text-[#fff] transition-all focus:outline-none focus:ring-2 focus:ring-violet-300
             focus:ring-offset-2 focus:ring-offset-ink-900;
         background-image: linear-gradient(90deg, #22d3ee, #a855f7, #f59e0b);
         box-shadow: 0 0 22px rgba(168, 85, 247, 0.5), 0 0 44px rgba(34, 211, 238, 0.3);
@@ -95,7 +158,7 @@
     /* Compact dark-cyan action button for the admin pages. */
     .btn-admin {
         @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2
-            text-sm font-semibold text-white transition-colors hover:bg-cyan-500 focus:outline-none
+            text-sm font-semibold text-[#fff] transition-colors hover:bg-cyan-500 focus:outline-none
             focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-ink-900
             disabled:cursor-not-allowed disabled:opacity-50;
     }
@@ -114,6 +177,21 @@
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
+    }
+    /* Deeper gradient on light backgrounds so the wordmark stays readable. */
+    :root.light .text-nexora {
+        background-image: linear-gradient(90deg, #0e7490, #6d28d9, #b45309);
+    }
+
+    /* Premium gold→violet wordmark (e.g. "Nexora AI Premium"). */
+    .text-premium {
+        background-image: linear-gradient(90deg, #fcd34d, #fbbf24, #c4b5fd);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+    :root.light .text-premium {
+        background-image: linear-gradient(90deg, #b45309, #92400e, #6d28d9);
     }
 
     /* Logo wordmark font. Falls back to a bold sans if "Gevora" isn't loaded. */

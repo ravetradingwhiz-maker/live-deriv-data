@@ -156,7 +156,7 @@ const Checkout = () => {
                             alt='Payment address QR'
                             width={180}
                             height={180}
-                            className='rounded-lg bg-white p-2'
+                            className='rounded-lg bg-[#ffffff] p-2'
                             src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
                                 order.payAddress
                             )}`}

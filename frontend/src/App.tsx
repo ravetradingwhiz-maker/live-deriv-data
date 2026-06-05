@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { useAdminOptional } from '@/context/AdminContext';
 import ConsentGate from '@/components/ConsentGate';
 import Home from '@/pages/Home';
@@ -99,12 +100,14 @@ const AppBody = () => {
 
 function App() {
     return (
-        <AuthProvider>
-            <ConsentGate />
-            <BrowserRouter>
-                <AppBody />
-            </BrowserRouter>
-        </AuthProvider>
+        <ThemeProvider>
+            <AuthProvider>
+                <ConsentGate />
+                <BrowserRouter>
+                    <AppBody />
+                </BrowserRouter>
+            </AuthProvider>
+        </ThemeProvider>
     );
 }
 

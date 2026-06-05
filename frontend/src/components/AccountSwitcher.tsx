@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, LogOut } from 'lucide-react';
+import { Check, ChevronDown, Copy, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminOptional } from '@/context/AdminContext';
 import CurrencyIcon from '@/components/CurrencyIcon';
@@ -25,8 +25,16 @@ const AccountSwitcher = () => {
     const { accounts, activeLoginId, balance, balanceCurrency, balances, switchAccount, logout } = useAuth();
     const admin = useAdminOptional();
     const [open, setOpen] = useState(false);
+    const [copied, setCopied] = useState<string | null>(null);
     const ref = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+
+    const copyLoginid = (e: React.MouseEvent, loginid: string) => {
+        e.stopPropagation(); // don't switch account
+        navigator.clipboard?.writeText(loginid);
+        setCopied(loginid);
+        setTimeout(() => setCopied(c => (c === loginid ? null : c)), 1500);
+    };
 
     useEffect(() => {
         const onClick = (e: MouseEvent) => {
@@ -109,6 +117,23 @@ const AccountSwitcher = () => {
                                                 : b
                                                   ? fmt(b.balance, b.currency)
                                                   : acc.currency}
+                                        </span>
+                                        <span className='flex items-center gap-1 whitespace-nowrap font-mono text-[10px] text-slate-500'>
+                                            {acc.loginid}
+                                            <span
+                                                role='button'
+                                                tabIndex={0}
+                                                aria-label='Copy account number'
+                                                title='Copy account number'
+                                                onClick={e => copyLoginid(e, acc.loginid)}
+                                                className='cursor-pointer text-slate-400 transition-colors hover:text-cyan-400'
+                                            >
+                                                {copied === acc.loginid ? (
+                                                    <Check size={11} className='text-emerald-400' />
+                                                ) : (
+                                                    <Copy size={11} />
+                                                )}
+                                            </span>
                                         </span>
                                     </span>
                                     {isActive && <Check size={16} className='shrink-0 text-cyan-400' />}

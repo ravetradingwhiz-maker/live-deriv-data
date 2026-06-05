@@ -133,13 +133,11 @@ const TradePilotPremium = () => {
             {/* Header */}
             <div className='flex flex-wrap items-center gap-2.5'>
                 <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-violet-500 shadow-[0_0_16px_rgba(245,158,11,0.5)]'>
-                    <Crown size={18} className='text-ink-900' />
+                    <Crown size={18} className='text-[#06141a]' />
                 </div>
                 <div className='flex-1'>
                     <div className='flex flex-wrap items-center gap-1.5'>
-                        <h1 className='bg-gradient-to-r from-amber-300 via-amber-200 to-violet-300 bg-clip-text text-base font-extrabold text-transparent'>
-                            Nexora AI Premium
-                        </h1>
+                        <h1 className='text-premium text-base font-extrabold'>Nexora AI Premium</h1>
                         <span className='rounded-full border border-amber-300/50 bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200'>
                             Premium
                         </span>
@@ -152,14 +150,14 @@ const TradePilotPremium = () => {
                             <CheckCircle2 size={11} /> {subscription.label} active · until {fmtDate(subscription.expiresAt)}
                         </p>
                     ) : !isAdmin ? (
-                        <p className='text-[11px] text-amber-100/70'>Subscribe to activate the premium engine.</p>
+                        <p className='text-[11px] text-amber-300'>Subscribe to activate the premium engine.</p>
                     ) : null}
                 </div>
                 {!subscription.active && !isAdmin && (
                     <button
                         type='button'
                         onClick={() => navigate('/app/pricing')}
-                        className='flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-violet-500 px-3.5 py-1.5 text-xs font-bold text-ink-900 shadow-[0_0_16px_rgba(245,158,11,0.45)] transition-all hover:brightness-110'
+                        className='flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-violet-500 px-3.5 py-1.5 text-xs font-bold text-[#06141a] shadow-[0_0_16px_rgba(245,158,11,0.45)] transition-all hover:brightness-110'
                     >
                         <Crown size={13} /> Unlock
                     </button>
@@ -248,7 +246,7 @@ const TradePilotPremium = () => {
                 <button
                     type='button'
                     onClick={() => navigate('/app/pricing')}
-                    className='flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-violet-500 px-6 py-3 text-sm font-bold text-ink-900 shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all hover:brightness-110'
+                    className='flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-violet-500 px-6 py-3 text-sm font-bold text-[#06141a] shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all hover:brightness-110'
                 >
                     <Lock size={16} /> Unlock {TIER_LABEL[selectedBot.tier]} to run
                 </button>
@@ -265,7 +263,7 @@ const TradePilotPremium = () => {
                     type='button'
                     onClick={start}
                     disabled={!inputsValid || !ticksReady}
-                    className='flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-violet-500 px-6 py-3 text-sm font-bold text-ink-900 shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
+                    className='flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-violet-500 px-6 py-3 text-sm font-bold text-[#06141a] shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
                 >
                     {!ticksReady ? 'Loading market…' : (
                         <>

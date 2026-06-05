@@ -62,8 +62,7 @@ const AdminMenu = () => {
 
                     {/* Drawer — starts below the header, slides in from the left */}
                     <aside
-                        style={{ backgroundColor: '#0f2730' }}
-                        className={`fixed bottom-0 left-0 top-16 z-[61] flex w-72 max-w-[82%] flex-col border-r-2 border-cyan-600 shadow-2xl shadow-black/70 transition-transform duration-300 ease-out ${
+                        className={`fixed bottom-0 left-0 top-16 z-[61] flex w-72 max-w-[82%] flex-col border-r-2 border-cyan-600 bg-ink-700 shadow-2xl shadow-black/70 transition-transform duration-300 ease-out ${
                             open ? 'translate-x-0' : 'pointer-events-none -translate-x-full'
                         }`}
                         role='dialog'
