@@ -13,6 +13,7 @@ import {
     Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import BotResultModal from '@/components/BotResultModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { useAdminOptional } from '@/context/AdminContext';
@@ -110,7 +111,8 @@ const TradePilotPremium = () => {
         [strategy, symbol, stake, profitTarget, maxLoss, currency]
     );
 
-    const { ticksReady, isRunning, status, stats, start, stop } = useNexoraBot(config);
+    const { ticksReady, isRunning, status, stats, sessionResult, clearSessionResult, start, stop } =
+        useNexoraBot(config);
 
     // The selected bot's required tier gates running.
     const selectedBot = PREMIUM_BOTS.find(b => b.id === strategy) ?? PREMIUM_BOTS[0];
@@ -277,6 +279,8 @@ const TradePilotPremium = () => {
                     <TriangleAlert size={12} /> Enter a stake, profit target and max loss greater than 0.
                 </p>
             )}
+
+            {sessionResult && <BotResultModal result={sessionResult} onClose={clearSessionResult} />}
         </div>
     );
 };

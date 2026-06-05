@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Hash, Layers, Lock, Play, Shuffle, Square, TrendingUp, TriangleAlert } from 'lucide-react';
 import NexoraStar from '@/components/NexoraStar';
+import BotResultModal from '@/components/BotResultModal';
 import { useAuth } from '@/context/AuthContext';
 import { getActiveCurrency } from '@/services/trade-api';
 import { riskStakingLabel, useNexoraBot, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
@@ -122,7 +123,8 @@ const TradePilotFree = () => {
         [strategy, risk, symbol, stake, profitTarget, maxLoss, currency]
     );
 
-    const { ticksReady, isRunning, status, stats, start, stop } = useNexoraBot(config);
+    const { ticksReady, isRunning, status, stats, sessionResult, clearSessionResult, start, stop } =
+        useNexoraBot(config);
 
     const demoLocked = isDemo && !ALLOW_DEMO_TRADING;
 
@@ -264,6 +266,8 @@ const TradePilotFree = () => {
                     </p>
                 )}
             </div>
+
+            {sessionResult && <BotResultModal result={sessionResult} onClose={clearSessionResult} />}
         </div>
     );
 };

@@ -126,6 +126,13 @@ export interface JournalEntry {
     profit?: number;
 }
 
+/** Emitted once a session ends by hitting the profit target or the max loss,
+ *  so the UI can show a celebratory / stop modal. */
+export interface SessionResult extends SessionStats {
+    reason: 'target' | 'maxloss';
+    currency: string;
+}
+
 export type BotStatus =
     | { kind: 'idle'; text: string }
     | { kind: 'running'; text: string }
@@ -461,6 +468,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
     const [journal, setJournal] = useState<JournalEntry[]>([]);
     const [isRunning, setIsRunning] = useState(false);
     const [status, setStatus] = useState<BotStatus>({ kind: 'idle', text: 'Configure your bot and run.' });
+    const [sessionResult, setSessionResult] = useState<SessionResult | null>(null);
 
     const quotesRef = useRef<number[]>([]);
     const decimalsRef = useRef(2);
@@ -500,7 +508,14 @@ export const useNexoraBot = (config: NexoraConfig) => {
         else if (reason === 'maxloss') setStatus({ kind: 'error', text: 'Max loss reached — bot stopped.' });
         else if (reason === 'error') setStatus({ kind: 'error', text: message ?? 'Bot stopped on error.' });
         else setStatus({ kind: 'idle', text: 'Bot stopped.' });
+
+        // Surface a result modal when the session ends on a target/loss boundary.
+        if (reason === 'target' || reason === 'maxloss') {
+            setSessionResult({ reason, currency: cfgRef.current.currency, ...statsRef.current });
+        }
     }, []);
+
+    const clearSessionResult = useCallback(() => setSessionResult(null), []);
 
     const refreshDisplay = useCallback(() => {
         const q = quotesRef.current;
@@ -768,6 +783,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
         statsRef.current = { netProfit: 0, trades: 0, wins: 0, losses: 0 };
         setStats({ ...statsRef.current });
         setJournal([]);
+        setSessionResult(null);
         runningRef.current = true;
         setIsRunning(true);
         setStatus({ kind: 'running', text: 'Scanning market for the next signal…' });
@@ -775,5 +791,17 @@ export const useNexoraBot = (config: NexoraConfig) => {
 
     const stop = useCallback(() => stopInternal('user'), [stopInternal]);
 
-    return { ticksReady, behaviour, signal, stats, journal, isRunning, status, start, stop };
+    return {
+        ticksReady,
+        behaviour,
+        signal,
+        stats,
+        journal,
+        isRunning,
+        status,
+        sessionResult,
+        clearSessionResult,
+        start,
+        stop,
+    };
 };
