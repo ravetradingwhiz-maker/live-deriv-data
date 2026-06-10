@@ -52,4 +52,4 @@ if (existsSync(assetsDir)) {
     cpSync(assetsDir, assetsDest, { recursive: true, force: true });
 }
 
-console.log('[copy-smartcharts] staged chunks + Flutter engine into public/');
+

@@ -128,7 +128,6 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     // Detect admin eligibility from the Deriv account loginid(s).
     useEffect(() => {
         const loginids = accounts.map(a => a.loginid).filter(Boolean);
-        console.log('[admin] detect effect run →', { isAuthenticated, activeLoginId, loginids });
         let alive = true;
         if (!isAuthenticated) {
             setEligible(false);
@@ -139,10 +138,10 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         (async () => {
             try {
                 const res = await checkAdmin(loginids);
-                console.log('[admin] checkAdmin →', res, 'for', loginids);
+                
                 if (alive) setEligible(!!res.isAdmin);
             } catch (e) {
-                console.warn('[admin] loginid/role detection failed:', e);
+
                 if (alive) setEligible(false);
             } finally {
                 if (alive) setChecked(true);
