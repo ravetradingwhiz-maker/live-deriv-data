@@ -9,6 +9,8 @@ const { TIERS, getTiers } = require('../config/tiers');
 // read-scoped app token — the browser gets 403). Mirrors quantum-vault.
 const DERIV_V4_URL = 'https://api.derivws.com/applications/v1/markup-statistics';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MARKUP_CACHE_TTL_MS = 5 * 60 * 1000;
+const markupCache = new Map();
 
 const normalizeLoginid = v =>
     String(v || '')
@@ -82,6 +84,12 @@ module.exports = {
             const appId = process.env.MARKUP_APP_ID || process.env.CLIENT_ID;
             if (!token || !appId) throw createError(503, 'MARKUP_API_TOKEN / MARKUP_APP_ID not configured on the server');
 
+            const cacheKey = `${String(appId)}:${String(date_from)}:${String(date_to)}`;
+            const cached = markupCache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < MARKUP_CACHE_TTL_MS) {
+                return res.json(cached.data);
+            }
+
             const url = `${DERIV_V4_URL}?date_from=${encodeURIComponent(date_from)}&date_to=${encodeURIComponent(date_to)}`;
             const r = await fetch(url, {
                 headers: { Authorization: `Bearer ${token}`, 'Deriv-App-ID': String(appId) },
@@ -91,18 +99,19 @@ module.exports = {
 
             const bd = Array.isArray(json?.data?.breakdown) ? json.data.breakdown : [];
             const row = bd.find(x => String(x.app_id) === String(appId));
-            res.json(
-                row
-                    ? {
-                          markup: row.app_markup_usd ?? 0,
-                          volume: row.volume_usd ?? 0,
-                          payout: row.payout_usd ?? 0,
-                          contracts: row.contract_count ?? 0,
-                          clients: row.client_count ?? 0,
-                          app_id: String(appId),
-                      }
-                    : { markup: 0, volume: 0, payout: 0, contracts: 0, clients: 0, app_id: String(appId) }
-            );
+            const payload = row
+                ? {
+                      markup: row.app_markup_usd ?? 0,
+                      volume: row.volume_usd ?? 0,
+                      payout: row.payout_usd ?? 0,
+                      contracts: row.contract_count ?? 0,
+                      clients: row.client_count ?? 0,
+                      app_id: String(appId),
+                  }
+                : { markup: 0, volume: 0, payout: 0, contracts: 0, clients: 0, app_id: String(appId) };
+
+            markupCache.set(cacheKey, { timestamp: Date.now(), data: payload });
+            res.json(payload);
         } catch (error) {
             next(error);
         }

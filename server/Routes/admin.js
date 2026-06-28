@@ -5,6 +5,7 @@ const adminController = require('../Controllers/adminController');
 const router = express.Router();
 
 const checkLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+const markupLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 
 // The frontend checks the logged-in account loginid(s).
 router.get('/check', checkLimiter, adminController.check);
@@ -24,7 +25,7 @@ router.delete('/subscriptions/:id', adminController.deleteSubscription);
 router.get('/payments', adminController.listPayments);
 
 // Markup (Deriv v4 REST proxy)
-router.get('/markup', adminController.markup);
+router.get('/markup', markupLimiter, adminController.markup);
 
 // Pricing
 router.get('/pricing', adminController.getPricing);
