@@ -86,14 +86,23 @@ const AdminMarkup = () => {
         try {
             setTotals(await getMarkup(from, to));
 
-            // Daily series across the range (capped to keep calls sane).
-            const days: string[] = [];
+            // Keep the chart lightweight by requesting a small number of aggregated buckets.
             const start = new Date(`${from}T00:00:00Z`);
             const end = new Date(`${to}T00:00:00Z`);
-            for (let d = new Date(start); d <= end && days.length < 62; d.setUTCDate(d.getUTCDate() + 1))
-                days.push(d.toISOString().slice(0, 10));
+            const span = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+            const bucketCount = Math.min(8, Math.max(4, Math.ceil(span / 7)));
+            const bucketSize = Math.max(1, Math.ceil(span / bucketCount));
+
             const pts = await Promise.all(
-                days.map(async day => ({ date: day, markup: (await getMarkup(day, day).catch(() => ZERO)).markup }))
+                Array.from({ length: bucketCount }, async (_, i) => {
+                    const bucketStart = new Date(start);
+                    bucketStart.setUTCDate(start.getUTCDate() + i * bucketSize);
+                    const bucketEnd = new Date(start);
+                    bucketEnd.setUTCDate(start.getUTCDate() + Math.min(span - 1, (i + 1) * bucketSize - 1));
+
+                    const totalsForBucket = await getMarkup(isoDay(bucketStart), isoDay(bucketEnd)).catch(() => ZERO);
+                    return { date: isoDay(bucketStart), markup: totalsForBucket.markup };
+                })
             );
             setSeries(pts);
         } catch (e: any) {
