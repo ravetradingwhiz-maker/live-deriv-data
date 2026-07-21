@@ -8,4 +8,11 @@ const createPaymentSchema = Joi.object({
     loginids: Joi.array().items(Joi.string().trim().min(1)).min(1).required(),
 });
 
-module.exports = { createPaymentSchema };
+// Card (Paystack) checkout — same as above minus the crypto pay-currency.
+const paystackInitSchema = Joi.object({
+    tier: Joi.string().valid('alpha', 'quantum', 'apex').required(),
+    email: Joi.string().email().required(),
+    loginids: Joi.array().items(Joi.string().trim().min(1)).min(1).required(),
+});
+
+module.exports = { createPaymentSchema, paystackInitSchema };

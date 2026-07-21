@@ -9,6 +9,9 @@ const createLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders:
 
 router.get('/pricing', paymentController.pricing);
 router.post('/create', createLimiter, paymentController.create);
+// Card (Paystack): start a hosted checkout + receive charge webhooks.
+router.post('/paystack/init', createLimiter, paymentController.createCard);
+router.post('/paystack/webhook', paymentController.webhook);
 router.get('/:orderId', paymentController.getOrder);
 
 module.exports = router;

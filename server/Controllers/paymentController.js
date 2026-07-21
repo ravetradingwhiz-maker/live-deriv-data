@@ -2,10 +2,15 @@ const crypto = require('crypto');
 const createError = require('http-errors');
 const Payment = require('../Models/Payment');
 const Subscription = require('../Models/Subscription');
-const { createPaymentSchema } = require('../Middlewares/validation');
+const { createPaymentSchema, paystackInitSchema } = require('../Middlewares/validation');
 const { getTiers } = require('../config/tiers');
 const tron = require('../Services/tronChainService');
+const paystack = require('../Services/paystackService');
 const { sendSubscriptionReceipt } = require('../Services/emailService');
+
+// Currency Paystack charges in (must be enabled on the account). Amount is sent
+// in the currency's smallest unit, so priceUSD * 100 for USD.
+const PAYSTACK_CURRENCY = (process.env.PAYSTACK_CURRENCY || 'USD').toUpperCase();
 
 // How long an order stays payable (and reserves its unique amount).
 const ORDER_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -107,11 +112,50 @@ const checkOnchain = async payment => {
     }
 };
 
+/**
+ * Confirms a Paystack (card) order against Paystack's own record — the server
+ * side of truth. Activates on success, marks failed on a terminal failure, and
+ * leaves the order pending while the shopper is still on the checkout page.
+ * Idempotent via `payment.activated`, so the webhook and the status poll can
+ * both call it safely.
+ */
+const verifyPaystack = async payment => {
+    if (payment.status !== 'pending') return;
+
+    let data;
+    try {
+        data = await paystack.verifyTransaction(payment.orderId);
+    } catch (e) {
+        console.error('[payment] Paystack verify failed:', e.message);
+        return;
+    }
+
+    if (data.status === 'success') {
+        // Guard against a tampered client paying less than the tier price.
+        const expected = Math.round(payment.priceUSD * 100);
+        if (typeof data.amount === 'number' && data.amount < expected) {
+            console.error(`[payment] Paystack underpayment on ${payment.orderId}: ${data.amount} < ${expected}`);
+            payment.status = 'failed';
+            await payment.save();
+            return;
+        }
+        payment.providerPaymentId = String(data.id || data.reference || '');
+        await activatePayment(payment);
+    } else if (data.status === 'failed' || data.status === 'reversed') {
+        payment.status = 'failed';
+        await payment.save();
+    }
+    // 'abandoned' / 'ongoing' / 'pending' → leave as-is; the poll retries.
+};
+
 /** Background sweep so orders confirm even if the user closed the checkout tab. */
 const pollPendingOrders = async () => {
     const since = new Date(Date.now() - ORDER_TTL_MS);
     const pending = await Payment.find({ status: 'pending', createdAt: { $gt: since } }).limit(50);
-    for (const p of pending) await checkOnchain(p);
+    for (const p of pending) {
+        if (p.provider === 'paystack') await verifyPaystack(p);
+        else await checkOnchain(p);
+    }
 };
 
 module.exports = {
@@ -165,17 +209,98 @@ module.exports = {
         }
     },
 
-    // GET /api/payments/:orderId — frontend polls; checks the chain on the way.
+    // POST /api/payments/paystack/init — start a hosted card checkout.
+    createCard: async (req, res, next) => {
+        try {
+            const { tier, email, loginids } = await paystackInitSchema.validateAsync(req.body);
+            if (!process.env.PAYSTACK_SECRET_KEY) throw createError(500, 'Card payments not configured');
+
+            const tiers = await getTiers();
+            const tierCfg = tiers[tier];
+
+            const payment = await Payment.create({
+                orderId: genOrderId(),
+                provider: 'paystack',
+                tier,
+                priceUSD: tierCfg.priceUSD,
+                payCurrency: PAYSTACK_CURRENCY.toLowerCase(),
+                payAddress: '',
+                payAmount: tierCfg.priceUSD,
+                email,
+                loginids,
+                status: 'pending',
+            });
+
+            // Paystack appends ?reference=<orderId>&trxref=<orderId> to this URL.
+            const base = (process.env.CHECKOUT_RETURN_URL || process.env.ALLOWED_ORIGIN_1 || '').replace(/\/$/, '');
+            const callbackUrl = base ? `${base}/app/checkout?tier=${tier}` : undefined;
+
+            let init;
+            try {
+                init = await paystack.initTransaction({
+                    email,
+                    amountSubunit: Math.round(tierCfg.priceUSD * 100),
+                    currency: PAYSTACK_CURRENCY,
+                    reference: payment.orderId,
+                    callbackUrl,
+                    metadata: { orderId: payment.orderId, tier, loginids },
+                });
+            } catch (e) {
+                payment.status = 'failed';
+                await payment.save();
+                throw createError(502, `Could not start card payment: ${e.message}`);
+            }
+
+            res.status(201).json({
+                orderId: payment.orderId,
+                authorizationUrl: init.authorization_url,
+                status: payment.status,
+            });
+        } catch (error) {
+            if (error.isJoi) error.status = 422;
+            next(error);
+        }
+    },
+
+    // POST /api/payments/paystack/webhook — Paystack calls this on charge events.
+    // Signature is verified over the raw body captured in index.js (req.rawBody).
+    webhook: async (req, res) => {
+        const signature = req.headers['x-paystack-signature'];
+        if (!paystack.verifyWebhookSignature(req.rawBody, signature)) {
+            return res.status(401).json({ received: false });
+        }
+        try {
+            const event = req.body;
+            if (event && event.event === 'charge.success') {
+                const reference = event.data && event.data.reference;
+                const payment = reference ? await Payment.findOne({ orderId: reference }) : null;
+                if (payment && payment.status === 'pending') {
+                    // Re-verify against the API rather than trusting the payload.
+                    await verifyPaystack(payment);
+                }
+            }
+        } catch (e) {
+            console.error('[payment] Paystack webhook error:', e.message);
+        }
+        // Always 200 on a valid signature so Paystack stops retrying.
+        res.json({ received: true });
+    },
+
+    // GET /api/payments/:orderId — frontend polls; confirms with the provider on the way.
     getOrder: async (req, res, next) => {
         try {
             const payment = await Payment.findOne({ orderId: req.params.orderId });
             if (!payment) throw createError.NotFound('Order not found');
 
-            if (payment.status === 'pending') await checkOnchain(payment);
+            if (payment.status === 'pending') {
+                if (payment.provider === 'paystack') await verifyPaystack(payment);
+                else await checkOnchain(payment);
+            }
 
             res.json({
                 orderId: payment.orderId,
                 status: payment.status,
+                provider: payment.provider,
                 tier: payment.tier,
                 priceUSD: payment.priceUSD,
                 payCurrency: payment.payCurrency,
