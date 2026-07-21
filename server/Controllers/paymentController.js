@@ -6,6 +6,7 @@ const { createPaymentSchema, paystackInitSchema } = require('../Middlewares/vali
 const { getTiers } = require('../config/tiers');
 const tron = require('../Services/tronChainService');
 const paystack = require('../Services/paystackService');
+const fx = require('../Services/fxService');
 const { sendSubscriptionReceipt } = require('../Services/emailService');
 
 // Currency Paystack charges in (must be enabled on the account). Amount is sent
@@ -131,8 +132,10 @@ const verifyPaystack = async payment => {
     }
 
     if (data.status === 'success') {
-        // Guard against a tampered client paying less than the tier price.
-        const expected = Math.round(payment.priceUSD * 100);
+        // Guard against a tampered client paying less than we charged. `payAmount`
+        // is the amount in the charged currency's major unit (USD for card, KES
+        // for M-Pesa); Paystack reports `data.amount` in the minor unit (×100).
+        const expected = Math.round(payment.payAmount * 100);
         if (typeof data.amount === 'number' && data.amount < expected) {
             console.error(`[payment] Paystack underpayment on ${payment.orderId}: ${data.amount} < ${expected}`);
             payment.status = 'failed';
@@ -255,6 +258,66 @@ module.exports = {
                 orderId: payment.orderId,
                 authorizationUrl: init.authorization_url,
                 status: payment.status,
+            });
+        } catch (error) {
+            if (error.isJoi) error.status = 422;
+            next(error);
+        }
+    },
+
+    // POST /api/payments/mpesa/init — start an M-Pesa (Paystack mobile money)
+    // checkout. M-Pesa settles only in KES, so the USD tier price is converted
+    // at the live rate and the transaction is created in KES.
+    createMpesa: async (req, res, next) => {
+        try {
+            const { tier, email, loginids } = await paystackInitSchema.validateAsync(req.body);
+            if (!process.env.PAYSTACK_SECRET_KEY) throw createError(500, 'M-Pesa payments not configured');
+
+            const tiers = await getTiers();
+            const tierCfg = tiers[tier];
+
+            const rate = await fx.getUsdToKes();
+            const kesAmount = Math.round(tierCfg.priceUSD * rate); // whole shillings
+
+            const payment = await Payment.create({
+                orderId: genOrderId(),
+                provider: 'paystack',
+                tier,
+                priceUSD: tierCfg.priceUSD,
+                payCurrency: 'kes',
+                payAddress: '',
+                payAmount: kesAmount, // charged amount, in KES — used by the underpayment guard
+                email,
+                loginids,
+                status: 'pending',
+            });
+
+            const base = (process.env.CHECKOUT_RETURN_URL || process.env.ALLOWED_ORIGIN_1 || '').replace(/\/$/, '');
+            const callbackUrl = base ? `${base}/app/checkout?tier=${tier}` : undefined;
+
+            let init;
+            try {
+                init = await paystack.initTransaction({
+                    email,
+                    amountSubunit: kesAmount * 100, // KES minor unit
+                    currency: 'KES',
+                    reference: payment.orderId,
+                    callbackUrl,
+                    channels: ['mobile_money'],
+                    metadata: { orderId: payment.orderId, tier, loginids, method: 'mpesa', usdKesRate: rate },
+                });
+            } catch (e) {
+                payment.status = 'failed';
+                await payment.save();
+                throw createError(502, `Could not start M-Pesa payment: ${e.message}`);
+            }
+
+            res.status(201).json({
+                orderId: payment.orderId,
+                authorizationUrl: init.authorization_url,
+                status: payment.status,
+                currency: 'KES',
+                amount: kesAmount,
             });
         } catch (error) {
             if (error.isJoi) error.status = 422;

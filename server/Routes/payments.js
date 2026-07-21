@@ -11,6 +11,8 @@ router.get('/pricing', paymentController.pricing);
 router.post('/create', createLimiter, paymentController.create);
 // Card (Paystack): start a hosted checkout + receive charge webhooks.
 router.post('/paystack/init', createLimiter, paymentController.createCard);
+// M-Pesa (Paystack mobile money, KES): shares the same webhook/verify path.
+router.post('/mpesa/init', createLimiter, paymentController.createMpesa);
 router.post('/paystack/webhook', paymentController.webhook);
 router.get('/:orderId', paymentController.getOrder);
 

@@ -25,7 +25,7 @@ const client = () =>
  * Opens a hosted checkout. `amountSubunit` is in the currency's smallest unit
  * (cents for USD, kobo for NGN). Returns { authorization_url, access_code, reference }.
  */
-const initTransaction = async ({ email, amountSubunit, currency, reference, callbackUrl, metadata }) => {
+const initTransaction = async ({ email, amountSubunit, currency, reference, callbackUrl, metadata, channels }) => {
     const { data } = await client().post('/transaction/initialize', {
         email,
         amount: amountSubunit,
@@ -33,6 +33,9 @@ const initTransaction = async ({ email, amountSubunit, currency, reference, call
         reference,
         callback_url: callbackUrl,
         metadata,
+        // Restrict which payment channels the hosted page offers (e.g.
+        // ['mobile_money'] for M-Pesa). Omit to show all enabled channels.
+        ...(channels ? { channels } : {}),
     });
     if (!data || !data.status) throw new Error((data && data.message) || 'Paystack init failed');
     return data.data;
