@@ -38,11 +38,21 @@ export default defineConfig(({ mode }) => {
             // changes each session). Fine for a dev server.
             allowedHosts: true,
             hmr: tunnel ? { clientPort: 443 } : undefined,
+            // Proxy the payments/admin API through the dev server so the browser
+            // only ever talks to this (same) origin. Without this, a page served
+            // over an https tunnel calling http://localhost:4000 is blocked by
+            // the browser's Private Network Access policy (public → loopback).
+            proxy: {
+                '/api': { target: 'http://localhost:4000', changeOrigin: true },
+            },
         },
         preview: {
             port: 4173,
             host: true,
             allowedHosts: true,
+            proxy: {
+                '/api': { target: 'http://localhost:4000', changeOrigin: true },
+            },
         },
     };
 });

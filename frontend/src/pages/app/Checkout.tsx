@@ -1,17 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Coins, Copy, Crown, Loader2, TriangleAlert } from 'lucide-react';
+import {
+    Check,
+    CheckCircle2,
+    Coins,
+    Copy,
+    CreditCard,
+    Crown,
+    Loader2,
+    Lock,
+    ShieldCheck,
+    TriangleAlert,
+    X,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/context/SubscriptionContext';
 import {
     createPayment,
     getPaymentOrder,
     getPricing,
+    initCardPayment,
     type PayCurrency,
     type PaymentOrder,
     type Tier,
     type TierPricing,
 } from '@/services/payments-api';
+
+type Method = 'card' | 'crypto';
 
 const TIERS: Record<Tier, { label: string; priceUSD: number; term: string }> = {
     alpha: { label: 'Alpha', priceUSD: 100, term: '1 month' },
@@ -19,8 +34,21 @@ const TIERS: Record<Tier, { label: string; priceUSD: number; term: string }> = {
     apex: { label: 'Apex', priceUSD: 480, term: '6 months' },
 };
 
-const COINS: { id: PayCurrency; label: string; icon: typeof Coins }[] = [
-    { id: 'usdt', label: 'USDT (TRC-20)', icon: Coins },
+const METHODS: { id: Method; title: string; sub: string }[] = [
+    { id: 'card', title: 'Card', sub: 'Credit / Debit card' },
+    { id: 'crypto', title: 'Crypto', sub: 'USDT (TRC-20)' },
+];
+
+// Brand logos served from jsDelivr (a CDN built for hotlinking).
+const CDN = 'https://cdn.jsdelivr.net/gh';
+const CARD_LOGOS = [
+    { src: `${CDN}/aaronfagan/svg-credit-card-payment-icons@main/flat/mastercard.svg`, alt: 'Mastercard' },
+    { src: `${CDN}/aaronfagan/svg-credit-card-payment-icons@main/flat/visa.svg`, alt: 'Visa' },
+];
+const CRYPTO_LOGOS = [
+    { src: `${CDN}/spothq/cryptocurrency-icons@master/128/color/usdt.png`, alt: 'USDT' },
+    { src: `${CDN}/spothq/cryptocurrency-icons@master/128/color/btc.png`, alt: 'Bitcoin' },
+    { src: `${CDN}/spothq/cryptocurrency-icons@master/128/color/eth.png`, alt: 'Ethereum' },
 ];
 
 type Phase = 'form' | 'pending' | 'paid' | 'failed';
@@ -46,7 +74,10 @@ const Checkout = () => {
     const term = dyn ? (dyn.months === 1 ? '1 month' : `${dyn.months} months`) : plan.term;
 
     const [email, setEmail] = useState('');
-    const [coin, setCoin] = useState<PayCurrency>('usdt');
+    const [method, setMethod] = useState<Method>('card');
+    const coin: PayCurrency = 'usdt';
+    const [agreed, setAgreed] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
     const [phase, setPhase] = useState<Phase>('form');
     const [order, setOrder] = useState<PaymentOrder | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -71,6 +102,32 @@ const Checkout = () => {
             setSubmitting(false);
         }
     };
+
+    // Card: hand off to Paystack's hosted page. We don't clear `submitting` —
+    // the browser navigates away, then returns to this page with ?reference=.
+    const startCardPayment = async () => {
+        setSubmitting(true);
+        setError(null);
+        try {
+            const { authorizationUrl } = await initCardPayment({ tier, email, loginids });
+            window.location.href = authorizationUrl;
+        } catch (e: any) {
+            setError(e?.message ?? 'Could not start the card payment.');
+            setSubmitting(false);
+        }
+    };
+
+    // On return from Paystack the URL carries the order reference. Load it and
+    // drop into the polling `pending` phase so the server verifies the charge.
+    useEffect(() => {
+        const ref = params.get('reference') || params.get('trxref');
+        if (!ref) return;
+        setPhase('pending');
+        getPaymentOrder(ref)
+            .then(setOrder)
+            .catch(() => setError('Could not load your payment.'));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Poll order status once we're awaiting payment.
     useEffect(() => {
@@ -136,6 +193,16 @@ const Checkout = () => {
                     </button>
                 </div>
             ) : phase === 'pending' && order ? (
+                order.provider === 'paystack' ? (
+                    <div className='card flex flex-col items-center gap-3 text-center'>
+                        <Loader2 size={42} className='animate-spin text-cyan-400' />
+                        <h2 className='text-lg font-bold text-white'>Confirming your payment…</h2>
+                        <p className='text-sm text-slate-400'>
+                            We&apos;re verifying your card payment with Paystack. This usually takes a few seconds and
+                            updates here automatically.
+                        </p>
+                    </div>
+                ) : (
                 <div className='card flex flex-col gap-4'>
                     <div className='flex items-center justify-between gap-2 text-sm'>
                         <span className='text-slate-400'>Send exactly</span>
@@ -186,49 +253,80 @@ const Checkout = () => {
                         confirms (usually a couple of minutes).
                     </p>
                 </div>
+                )
             ) : (
-                <div className='card flex flex-col gap-4'>
-                    <div className='flex items-center justify-between rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2'>
-                        <span className='text-sm font-semibold text-amber-200'>
-                            {plan.label} · {term}
-                        </span>
-                        <span className='font-bold text-white'>${priceUSD}</span>
+                <div className='card flex flex-col gap-5'>
+                    {/* Order summary */}
+                    <div className='flex items-center justify-between rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3'>
+                        <div className='flex flex-col'>
+                            <span className='text-sm font-semibold text-amber-200'>{plan.label} plan</span>
+                            <span className='text-xs text-slate-400'>{term} of Nexora AI Premium</span>
+                        </div>
+                        <span className='text-2xl font-extrabold text-white'>${priceUSD}</span>
                     </div>
 
-                    <label className='flex flex-col gap-1'>
-                        <span className='text-xs font-medium text-slate-400'>Email for your receipt</span>
-                        <input
-                            type='email'
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            placeholder='you@email.com'
-                            className='rounded-lg border border-line bg-ink-800 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-amber-400'
-                        />
-                    </label>
-
+                    {/* Payment method */}
                     <div>
-                        <span className='text-xs font-medium text-slate-400'>Pay with</span>
-                        <div className='mt-1 grid grid-cols-3 gap-2'>
-                            {COINS.map(c => {
-                                const Icon = c.icon;
-                                const active = c.id === coin;
+                        <span className='text-sm font-semibold text-white'>Select a payment method</span>
+                        <div className='mt-3 grid grid-cols-2 gap-3'>
+                            {METHODS.map(m => {
+                                const active = m.id === method;
                                 return (
                                     <button
-                                        key={c.id}
+                                        key={m.id}
                                         type='button'
-                                        onClick={() => setCoin(c.id)}
-                                        className={`flex items-center justify-center gap-1.5 rounded-lg border py-2.5 text-sm font-semibold transition-all ${
+                                        onClick={() => setMethod(m.id)}
+                                        className={`relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 text-center transition-all ${
                                             active
-                                                ? 'border-amber-400 bg-amber-400/10 text-amber-200'
-                                                : 'border-line bg-ink-800 text-slate-300 hover:border-amber-700'
+                                                ? 'border-cyan-500 bg-cyan-500/5 ring-2 ring-cyan-500/30'
+                                                : 'border-line bg-ink-800 hover:border-slate-600'
                                         }`}
                                     >
-                                        <Icon size={15} /> {c.label}
+                                        {active && (
+                                            <span className='absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500'>
+                                                <Check size={13} strokeWidth={3} className='text-[#fff]' />
+                                            </span>
+                                        )}
+                                        <span className='flex h-10 items-center justify-center gap-1.5'>
+                                            {(m.id === 'card' ? CARD_LOGOS : CRYPTO_LOGOS).map(logo => (
+                                                <img
+                                                    key={logo.alt}
+                                                    src={logo.src}
+                                                    alt={logo.alt}
+                                                    title={logo.alt}
+                                                    loading='lazy'
+                                                    className='h-8 w-auto'
+                                                />
+                                            ))}
+                                        </span>
+                                        <span className='flex flex-col'>
+                                            <span className='text-sm font-bold text-white'>{m.title}</span>
+                                            <span className='text-[11px] text-slate-400'>Pay via {m.sub}</span>
+                                        </span>
                                     </button>
                                 );
                             })}
                         </div>
                     </div>
+
+                    {/* Email */}
+                    <label className='flex flex-col gap-1.5'>
+                        <span className='text-sm font-medium text-slate-300'>Email for your receipt</span>
+                        <input
+                            type='email'
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder='you@email.com'
+                            className='rounded-xl border border-line bg-ink-800 px-4 py-3 text-sm font-semibold text-white outline-none transition-colors focus:border-cyan-400'
+                        />
+                    </label>
+
+                    {method === 'crypto' && (
+                        <p className='flex items-center gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
+                            <Coins size={14} className='shrink-0 text-emerald-400' /> You&apos;ll pay in{' '}
+                            <strong className='text-slate-200'>USDT (TRC-20)</strong> on the TRON network.
+                        </p>
+                    )}
 
                     {error && (
                         <p className='flex items-center gap-1 text-xs text-rose-300'>
@@ -236,18 +334,96 @@ const Checkout = () => {
                         </p>
                     )}
 
+                    {/* Terms agreement */}
+                    <label className='flex items-start gap-2.5 text-xs text-slate-400'>
+                        <input
+                            type='checkbox'
+                            checked={agreed}
+                            onChange={e => setAgreed(e.target.checked)}
+                            className='mt-0.5 h-4 w-4 shrink-0 accent-cyan-500'
+                        />
+                        <span>
+                            I agree to the{' '}
+                            <button
+                                type='button'
+                                onClick={() => setShowTerms(true)}
+                                className='font-semibold text-cyan-300 underline underline-offset-2 hover:text-cyan-200'
+                            >
+                                Terms &amp; Conditions
+                            </button>
+                            .
+                        </span>
+                    </label>
+
                     <button
                         type='button'
-                        onClick={startPayment}
-                        disabled={!emailValid || submitting || loginids.length === 0}
+                        onClick={method === 'card' ? startCardPayment : startPayment}
+                        disabled={!emailValid || submitting || loginids.length === 0 || !agreed}
                         className='btn-nexora w-full disabled:cursor-not-allowed disabled:opacity-50'
                     >
-                        {submitting ? <Loader2 size={18} className='animate-spin' /> : <Crown size={18} />}
-                        Pay ${priceUSD} in USDT
+                        {submitting ? (
+                            <Loader2 size={18} className='animate-spin' />
+                        ) : method === 'card' ? (
+                            <CreditCard size={18} />
+                        ) : (
+                            <Crown size={18} />
+                        )}
+                        {method === 'card' ? `Pay $${priceUSD} by card` : `Pay $${priceUSD} in USDT`}
                     </button>
-                    <p className='text-center text-[11px] text-slate-500'>
-                        Premium unlocks for all your logins (real + demo) once the payment confirms.
+                    <p className='flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500'>
+                        <Lock size={11} /> Secure checkout · unlocks for all your logins once payment confirms.
                     </p>
+                </div>
+            )}
+
+            {/* Terms & Conditions modal */}
+            {showTerms && (
+                <div
+                    className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm'
+                    onClick={() => setShowTerms(false)}
+                >
+                    <div
+                        className='w-full max-w-md rounded-2xl border border-line bg-ink-800 p-6 shadow-2xl'
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className='flex items-center justify-between'>
+                            <h3 className='flex items-center gap-2 text-base font-bold text-white'>
+                                <ShieldCheck size={18} className='text-cyan-400' /> Terms &amp; Conditions
+                            </h3>
+                            <button
+                                type='button'
+                                onClick={() => setShowTerms(false)}
+                                className='text-slate-400 transition-colors hover:text-white'
+                                aria-label='Close'
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className='mt-4 space-y-3 text-sm text-slate-400'>
+                            <p>
+                                Nexora AI is an independent analytics and automation tool. It is not affiliated with,
+                                or endorsed by, Deriv.
+                            </p>
+                            <p>
+                                Subscriptions are prepaid for the selected term and are non-refundable once the plan is
+                                activated.
+                            </p>
+                            <p>
+                                Trading carries risk. You alone are responsible for your trading decisions and any
+                                resulting losses — no profit is guaranteed.
+                            </p>
+                        </div>
+                        <button
+                            type='button'
+                            onClick={() => {
+                                setAgreed(true);
+                                setShowTerms(false);
+                            }}
+                            className='btn-primary mt-5 w-full'
+                        >
+                            I understand &amp; agree
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

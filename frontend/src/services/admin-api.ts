@@ -2,7 +2,9 @@
 
 import type { Tier } from '@/services/payments-api';
 
-const API_URL = (process.env.API_URL || 'http://localhost:4000').replace(/\/$/, '');
+// Empty by default → same-origin (/api/...), proxied to the backend by Vite.
+// Set API_URL only when the API lives on another host.
+const API_URL = (process.env.API_URL || '').replace(/\/$/, '');
 
 export interface AdminCheck {
     isAdmin: boolean;
