@@ -1,5 +1,17 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, KeyRound, LogIn, Sparkles } from 'lucide-react';
+import {
+    ArrowRight,
+    BarChart3,
+    Bot,
+    Check,
+    KeyRound,
+    Lock,
+    LogIn,
+    SlidersHorizontal,
+    Sparkles,
+    TrendingUp,
+    Zap,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -29,32 +41,32 @@ const STATS = [
 
 const FEATURES = [
     {
-        icon: '🤖',
+        icon: Bot,
         title: 'Automated strategies',
         body: 'Run rule-based options strategies around the clock without watching every tick.',
     },
     {
-        icon: '📊',
+        icon: BarChart3,
         title: 'Live market data',
         body: 'Stream real-time prices and balances straight from the Deriv WebSocket API.',
     },
     {
-        icon: '🔒',
+        icon: Lock,
         title: 'Secure by design',
         body: 'Log in with OAuth 2.0 (PKCE) or the classic token flow — your credentials never touch us.',
     },
     {
-        icon: '⚡',
+        icon: Zap,
         title: 'Fast execution',
         body: 'Low-latency order routing reacts to market moves in under a second.',
     },
     {
-        icon: '🎛️',
+        icon: SlidersHorizontal,
         title: 'Full control',
         body: 'Start, stop, and switch accounts instantly. You stay in charge at all times.',
     },
     {
-        icon: '📈',
+        icon: TrendingUp,
         title: 'Performance insights',
         body: 'Track balance, open positions, and results from a single clean dashboard.',
     },
@@ -121,10 +133,7 @@ const Home = () => {
             <section className='border-b border-line'>
                 <div className='container-page grid gap-12 pb-16 pt-8 sm:py-20 lg:grid-cols-2 lg:items-center lg:py-28'>
                     <div>
-                        <span className='inline-flex items-center gap-2 rounded-full border border-line bg-ink-800 px-3 py-1 text-xs font-semibold text-cyan-300'>
-                            <span className='h-1.5 w-1.5 rounded-full bg-cyan-400' />
-                            Automated Deriv options trading
-                        </span>
+                       
                         <h1 className='mt-5 text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl'>
                             Trade Deriv options on autopilot
                         </h1>
@@ -148,9 +157,9 @@ const Home = () => {
                             </a>
                         </div>
                         <div className='mt-8 flex items-center gap-2 text-sm text-slate-500'>
-                            <span className='text-cyan-400'>✓</span> OAuth 2.0 &amp; legacy login
+                            <Check size={16} className='text-cyan-400' /> OAuth 2.0 &amp; legacy login
                             <span className='mx-2 text-slate-700'>•</span>
-                            <span className='text-cyan-400'>✓</span> No card required
+                            <Check size={16} className='text-cyan-400' /> No card required
                         </div>
 
                         {!isAuthenticated && (
@@ -177,7 +186,7 @@ const Home = () => {
                                 </div>
                             </div>
                             <span className='inline-flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-ink-900 px-2.5 py-1 text-xs font-bold'>
-                                <span className='h-1.5 w-1.5 rounded-full bg-violet-400' />
+                        
                                 <span className='text-nexora'>AI Powered</span>
                             </span>
                         </div>
@@ -261,8 +270,8 @@ const Home = () => {
                 <div className='mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
                     {FEATURES.map(f => (
                         <div key={f.title} className='card transition-colors hover:border-cyan-800'>
-                            <div className='flex h-11 w-11 items-center justify-center rounded-lg bg-ink-700 text-xl'>
-                                {f.icon}
+                            <div className='flex h-11 w-11 items-center justify-center rounded-lg bg-ink-700 text-cyan-400'>
+                                <f.icon size={22} />
                             </div>
                             <h3 className='mt-4 text-lg font-semibold text-white'>{f.title}</h3>
                             <p className='mt-2 text-sm text-slate-400'>{f.body}</p>
