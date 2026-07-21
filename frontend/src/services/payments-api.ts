@@ -29,6 +29,9 @@ export interface CardInitResult {
     orderId: string;
     authorizationUrl: string;
     status: string;
+    // Present for M-Pesa: the KES amount the user will actually be charged.
+    currency?: string;
+    amount?: number;
 }
 
 export interface SubscriptionStatus {
@@ -62,6 +65,18 @@ export const initCardPayment = (body: {
     loginids: string[];
 }): Promise<CardInitResult> =>
     fetch(`${API_URL}/api/payments/paystack/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(json);
+
+/** Start an M-Pesa (Paystack mobile money) checkout; redirect to authorizationUrl. */
+export const initMpesaPayment = (body: {
+    tier: Tier;
+    email: string;
+    loginids: string[];
+}): Promise<CardInitResult> =>
+    fetch(`${API_URL}/api/payments/mpesa/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

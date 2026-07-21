@@ -10,6 +10,7 @@ import {
     Loader2,
     Lock,
     ShieldCheck,
+    Smartphone,
     TriangleAlert,
     X,
 } from 'lucide-react';
@@ -20,13 +21,14 @@ import {
     getPaymentOrder,
     getPricing,
     initCardPayment,
+    initMpesaPayment,
     type PayCurrency,
     type PaymentOrder,
     type Tier,
     type TierPricing,
 } from '@/services/payments-api';
 
-type Method = 'card' | 'crypto';
+type Method = 'card' | 'mpesa' | 'crypto';
 
 const TIERS: Record<Tier, { label: string; priceUSD: number; term: string }> = {
     alpha: { label: 'Alpha', priceUSD: 100, term: '1 month' },
@@ -35,8 +37,9 @@ const TIERS: Record<Tier, { label: string; priceUSD: number; term: string }> = {
 };
 
 const METHODS: { id: Method; title: string; sub: string }[] = [
-    { id: 'card', title: 'Card', sub: 'Credit / Debit card' },
-    { id: 'crypto', title: 'Crypto', sub: 'USDT (TRC-20)' },
+    { id: 'card', title: 'Card', sub: 'Credit / Debit' },
+    { id: 'mpesa', title: 'M-Pesa', sub: 'Mobile money' },
+    { id: 'crypto', title: 'Crypto', sub: 'USDT' },
 ];
 
 // Brand logos served from jsDelivr (a CDN built for hotlinking).
@@ -113,6 +116,20 @@ const Checkout = () => {
             window.location.href = authorizationUrl;
         } catch (e: any) {
             setError(e?.message ?? 'Could not start the card payment.');
+            setSubmitting(false);
+        }
+    };
+
+    // M-Pesa: same hand-off as card, but Paystack charges in KES and triggers an
+    // STK push on the hosted page.
+    const startMpesaPayment = async () => {
+        setSubmitting(true);
+        setError(null);
+        try {
+            const { authorizationUrl } = await initMpesaPayment({ tier, email, loginids });
+            window.location.href = authorizationUrl;
+        } catch (e: any) {
+            setError(e?.message ?? 'Could not start the M-Pesa payment.');
             setSubmitting(false);
         }
     };
@@ -268,7 +285,7 @@ const Checkout = () => {
                     {/* Payment method */}
                     <div>
                         <span className='text-sm font-semibold text-white'>Select a payment method</span>
-                        <div className='mt-3 grid grid-cols-2 gap-3'>
+                        <div className='mt-3 grid grid-cols-3 gap-2.5'>
                             {METHODS.map(m => {
                                 const active = m.id === method;
                                 return (
@@ -276,32 +293,44 @@ const Checkout = () => {
                                         key={m.id}
                                         type='button'
                                         onClick={() => setMethod(m.id)}
-                                        className={`relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 text-center transition-all ${
+                                        className={`relative flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-all ${
                                             active
                                                 ? 'border-cyan-500 bg-cyan-500/5 ring-2 ring-cyan-500/30'
                                                 : 'border-line bg-ink-800 hover:border-slate-600'
                                         }`}
                                     >
                                         {active && (
-                                            <span className='absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500'>
+                                            <span className='absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500'>
                                                 <Check size={13} strokeWidth={3} className='text-[#fff]' />
                                             </span>
                                         )}
-                                        <span className='flex h-10 items-center justify-center gap-1.5'>
-                                            {(m.id === 'card' ? CARD_LOGOS : CRYPTO_LOGOS).map(logo => (
-                                                <img
-                                                    key={logo.alt}
-                                                    src={logo.src}
-                                                    alt={logo.alt}
-                                                    title={logo.alt}
-                                                    loading='lazy'
-                                                    className='h-8 w-auto'
-                                                />
-                                            ))}
+                                        <span className='flex h-9 items-center justify-center gap-1'>
+                                            {m.id === 'mpesa' ? (
+                                                <span className='flex h-7 w-full max-w-[86px] items-center justify-center overflow-hidden rounded bg-[#fff]'>
+                                                    <img
+                                                        src='/mpesa.jpg'
+                                                        alt='Lipa na M-Pesa'
+                                                        title='Lipa na M-Pesa'
+                                                        loading='lazy'
+                                                        className='h-full w-full object-cover'
+                                                    />
+                                                </span>
+                                            ) : (
+                                                (m.id === 'card' ? CARD_LOGOS : CRYPTO_LOGOS).map(logo => (
+                                                    <img
+                                                        key={logo.alt}
+                                                        src={logo.src}
+                                                        alt={logo.alt}
+                                                        title={logo.alt}
+                                                        loading='lazy'
+                                                        className='h-7 w-auto'
+                                                    />
+                                                ))
+                                            )}
                                         </span>
                                         <span className='flex flex-col'>
                                             <span className='text-sm font-bold text-white'>{m.title}</span>
-                                            <span className='text-[11px] text-slate-400'>Pay via {m.sub}</span>
+                                            <span className='text-[10px] text-slate-400'>{m.sub}</span>
                                         </span>
                                     </button>
                                 );
@@ -325,6 +354,16 @@ const Checkout = () => {
                         <p className='flex items-center gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
                             <Coins size={14} className='shrink-0 text-emerald-400' /> You&apos;ll pay in{' '}
                             <strong className='text-slate-200'>USDT (TRC-20)</strong> on the TRON network.
+                        </p>
+                    )}
+
+                    {method === 'mpesa' && (
+                        <p className='flex items-start gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
+                            <Smartphone size={14} className='mt-0.5 shrink-0 text-emerald-400' />
+                            <span>
+                                Charged in <strong className='text-slate-200'>KES</strong> (converted from ${priceUSD}{' '}
+                                at today&apos;s live rate). You&apos;ll get an M-Pesa PIN prompt on your phone.
+                            </span>
                         </p>
                     )}
 
@@ -357,7 +396,13 @@ const Checkout = () => {
 
                     <button
                         type='button'
-                        onClick={method === 'card' ? startCardPayment : startPayment}
+                        onClick={
+                            method === 'card'
+                                ? startCardPayment
+                                : method === 'mpesa'
+                                  ? startMpesaPayment
+                                  : startPayment
+                        }
                         disabled={!emailValid || submitting || loginids.length === 0 || !agreed}
                         className='btn-nexora w-full disabled:cursor-not-allowed disabled:opacity-50'
                     >
@@ -365,10 +410,16 @@ const Checkout = () => {
                             <Loader2 size={18} className='animate-spin' />
                         ) : method === 'card' ? (
                             <CreditCard size={18} />
+                        ) : method === 'mpesa' ? (
+                            <Smartphone size={18} />
                         ) : (
                             <Crown size={18} />
                         )}
-                        {method === 'card' ? `Pay $${priceUSD} by card` : `Pay $${priceUSD} in USDT`}
+                        {method === 'card'
+                            ? `Pay $${priceUSD} by card`
+                            : method === 'mpesa'
+                              ? 'Pay with M-Pesa'
+                              : `Pay $${priceUSD} in USDT`}
                     </button>
                     <p className='flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500'>
                         <Lock size={11} /> Secure checkout · unlocks for all your logins once payment confirms.
