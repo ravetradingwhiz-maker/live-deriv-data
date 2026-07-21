@@ -306,15 +306,13 @@ const Checkout = () => {
                                         )}
                                         <span className='flex h-9 items-center justify-center gap-1'>
                                             {m.id === 'mpesa' ? (
-                                                <span className='flex h-7 w-full max-w-[86px] items-center justify-center overflow-hidden rounded bg-[#fff]'>
-                                                    <img
-                                                        src='/mpesa.jpg'
-                                                        alt='Lipa na M-Pesa'
-                                                        title='Lipa na M-Pesa'
-                                                        loading='lazy'
-                                                        className='h-full w-full object-cover'
-                                                    />
-                                                </span>
+                                                <img
+                                                    src='/mpesa.svg'
+                                                    alt='M-Pesa'
+                                                    title='M-Pesa'
+                                                    loading='lazy'
+                                                    className='h-6 w-auto max-w-full object-contain'
+                                                />
                                             ) : (
                                                 (m.id === 'card' ? CARD_LOGOS : CRYPTO_LOGOS).map(logo => (
                                                     <img
