@@ -38,10 +38,12 @@ const TIERS: Record<Tier, { label: string; priceUSD: number; term: string }> = {
     apex: { label: 'Apex', priceUSD: 480, term: '6 months' },
 };
 
+// Crypto first — it's irreversible (no chargeback exposure), so it's the option
+// we lead with.
 const METHODS: { id: Method; title: string; sub: string }[] = [
+    { id: 'crypto', title: 'Crypto', sub: 'USDT' },
     { id: 'card', title: 'Card', sub: 'Credit / Debit' },
     { id: 'mpesa', title: 'M-Pesa', sub: 'Mobile money' },
-    { id: 'crypto', title: 'Crypto', sub: 'USDT' },
 ];
 
 // Brand logos served from jsDelivr (a CDN built for hotlinking).
@@ -102,7 +104,7 @@ const Checkout = () => {
     const term = dyn ? (dyn.months === 1 ? '1 month' : `${dyn.months} months`) : plan.term;
 
     const [email, setEmail] = useState('');
-    const [method, setMethod] = useState<Method>('card');
+    const [method, setMethod] = useState<Method>('crypto');
     // Which methods the admin has enabled. `null` = still loading — we render a
     // skeleton rather than guessing, otherwise disabled methods flash on screen
     // and then vanish once the real flags arrive.
