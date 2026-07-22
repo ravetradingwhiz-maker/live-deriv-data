@@ -4,6 +4,7 @@ const Payment = require('../Models/Payment');
 const Subscription = require('../Models/Subscription');
 const { createPaymentSchema, paystackInitSchema } = require('../Middlewares/validation');
 const { getTiers } = require('../config/tiers');
+const { getPaymentMethods } = require('../config/paymentMethods');
 const tron = require('../Services/tronChainService');
 const paystack = require('../Services/paystackService');
 const fx = require('../Services/fxService');
@@ -17,6 +18,15 @@ const PAYSTACK_CURRENCY = (process.env.PAYSTACK_CURRENCY || 'USD').toUpperCase()
 const ORDER_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 const genOrderId = () => `NX-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`.toUpperCase();
+
+/**
+ * Blocks orders for a method an admin has switched off. The checkout hides
+ * disabled methods, but this is the actual enforcement — the UI can be bypassed.
+ */
+const assertMethodEnabled = async id => {
+    const methods = await getPaymentMethods();
+    if (!methods[id]) throw createError(403, 'That payment method is currently unavailable');
+};
 const round6 = n => Math.round(n * 1e6) / 1e6;
 
 const addMonths = (date, months) => {
@@ -173,10 +183,20 @@ module.exports = {
         }
     },
 
+    // GET /api/payments/methods — public; which methods the checkout should show.
+    methods: async (req, res, next) => {
+        try {
+            res.json({ methods: await getPaymentMethods() });
+        } catch (error) {
+            next(error);
+        }
+    },
+
     // POST /api/payments/create
     create: async (req, res, next) => {
         try {
             const { tier, email, loginids } = await createPaymentSchema.validateAsync(req.body);
+            await assertMethodEnabled('crypto');
             const address = process.env.TRON_WALLET_ADDRESS;
             if (!address) throw createError(500, 'Receiving wallet not configured');
 
@@ -216,6 +236,7 @@ module.exports = {
     createCard: async (req, res, next) => {
         try {
             const { tier, email, loginids } = await paystackInitSchema.validateAsync(req.body);
+            await assertMethodEnabled('card');
             if (!process.env.PAYSTACK_SECRET_KEY) throw createError(500, 'Card payments not configured');
 
             const tiers = await getTiers();
@@ -271,6 +292,7 @@ module.exports = {
     createMpesa: async (req, res, next) => {
         try {
             const { tier, email, loginids } = await paystackInitSchema.validateAsync(req.body);
+            await assertMethodEnabled('mpesa');
             if (!process.env.PAYSTACK_SECRET_KEY) throw createError(500, 'M-Pesa payments not configured');
 
             const tiers = await getTiers();

@@ -8,6 +8,8 @@ const router = express.Router();
 const createLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
 router.get('/pricing', paymentController.pricing);
+// Must stay above the '/:orderId' catch-all below.
+router.get('/methods', paymentController.methods);
 router.post('/create', createLimiter, paymentController.create);
 // Card (Paystack): start a hosted checkout + receive charge webhooks.
 router.post('/paystack/init', createLimiter, paymentController.createCard);

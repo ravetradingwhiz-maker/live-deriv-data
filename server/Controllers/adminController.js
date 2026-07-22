@@ -4,6 +4,7 @@ const Subscription = require('../Models/Subscription');
 const Payment = require('../Models/Payment');
 const Setting = require('../Models/Setting');
 const { TIERS, getTiers } = require('../config/tiers');
+const { METHOD_DEFS, DEFAULTS: METHOD_DEFAULTS, getPaymentMethods } = require('../config/paymentMethods');
 
 // Deriv v4 markup-statistics REST endpoint (must be called server-side with a
 // read-scoped app token — the browser gets 403). Mirrors quantum-vault.
@@ -243,6 +244,35 @@ module.exports = {
             }
             await Setting.updateOne({ key: 'pricing' }, { $set: { value } }, { upsert: true });
             res.json({ ok: true, tiers: await getTiers() });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // ── Payment methods ──────────────────────────────────────────────────────
+    // GET /api/admin/payment-methods
+    getPaymentMethods: async (req, res, next) => {
+        try {
+            res.json({ methods: await getPaymentMethods(), defs: METHOD_DEFS, defaults: METHOD_DEFAULTS });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // PUT /api/admin/payment-methods  { card: true, mpesa: false, crypto: true }
+    setPaymentMethods: async (req, res, next) => {
+        try {
+            const body = req.body || {};
+            const value = {};
+            for (const key of Object.keys(METHOD_DEFAULTS)) {
+                if (typeof body[key] === 'boolean') value[key] = body[key];
+            }
+            // Refuse to switch every method off — that would leave a dead checkout.
+            if (Object.keys(value).length && !Object.values(value).some(Boolean)) {
+                throw createError(422, 'At least one payment method must stay enabled');
+            }
+            await Setting.updateOne({ key: 'payment_methods' }, { $set: { value } }, { upsert: true });
+            res.json({ ok: true, methods: await getPaymentMethods() });
         } catch (error) {
             next(error);
         }

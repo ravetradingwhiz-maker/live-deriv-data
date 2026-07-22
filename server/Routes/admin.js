@@ -31,4 +31,8 @@ router.get('/markup', markupLimiter, adminController.markup);
 router.get('/pricing', adminController.getPricing);
 router.put('/pricing', adminController.setPricing);
 
+// Payment methods (which options the checkout offers)
+router.get('/payment-methods', adminController.getPaymentMethods);
+router.put('/payment-methods', adminController.setPaymentMethods);
+
 module.exports = router;
