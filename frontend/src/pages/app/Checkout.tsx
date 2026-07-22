@@ -19,10 +19,12 @@ import { useSubscription } from '@/context/SubscriptionContext';
 import {
     createPayment,
     getPaymentOrder,
+    getPaymentMethods,
     getPricing,
     initCardPayment,
     initMpesaPayment,
     type PayCurrency,
+    type PaymentMethodFlags,
     type PaymentOrder,
     type Tier,
     type TierPricing,
@@ -78,6 +80,9 @@ const Checkout = () => {
 
     const [email, setEmail] = useState('');
     const [method, setMethod] = useState<Method>('card');
+    // Which methods the admin has enabled. Assume all until the check resolves so
+    // the options don't flicker on load.
+    const [enabled, setEnabled] = useState<PaymentMethodFlags>({ card: true, mpesa: true, crypto: true });
     const coin: PayCurrency = 'usdt';
     const [agreed, setAgreed] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
@@ -91,6 +96,20 @@ const Checkout = () => {
 
     const loginids = accounts.map(a => a.loginid);
     const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+
+    useEffect(() => {
+        getPaymentMethods()
+            .then(setEnabled)
+            .catch(() => {});
+    }, []);
+
+    const visibleMethods = METHODS.filter(m => enabled[m.id]);
+
+    // Keep the selection on a method that's actually offered.
+    useEffect(() => {
+        const vis = METHODS.filter(m => enabled[m.id]);
+        if (vis.length && !vis.some(m => m.id === method)) setMethod(vis[0].id);
+    }, [enabled, method]);
 
     const startPayment = async () => {
         setSubmitting(true);
@@ -285,8 +304,16 @@ const Checkout = () => {
                     {/* Payment method */}
                     <div>
                         <span className='text-sm font-semibold text-white'>Select a payment method</span>
-                        <div className='mt-3 grid grid-cols-3 gap-2.5'>
-                            {METHODS.map(m => {
+                        <div
+                            className={`mt-3 grid gap-2.5 ${
+                                visibleMethods.length === 1
+                                    ? 'grid-cols-1'
+                                    : visibleMethods.length === 2
+                                      ? 'grid-cols-2'
+                                      : 'grid-cols-3'
+                            }`}
+                        >
+                            {visibleMethods.map(m => {
                                 const active = m.id === method;
                                 return (
                                     <button

@@ -134,3 +134,21 @@ export const setAdminPricing = (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     }).then(json);
+
+// ── Payment methods ─────────────────────────────────────────────────────────
+export type MethodId = 'card' | 'mpesa' | 'crypto';
+export type MethodFlags = Record<MethodId, boolean>;
+export type MethodDefs = Record<MethodId, { label: string; desc: string }>;
+
+export const getAdminPaymentMethods = (): Promise<{
+    methods: MethodFlags;
+    defs: MethodDefs;
+    defaults: MethodFlags;
+}> => fetch(`${API_URL}/api/admin/payment-methods`).then(json);
+
+export const setAdminPaymentMethods = (body: MethodFlags): Promise<{ methods: MethodFlags }> =>
+    fetch(`${API_URL}/api/admin/payment-methods`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(json);

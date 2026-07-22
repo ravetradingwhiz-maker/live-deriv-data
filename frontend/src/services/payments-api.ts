@@ -94,6 +94,14 @@ export interface TierPricing {
     rank: number;
 }
 
+/** Which checkout methods an admin has enabled. */
+export type PaymentMethodFlags = { card: boolean; mpesa: boolean; crypto: boolean };
+
+export const getPaymentMethods = (): Promise<PaymentMethodFlags> =>
+    fetch(`${API_URL}/api/payments/methods`)
+        .then(json)
+        .then(d => d.methods);
+
 /** Public current tier prices (reflects admin overrides). */
 export const getPricing = (): Promise<Record<Tier, TierPricing>> =>
     fetch(`${API_URL}/api/payments/pricing`)

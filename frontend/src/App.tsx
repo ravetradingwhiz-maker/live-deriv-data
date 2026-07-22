@@ -19,6 +19,7 @@ import AdminMarkup from '@/pages/app/admin/AdminMarkup';
 import AdminSubscriptions from '@/pages/app/admin/AdminSubscriptions';
 import AdminPayments from '@/pages/app/admin/AdminPayments';
 import AdminPricing from '@/pages/app/admin/AdminPricing';
+import AdminPaymentMethods from '@/pages/app/admin/AdminPaymentMethods';
 
 /**
  * True when the URL carries an auth redirect payload — either an OAuth 2.0
@@ -89,6 +90,7 @@ const AppBody = () => {
                 <Route path='admin/subscriptions' element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
                 <Route path='admin/payments' element={<AdminRoute><AdminPayments /></AdminRoute>} />
                 <Route path='admin/pricing' element={<AdminRoute><AdminPricing /></AdminRoute>} />
+                <Route path='admin/payment-methods' element={<AdminRoute><AdminPaymentMethods /></AdminRoute>} />
             </Route>
 
             {/* Legacy path redirect */}
