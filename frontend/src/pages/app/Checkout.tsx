@@ -58,6 +58,27 @@ const CRYPTO_LOGOS = [
 
 type Phase = 'form' | 'pending' | 'paid' | 'failed';
 
+/** Mirrors the checkout form's layout so the swap to real content doesn't jump. */
+const CheckoutSkeleton = () => (
+    <div className='card flex animate-pulse flex-col gap-5'>
+        <div className='h-[62px] rounded-xl bg-ink-700' />
+        <div>
+            <div className='h-4 w-44 rounded bg-ink-700' />
+            <div className='mt-3 grid grid-cols-3 gap-2.5'>
+                {[0, 1, 2].map(i => (
+                    <div key={i} className='h-[104px] rounded-2xl bg-ink-700' />
+                ))}
+            </div>
+        </div>
+        <div className='flex flex-col gap-1.5'>
+            <div className='h-4 w-36 rounded bg-ink-700' />
+            <div className='h-[46px] rounded-xl bg-ink-700' />
+        </div>
+        <div className='h-4 w-56 rounded bg-ink-700' />
+        <div className='h-[46px] rounded-full bg-ink-700' />
+    </div>
+);
+
 const Checkout = () => {
     const [params] = useSearchParams();
     const navigate = useNavigate();
@@ -69,10 +90,12 @@ const Checkout = () => {
     const plan = TIERS[tier];
 
     const [pricing, setPricing] = useState<Record<Tier, TierPricing> | null>(null);
+    const [pricingReady, setPricingReady] = useState(false);
     useEffect(() => {
         getPricing()
             .then(setPricing)
-            .catch(() => {});
+            .catch(() => {}) // fall back to the built-in tier table
+            .finally(() => setPricingReady(true));
     }, []);
     const dyn = pricing?.[tier];
     const priceUSD = dyn?.priceUSD ?? plan.priceUSD;
@@ -80,9 +103,10 @@ const Checkout = () => {
 
     const [email, setEmail] = useState('');
     const [method, setMethod] = useState<Method>('card');
-    // Which methods the admin has enabled. Assume all until the check resolves so
-    // the options don't flicker on load.
-    const [enabled, setEnabled] = useState<PaymentMethodFlags>({ card: true, mpesa: true, crypto: true });
+    // Which methods the admin has enabled. `null` = still loading — we render a
+    // skeleton rather than guessing, otherwise disabled methods flash on screen
+    // and then vanish once the real flags arrive.
+    const [enabled, setEnabled] = useState<PaymentMethodFlags | null>(null);
     const coin: PayCurrency = 'usdt';
     const [agreed, setAgreed] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
@@ -100,16 +124,20 @@ const Checkout = () => {
     useEffect(() => {
         getPaymentMethods()
             .then(setEnabled)
-            .catch(() => {});
+            // If the flags can't be read, offer everything rather than a dead checkout.
+            .catch(() => setEnabled({ card: true, mpesa: true, crypto: true }));
     }, []);
 
-    const visibleMethods = METHODS.filter(m => enabled[m.id]);
+    const visibleMethods = enabled ? METHODS.filter(m => enabled[m.id]) : [];
 
-    // Keep the selection on a method that's actually offered.
-    useEffect(() => {
-        const vis = METHODS.filter(m => enabled[m.id]);
-        if (vis.length && !vis.some(m => m.id === method)) setMethod(vis[0].id);
-    }, [enabled, method]);
+    // Derive the selection instead of syncing it in an effect, so the choice is
+    // never briefly out of step with what's actually on offer.
+    const activeMethod: Method = visibleMethods.some(m => m.id === method)
+        ? method
+        : (visibleMethods[0]?.id ?? method);
+
+    // Skeleton until both the prices and the enabled methods are known.
+    const formLoading = !pricingReady || enabled === null;
 
     const startPayment = async () => {
         setSubmitting(true);
@@ -290,6 +318,8 @@ const Checkout = () => {
                     </p>
                 </div>
                 )
+            ) : formLoading ? (
+                <CheckoutSkeleton />
             ) : (
                 <div className='card flex flex-col gap-5'>
                     {/* Order summary */}
@@ -314,7 +344,7 @@ const Checkout = () => {
                             }`}
                         >
                             {visibleMethods.map(m => {
-                                const active = m.id === method;
+                                const active = m.id === activeMethod;
                                 return (
                                     <button
                                         key={m.id}
@@ -375,14 +405,14 @@ const Checkout = () => {
                         />
                     </label>
 
-                    {method === 'crypto' && (
+                    {activeMethod === 'crypto' && (
                         <p className='flex items-center gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
                             <Coins size={14} className='shrink-0 text-emerald-400' /> You&apos;ll pay in{' '}
                             <strong className='text-slate-200'>USDT (TRC-20)</strong> on the TRON network.
                         </p>
                     )}
 
-                    {method === 'mpesa' && (
+                    {activeMethod === 'mpesa' && (
                         <p className='flex items-start gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
                             <Smartphone size={14} className='mt-0.5 shrink-0 text-emerald-400' />
                             <span>
@@ -422,9 +452,9 @@ const Checkout = () => {
                     <button
                         type='button'
                         onClick={
-                            method === 'card'
+                            activeMethod === 'card'
                                 ? startCardPayment
-                                : method === 'mpesa'
+                                : activeMethod === 'mpesa'
                                   ? startMpesaPayment
                                   : startPayment
                         }
@@ -433,16 +463,16 @@ const Checkout = () => {
                     >
                         {submitting ? (
                             <Loader2 size={18} className='animate-spin' />
-                        ) : method === 'card' ? (
+                        ) : activeMethod === 'card' ? (
                             <CreditCard size={18} />
-                        ) : method === 'mpesa' ? (
+                        ) : activeMethod === 'mpesa' ? (
                             <Smartphone size={18} />
                         ) : (
                             <Crown size={18} />
                         )}
-                        {method === 'card'
+                        {activeMethod === 'card'
                             ? `Pay $${priceUSD} by card`
-                            : method === 'mpesa'
+                            : activeMethod === 'mpesa'
                               ? 'Pay with M-Pesa'
                               : `Pay $${priceUSD} in USDT`}
                     </button>
