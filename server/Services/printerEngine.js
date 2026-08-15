@@ -132,27 +132,40 @@ const placeRound = async (session, setup) => {
     // Captured before the buys so the post-settlement delta is the round's profit.
     const balanceBefore = await fetchBalance(token, appId, accountId).catch(() => null);
 
-    const placed = [];
-    for (const leg of legsFor(setup.symbol, stake)) {
-        const result = await purchaseContract({
-            token,
-            appId,
-            accountId,
-            accountType,
-            currency,
-            contractParameters: leg.params,
-        });
-        placed.push({
-            contract_type: leg.contract_type,
-            barrier: leg.barrier,
-            contract_id: result.contract_id || '',
-            buy_price: result.buy_price || 0,
-            transaction_id: result.transaction_id || '',
-            error: result.error || '',
-        });
-    }
+    // Both legs go out together rather than one after the other. These are 1-tick
+    // contracts, so the round-trip between two sequential buys can straddle a tick
+    // boundary and settle the pair against different digits — which takes the
+    // both-lose rate from 20% to 36% for no gain. Firing in parallel narrows the
+    // gap to network jitter. The per-call catch keeps one leg's network failure
+    // from rejecting the pair.
+    const legs = legsFor(setup.symbol, stake);
+    const results = await Promise.all(
+        legs.map(leg =>
+            purchaseContract({
+                token,
+                appId,
+                accountId,
+                accountType,
+                currency,
+                contractParameters: leg.params,
+            }).catch(err => ({ error: err?.message || 'Purchase failed' }))
+        )
+    );
 
-    const anyFilled = placed.some(l => l.contract_id);
+    const placed = legs.map((leg, i) => ({
+        contract_type: leg.contract_type,
+        barrier: leg.barrier,
+        contract_id: results[i].contract_id || '',
+        buy_price: results[i].buy_price || 0,
+        transaction_id: results[i].transaction_id || '',
+        error: results[i].error || '',
+    }));
+
+    const filled = placed.filter(l => l.contract_id);
+    const anyFilled = filled.length > 0;
+    // One leg filling alone is not an O5U4 round — it is a naked 40% bet. Worth
+    // surfacing rather than logging it as a normal round.
+    const partial = anyFilled && filled.length < legs.length;
     const trade = {
         hourKey: session.lastHourKey,
         symbol: setup.symbol,
@@ -161,9 +174,12 @@ const placeRound = async (session, setup) => {
         balanceBefore: balanceBefore ?? 0,
         profit: anyFilled ? null : 0,
         status: anyFilled ? 'open' : 'failed',
-        reason: anyFilled
-            ? `last=${setup.current} least=${setup.least} most=${setup.most}`
-            : placed.map(l => l.error).filter(Boolean).join('; ') || 'Purchase failed',
+        reason: !anyFilled
+            ? placed.map(l => l.error).filter(Boolean).join('; ') || 'Purchase failed'
+            : partial
+              ? `PARTIAL — only ${filled[0].contract_type} filled: ` +
+                `${placed.map(l => l.error).filter(Boolean).join('; ')}`
+              : `last=${setup.current} least=${setup.least} most=${setup.most}`,
         placedAt: new Date(),
         settledAt: anyFilled ? null : new Date(),
     };
