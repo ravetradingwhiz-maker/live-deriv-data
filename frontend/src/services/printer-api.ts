@@ -11,6 +11,7 @@ const API_URL = (process.env.API_URL || '').replace(/\/$/, '');
 
 export interface PrinterAccount {
     account_id: string;
+    account_type: 'real' | 'demo';
     currency: string;
     balance: number;
 }
@@ -36,7 +37,10 @@ export interface PrinterTrade {
 
 export interface PrinterSession {
     active: boolean;
+    /** A PAT is on file, so starting again does not require re-entering it. */
+    hasToken: boolean;
     account_id: string;
+    account_type: 'real' | 'demo';
     currency: string;
     stake: number;
     stopLoss: number;
@@ -50,7 +54,8 @@ export interface PrinterSession {
 }
 
 export interface StartParams {
-    token: string;
+    /** Omit to reuse the token already stored server-side. */
+    token?: string;
     account_id: string;
     stake: number;
     stopLoss?: number;
@@ -70,9 +75,12 @@ const post = (path: string, loginids: string[], body: Record<string, unknown> = 
         body: JSON.stringify({ loginids: loginids.join(','), ...body }),
     }).then(json);
 
-/** Resolve a PAT to its real accounts. The token is not stored by this call. */
-export const resolvePrinterAccounts = (loginids: string[], token: string): Promise<PrinterAccount[]> =>
-    post('accounts', loginids, { token }).then(d => d.accounts as PrinterAccount[]);
+/**
+ * Resolve a PAT to its accounts (demo and real). The token is not stored by this
+ * call; omit it to use the one already on file.
+ */
+export const resolvePrinterAccounts = (loginids: string[], token?: string): Promise<PrinterAccount[]> =>
+    post('accounts', loginids, token ? { token } : {}).then(d => d.accounts as PrinterAccount[]);
 
 export const startPrinter = (loginids: string[], params: StartParams): Promise<PrinterSession> =>
     post('start', loginids, { ...params }).then(d => d.session as PrinterSession);

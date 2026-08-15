@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Play, Printer, Square, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -11,7 +11,7 @@ import {
     type PrinterSession,
 } from '@/services/printer-api';
 
-const POLL_MS = 20000;
+const POLL_MS = 15000;
 
 /** mm:ss until the next hour, or '—' once the timestamp has passed. */
 const useCountdown = (iso: string | null) => {
@@ -46,6 +46,10 @@ const AdminPrinter = () => {
     const [takeProfit, setTakeProfit] = useState('');
 
     const countdown = useCountdown(session?.active ? session.nextHourAt : null);
+    const selectedAccount = useMemo(
+        () => resolved.find(a => a.account_id === accountId) ?? null,
+        [resolved, accountId]
+    );
 
     const load = useCallback(async () => {
         if (!loginids.length) return;
@@ -62,21 +66,52 @@ const AdminPrinter = () => {
         load();
     }, [load]);
 
+    // Restore the previous setup after a stop: settings come back from the saved
+    // session and the account list is re-resolved with the stored token, so
+    // restarting is one click and the PAT never has to be pasted twice.
+    const restoredRef = useRef(false);
+    useEffect(() => {
+        if (restoredRef.current || !session || session.active) return;
+        restoredRef.current = true;
+
+        setStake(String(session.stake));
+        setStopLoss(session.stopLoss ? String(session.stopLoss) : '');
+        setTakeProfit(session.takeProfit ? String(session.takeProfit) : '');
+
+        if (!session.hasToken) return;
+        resolvePrinterAccounts(loginids)
+            .then(list => {
+                setResolved(list);
+                setAccountId(
+                    list.some(a => a.account_id === session.account_id) ? session.account_id : (list[0]?.account_id ?? '')
+                );
+            })
+            .catch(() => {
+                /* token unusable — the form falls back to asking for a new one */
+            });
+    }, [session, loginids]);
+
+    // The countdown re-renders this component every second. Holding `load` in a
+    // ref keeps the poll interval out of that churn — depending on it directly
+    // tore the interval down and recreated it every second, so it never fired.
+    const loadRef = useRef(load);
+    loadRef.current = load;
+
     // Refresh while the tab is open. This only updates the display — the server
     // keeps trading regardless of whether anyone is watching.
     useEffect(() => {
         if (!session?.active) return;
-        const id = setInterval(load, POLL_MS);
+        const id = setInterval(() => loadRef.current(), POLL_MS);
         return () => clearInterval(id);
-    }, [session?.active, load]);
+    }, [session?.active]);
 
     const connect = async () => {
         setBusy(true);
         setError(null);
         try {
-            const list = await resolvePrinterAccounts(loginids, token.trim());
+            const list = await resolvePrinterAccounts(loginids, token.trim() || undefined);
             setResolved(list);
-            setAccountId(list[0]?.account_id ?? '');
+            setAccountId(prev => (list.some(a => a.account_id === prev) ? prev : (list[0]?.account_id ?? '')));
         } catch (e: any) {
             setError(e?.message ?? 'Could not validate token');
         } finally {
@@ -89,7 +124,8 @@ const AdminPrinter = () => {
         setError(null);
         try {
             const next = await startPrinter(loginids, {
-                token: token.trim(),
+                // Omitted when blank so the server reuses the stored token.
+                token: token.trim() || undefined,
                 account_id: accountId,
                 stake: Number(stake),
                 stopLoss: Number(stopLoss) || 0,
@@ -97,7 +133,7 @@ const AdminPrinter = () => {
             });
             setSession(next);
             setToken('');
-            setResolved([]);
+            restoredRef.current = false;
         } catch (e: any) {
             setError(e?.message ?? 'Failed to start');
         } finally {
@@ -123,6 +159,10 @@ const AdminPrinter = () => {
         try {
             await removePrinterToken(loginids);
             setSession(null);
+            setResolved([]);
+            setAccountId('');
+            setToken('');
+            restoredRef.current = false;
         } catch (e: any) {
             setError(e?.message ?? 'Failed to remove token');
         } finally {
@@ -159,8 +199,17 @@ const AdminPrinter = () => {
                     <div className='card flex flex-wrap items-center justify-between gap-4'>
                         <div>
                             <p className='text-[11px] uppercase tracking-wider text-slate-500'>Printing on</p>
-                            <p className='mt-1 text-lg font-bold text-white'>
-                                {session.account_id}{' '}
+                            <p className='mt-1 flex flex-wrap items-center gap-2 text-lg font-bold text-white'>
+                                <span
+                                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                                        session.account_type === 'demo'
+                                            ? 'bg-slate-700 text-slate-300'
+                                            : 'bg-amber-500/20 text-amber-400'
+                                    }`}
+                                >
+                                    {session.account_type}
+                                </span>
+                                {session.account_id}
                                 <span className='text-sm font-medium text-slate-400'>
                                     · {session.stake} {session.currency} per leg
                                 </span>
@@ -229,16 +278,25 @@ const AdminPrinter = () => {
                                     type='password'
                                     value={token}
                                     onChange={e => setToken(e.target.value)}
-                                    placeholder='Paste your Deriv API token'
+                                    placeholder={
+                                        session?.hasToken
+                                            ? 'Token on file — leave blank to reuse it'
+                                            : 'Paste your Deriv API token'
+                                    }
                                     className='min-w-0 flex-1 rounded-lg border border-line bg-ink-900 px-3 py-2 text-sm text-white outline-none'
                                 />
-                                <button onClick={connect} disabled={busy || !token.trim()} className='btn-admin'>
+                                <button
+                                    onClick={connect}
+                                    disabled={busy || (!token.trim() && !session?.hasToken)}
+                                    className='btn-admin'
+                                >
                                     {busy ? <Loader2 size={15} className='animate-spin' /> : null} Connect
                                 </button>
                             </div>
                             <p className='mt-1 text-xs text-slate-500'>
-                                Create it in Deriv → Settings → API token, with the Trade scope. It is stored encrypted
-                                and never shown again.
+                                {session?.hasToken
+                                    ? 'Your token is saved. Paste a new one only to replace it, or use Remove token to clear it.'
+                                    : 'Create it in Deriv → Settings → API token, with the Trade scope. It is stored encrypted and never shown again.'}
                             </p>
                         </div>
 
@@ -255,10 +313,16 @@ const AdminPrinter = () => {
                                     >
                                         {resolved.map(a => (
                                             <option key={a.account_id} value={a.account_id}>
-                                                {a.account_id} — {a.balance.toFixed(2)} {a.currency}
+                                                {a.account_type === 'demo' ? 'Demo' : 'Real'} · {a.account_id} —{' '}
+                                                {a.balance.toFixed(2)} {a.currency}
                                             </option>
                                         ))}
                                     </select>
+                                    {selectedAccount?.account_type === 'real' && (
+                                        <p className='mt-1 text-xs text-amber-400'>
+                                            Real account — every round places live trades with your own money.
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
@@ -279,7 +343,7 @@ const AdminPrinter = () => {
 
                                 <p className='text-xs text-slate-500'>
                                     Each round buys two contracts at this stake, so an hour risks {Number(stake) * 2 || 0}{' '}
-                                    {resolved.find(a => a.account_id === accountId)?.currency ?? ''} at most.
+                                    {selectedAccount?.currency ?? ''} at most.
                                 </p>
 
                                 <button
