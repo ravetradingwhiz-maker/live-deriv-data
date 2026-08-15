@@ -40,11 +40,15 @@ app.get('/', (req, res) => res.send('Nexora payments API is running'));
 app.use('/api/payments', require('./Routes/payments'));
 app.use('/api/subscription', require('./Routes/subscription'));
 app.use('/api/admin', require('./Routes/admin'));
+app.use('/api/printer', require('./Routes/printer'));
 
 // Background sweep: confirm pending on-chain payments even if the payer closed
 // the checkout tab.
 const { pollPendingOrders } = require('./Controllers/paymentController');
 setInterval(() => pollPendingOrders().catch(() => {}), 30000);
+
+// Hourly O5U4 printer — keeps trading for started sessions with no browser open.
+require('./Services/printerEngine').start();
 
 // 404 + error handler
 app.use((req, res, next) => next(createError(404, 'Not Found')));
