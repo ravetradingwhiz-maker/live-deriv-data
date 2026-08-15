@@ -298,7 +298,7 @@ const AdminPrinter = () => {
                                     ? 'Your token is saved. Paste a new one only to replace it, or use Remove token to clear it.'
                                     : 'Create it in Deriv → Settings → API token, with the Trade scope. It is stored encrypted and never shown again.'}
                             </p>
-                        </div>
+                        </div>`   `
 
                         {resolved.length > 0 && (
                             <>
