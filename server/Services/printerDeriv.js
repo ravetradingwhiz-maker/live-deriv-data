@@ -24,10 +24,11 @@ const derivHeaders = (appId, token) => {
 };
 
 /**
- * Resolve a PAT to its REAL options accounts. Doubles as token validation —
- * an invalid or wrongly-scoped token fails here rather than at trade time.
+ * Resolve a PAT to its options accounts, demo and real alike, so the admin can
+ * choose which to run on. Doubles as token validation — an invalid or
+ * wrongly-scoped token fails here rather than at trade time.
  */
-const fetchRealAccounts = async (token, appId) => {
+const fetchAccounts = async (token, appId) => {
     const r = await fetch(`${DERIV_REST}/trading/v1/options/accounts`, {
         headers: derivHeaders(appId, token),
     });
@@ -39,18 +40,19 @@ const fetchRealAccounts = async (token, appId) => {
         throw err;
     }
     const accounts = Array.isArray(json.data) ? json.data : [];
-    return accounts
-        .filter(a => a.account_type === 'real')
-        .map(a => ({
-            account_id: a.account_id,
-            currency: a.currency || 'USD',
-            balance: Number(a.balance) || 0,
-        }));
+    return accounts.map(a => ({
+        account_id: a.account_id,
+        // Anything Deriv does not explicitly mark demo is treated as real, so an
+        // unexpected value can never route a live account down the demo path.
+        account_type: a.account_type === 'demo' ? 'demo' : 'real',
+        currency: a.currency || 'USD',
+        balance: Number(a.balance) || 0,
+    }));
 };
 
 /** Current balance for one account, used to derive round profit from the delta. */
 const fetchBalance = async (token, appId, accountId) => {
-    const accounts = await fetchRealAccounts(token, appId);
+    const accounts = await fetchAccounts(token, appId);
     const row = accounts.find(a => a.account_id === accountId);
     return row ? row.balance : null;
 };
@@ -58,14 +60,16 @@ const fetchBalance = async (token, appId, accountId) => {
 /**
  * Buy one contract on one account.
  * Uses the bulk-purchase endpoint with a single account — the only options
- * purchase path that works from a server with a stored PAT.
+ * purchase path that works from a server with a stored PAT. Demo and real are
+ * separate endpoints, so the account type decides which one is called.
  */
-const purchaseContract = async ({ token, appId, accountId, currency, contractParameters }) => {
+const purchaseContract = async ({ token, appId, accountId, accountType, currency, contractParameters }) => {
     const body = {
         contract_parameters: { ...contractParameters, currency },
         accounts: [{ token, account_id: accountId }],
     };
-    const r = await fetch(`${DERIV_REST}/trading/v1/options/contracts/bulk-purchase/real`, {
+    const path = accountType === 'demo' ? 'demo' : 'real';
+    const r = await fetch(`${DERIV_REST}/trading/v1/options/contracts/bulk-purchase/${path}`, {
         method: 'POST',
         headers: derivHeaders(appId),
         body: JSON.stringify(body),
@@ -151,7 +155,7 @@ const fetchTickHistory = (symbols = SYMBOLS, count = 500, timeoutMs = 15000) =>
 module.exports = {
     SYMBOLS,
     getAppId,
-    fetchRealAccounts,
+    fetchAccounts,
     fetchBalance,
     purchaseContract,
     fetchTickHistory,

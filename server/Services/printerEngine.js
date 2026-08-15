@@ -127,7 +127,7 @@ const legsFor = (symbol, stake) => [
 /** Place one O5U4 round for a session whose hour has already been claimed. */
 const placeRound = async (session, setup) => {
     const token = decryptToken(session.tokenEnc);
-    const { account_id: accountId, currency, appId, stake } = session;
+    const { account_id: accountId, account_type: accountType, currency, appId, stake } = session;
 
     // Captured before the buys so the post-settlement delta is the round's profit.
     const balanceBefore = await fetchBalance(token, appId, accountId).catch(() => null);
@@ -138,6 +138,7 @@ const placeRound = async (session, setup) => {
             token,
             appId,
             accountId,
+            accountType,
             currency,
             contractParameters: leg.params,
         });

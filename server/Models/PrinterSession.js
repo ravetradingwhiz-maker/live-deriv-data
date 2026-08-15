@@ -37,6 +37,9 @@ const PrinterSessionSchema = new mongoose.Schema(
     {
         loginid: { type: String, required: true, unique: true, uppercase: true, trim: true, index: true },
         account_id: { type: String, required: true },
+        // Demo and real buy through different Deriv endpoints, so the type is
+        // pinned at start time rather than re-derived when a round is placed.
+        account_type: { type: String, enum: ['real', 'demo'], default: 'real' },
         currency: { type: String, default: 'USD' },
         tokenEnc: { type: String, required: true },
         // Deriv-App-ID used for the purchase calls, captured at start so the

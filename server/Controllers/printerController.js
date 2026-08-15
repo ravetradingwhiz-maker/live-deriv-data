@@ -1,8 +1,8 @@
 const createError = require('http-errors');
 const Admin = require('../Models/Admin');
 const PrinterSession = require('../Models/PrinterSession');
-const { encryptToken } = require('../Services/printerCrypto');
-const { getAppId, fetchRealAccounts } = require('../Services/printerDeriv');
+const { encryptToken, decryptToken } = require('../Services/printerCrypto');
+const { getAppId, fetchAccounts } = require('../Services/printerDeriv');
 const { hourKeyNow } = require('../Services/printerEngine');
 
 const normalizeLoginid = v => String(v || '').trim().toUpperCase();
@@ -26,6 +26,25 @@ const requireAdmin = async req => {
     return admin.loginid;
 };
 
+/**
+ * The PAT for this admin: whatever was sent, otherwise the one already stored.
+ * Stopping keeps the token on file so restarting never means pasting it again —
+ * only "Remove token" clears it.
+ */
+const resolveToken = async (loginid, supplied) => {
+    const token = String(supplied || '').trim();
+    if (token) return token;
+
+    const existing = await PrinterSession.findOne({ loginid });
+    if (!existing?.tokenEnc) throw createError(422, 'token is required');
+    try {
+        return decryptToken(existing.tokenEnc);
+    } catch {
+        // Key derivation changed (MONGODB_URI rotated) — the stored blob is dead.
+        throw createError(422, 'Stored token could not be read — please enter it again');
+    }
+};
+
 /** Shape returned to the UI. Never includes the stored token. */
 const publicSession = session => {
     if (!session) return null;
@@ -35,7 +54,10 @@ const publicSession = session => {
 
     return {
         active: session.active,
+        // Lets the UI offer a restart without asking for the token again.
+        hasToken: Boolean(session.tokenEnc),
         account_id: session.account_id,
+        account_type: session.account_type,
         currency: session.currency,
         stake: session.stake,
         stopLoss: session.stopLoss,
@@ -73,18 +95,19 @@ module.exports = {
     // is not stored by this call.
     accounts: async (req, res, next) => {
         try {
-            await requireAdmin(req);
-            const token = String(req.body?.token || '').trim();
-            if (!token) throw createError(422, 'token is required');
+            const loginid = await requireAdmin(req);
+            const token = await resolveToken(loginid, req.body?.token);
 
             const appId = getAppId();
             if (!appId) throw createError(503, 'MARKUP_APP_ID is not configured on the server');
 
-            const accounts = await fetchRealAccounts(token, appId).catch(err => {
+            const accounts = await fetchAccounts(token, appId).catch(err => {
                 throw createError(err.status === 401 ? 401 : 502, err.message || 'Could not validate token');
             });
-            if (!accounts.length) throw createError(422, 'No real accounts found for this token');
+            if (!accounts.length) throw createError(422, 'No options accounts found for this token');
 
+            // Demo first, so the safer option is what the UI preselects.
+            accounts.sort((a, b) => (a.account_type === b.account_type ? 0 : a.account_type === 'demo' ? -1 : 1));
             res.json({ accounts });
         } catch (error) {
             next(error);
@@ -95,13 +118,12 @@ module.exports = {
     start: async (req, res, next) => {
         try {
             const loginid = await requireAdmin(req);
-            const token = String(req.body?.token || '').trim();
+            const token = await resolveToken(loginid, req.body?.token);
             const accountId = String(req.body?.account_id || '').trim();
             const stake = Number(req.body?.stake);
             const stopLoss = Number(req.body?.stopLoss) || 0;
             const takeProfit = Number(req.body?.takeProfit) || 0;
 
-            if (!token) throw createError(422, 'token is required');
             if (!accountId) throw createError(422, 'account_id is required');
             if (!Number.isFinite(stake) || stake < 0.35) throw createError(422, 'stake must be at least 0.35');
 
@@ -110,7 +132,7 @@ module.exports = {
 
             // Re-resolve so a mismatched token/account pair is caught before the
             // session goes live rather than at the top of the next hour.
-            const accounts = await fetchRealAccounts(token, appId).catch(err => {
+            const accounts = await fetchAccounts(token, appId).catch(err => {
                 throw createError(err.status === 401 ? 401 : 502, err.message || 'Could not validate token');
             });
             const account = accounts.find(a => a.account_id === accountId);
@@ -122,6 +144,7 @@ module.exports = {
                     $set: {
                         loginid,
                         account_id: account.account_id,
+                        account_type: account.account_type,
                         currency: account.currency,
                         tokenEnc: encryptToken(token),
                         appId: String(appId),
@@ -140,7 +163,10 @@ module.exports = {
                 { new: true, upsert: true, setDefaultsOnInsert: true }
             );
 
-            console.log(`[Printer] ${loginid} started on ${account.account_id} at ${stake} ${account.currency}`);
+            console.log(
+                `[Printer] ${loginid} started on ${account.account_id} (${account.account_type}) ` +
+                    `at ${stake} ${account.currency}`
+            );
             res.json({ session: publicSession(session), balance: account.balance });
         } catch (error) {
             next(error);
