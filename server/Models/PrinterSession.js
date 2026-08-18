@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const LegSchema = new mongoose.Schema(
     {
         contract_type: { type: String, required: true },
-        barrier: { type: String, required: true },
+        // Not required: Even has no barrier, and Mongoose counts '' as missing.
+        barrier: { type: String, default: '' },
         contract_id: { type: String, default: '' },
         buy_price: { type: Number, default: 0 },
         transaction_id: { type: String, default: '' },
@@ -20,6 +21,8 @@ const TradeSchema = new mongoose.Schema(
         hourKey: { type: String, required: true },
         symbol: { type: String, required: true },
         stake: { type: Number, required: true },
+        // 'pair' = Over 2 + Under 7, 'recovery' = a single Even sized to the deficit
+        mode: { type: String, enum: ['pair', 'recovery'], default: 'pair' },
         legs: { type: [LegSchema], default: [] },
         balanceBefore: { type: Number, default: 0 },
         profit: { type: Number, default: null },
@@ -47,10 +50,32 @@ const PrinterSessionSchema = new mongoose.Schema(
         appId: { type: String, required: true },
         stake: { type: Number, required: true, min: 0.35 },
         active: { type: Boolean, default: false, index: true },
-        // Guards one-trade-per-hour. Claimed atomically before a round is placed.
+        // The hour currently being worked, plus its running tally. The session
+        // trades within an hour until it banks `hourlyTarget`, then idles until
+        // the next one.
         lastHourKey: { type: String, default: '' },
+        hourlyTarget: { type: Number, default: 2 },
+        hourlyProfit: { type: Number, default: 0 },
+        hourRounds: { type: Number, default: 0 },
+        // Set when the hour is finished — target reached, or a brake tripped.
+        hourDone: { type: Boolean, default: false },
+        hourEndedReason: { type: String, default: '' },
+        // Kept for reporting only — the hour is not capped by round count.
+        // The session stop-loss is the brake.
+        maxHourlyLossMultiple: { type: Number, default: 0 }, // x base stake, 0 = off
+        // Claimed atomically so two workers can never place at the same time.
+        roundInFlight: { type: Boolean, default: false },
         stopLoss: { type: Number, default: 0 }, // 0 = disabled
         takeProfit: { type: Number, default: 0 }, // 0 = disabled
+        // Outstanding loss the next round tries to win back with an Even contract.
+        // Above zero means the session is in recovery.
+        deficit: { type: Number, default: 0 },
+        // Martingale on the recovery ladder. The stake is the larger of what
+        // clears the deficit and the previous recovery stake times this, so a
+        // multiplier above ~2 escalates faster than the deficit alone would.
+        recoveryMultiplier: { type: Number, default: 2 },
+        lastRecoveryStake: { type: Number, default: 0 },
+        maxRecoveryMultiple: { type: Number, default: 10 }, // x base stake
         stoppedReason: { type: String, default: '' },
         stats: {
             trades: { type: Number, default: 0 },

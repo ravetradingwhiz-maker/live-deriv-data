@@ -1,144 +1,138 @@
 /**
- * Hourly O5U4 printer.
+ * Hourly Over 2 / Under 7 printer.
  *
  * Runs entirely server-side: once an admin starts a session it keeps trading
- * whether or not any browser is open. One round per clock hour, where a round is
- * the O5U4 pair — Over 5 and Under 4 bought together, covering every last digit
- * except 4 and 5.
+ * whether or not any browser is open.
+ *
+ * Each clock hour the session trades rounds until it banks its hourly target
+ * (default 2), then idles until the next hour. A losing round leaves a deficit,
+ * which the next round tries to clear with a single Even; once the deficit is
+ * gone it goes straight back to Over 2 / Under 7 and carries on toward the
+ * target. The hour is not capped by round count — the session stop-loss is the
+ * only brake, so it needs to be set before this runs on real money.
+ *
+ * A normal round buys Over 2 and Under 7 together, both legs at the same stake:
+ *   digit 3-6 (40%) — both legs win   → +0.72 x stake
+ *   digit 0-2 (30%) — Under 7 only    → -0.64 x stake
+ *   digit 7-9 (30%) — Over 2 only     → -0.64 x stake
+ * The two ranges overlap, so every digit pays something and no round is a total
+ * loss. The trade-off is that 60% of rounds end slightly down.
+ *
+ * A losing round leaves a deficit. The next hour then buys a single Even
+ * contract sized to clear it (50% at 1.94x — the lowest house edge available),
+ * and the session returns to normal pairs as soon as the deficit is gone.
  *
  * Scheduling deliberately uses a one-minute tick rather than an hourly timer:
  *  - an hourly interval drifts and resets on redeploy (deploy at :59 and the
  *    hour is silently skipped),
  *  - the hour is claimed atomically per session, so a restart mid-hour still
- *    places a missed round and can never place two,
- *  - within an hour the engine waits for a genuine O5U4 setup instead of firing
- *    at :00 regardless, so "one per hour" is a ceiling, not a quota.
+ *    places a missed round and can never place two.
  */
 
 const PrinterSession = require('../Models/PrinterSession');
 const { decryptToken } = require('./printerCrypto');
 const { SYMBOLS, fetchTickHistory, fetchBalance, purchaseContract } = require('./printerDeriv');
 
-const TICK_MS = 60 * 1000;
-const TICK_COUNT = 500; // sample size the digit-frequency conditions are judged on
-const SETTLE_AFTER_MS = 30 * 1000; // 1-tick legs are long done by then
+const TICK_MS = 15 * 1000; // the hour is worked in rounds, so the loop runs faster
+const TICK_COUNT = 200; // only used to confirm a market is live before trading it
+const SETTLE_AFTER_MS = 12 * 1000; // 1-tick legs settle in seconds; this is slack
 const MAX_TRADES_KEPT = 200;
+const MIN_STAKE = 0.35; // Deriv's floor
+// Even pays 1.94x, so a win returns 0.94 x stake in profit. Recovery is sized
+// from this. Real proposals vary slightly, so a recovery win can overshoot or
+// undershoot the deficit a little; the next round simply picks up the remainder.
+const EVEN_NET_RETURN = 0.94;
+const MAX_RECOVERY_MULTIPLE = 10; // recovery stake never exceeds 10x the base stake
+const RECOVERY_LADDER_LIMIT = 12; // hard stop on runaway ladders (2^12 is already absurd)
 
 let timer = null;
 let running = false;
 
-// ── O5U4 analysis ────────────────────────────────────────────────────────────
-
-/** Decimal places actually used by a market, so 1234.5 reads as digit 0 not 5. */
-const decimalsOf = prices =>
-    prices.reduce((max, p) => Math.max(max, (String(p).split('.')[1] || '').length), 2);
-
-const lastDigitOf = (price, decimals) => {
-    let dec = String(price).split('.')[1] || '';
-    while (dec.length < decimals) dec += '0';
-    return Number(dec.slice(-1));
-};
-
-const toDigits = prices => {
-    const decimals = decimalsOf(prices);
-    return prices.map(p => lastDigitOf(p, decimals));
-};
+// ── Market selection ─────────────────────────────────────────────────────────
 
 /**
- * O5U4 entry conditions for one market:
- *   1. the latest digit is 4 or 5   (price just landed in the dead zone)
- *   2. the least-appearing digit is 4 or 5   (the dead zone is the rarest)
- *   3. the most-appearing digit sits outside 4-5
- * Score favours the widest gap between the most and least frequent digit.
+ * Over 2 / Under 7 has no entry condition to wait for — the pair covers every
+ * digit, and measurement on 60k ticks found no predictive signal in the digit
+ * history anyway. So the only job here is picking a market that is actually
+ * streaming, rotating by the hour so a session spreads across all ten rather
+ * than hammering one.
  */
-const scoreSymbol = digits => {
-    if (digits.length < 100) return null;
-
-    const current = digits[digits.length - 1];
-    if (current !== 4 && current !== 5) return null;
-
-    const counts = new Array(10).fill(0);
-    digits.forEach(d => counts[d]++);
-
-    const seen = counts.map((count, digit) => ({ digit, count })).filter(e => e.count > 0);
-    if (!seen.length) return null;
-
-    const sorted = [...seen].sort((a, b) => a.count - b.count);
-    const least = sorted[0];
-    const most = sorted[sorted.length - 1];
-
-    if (least.digit !== 4 && least.digit !== 5) return null;
-    if (!(most.digit > 5 || most.digit < 4)) return null;
-
-    return {
-        score: (most.count - least.count) * (digits.length / 100),
-        current,
-        least: least.digit,
-        most: most.digit,
-        sampleSize: digits.length,
-    };
-};
-
-/** Best qualifying market across all symbols, or null when none qualifies. */
-const pickBestSetup = ticksBySymbol => {
-    let best = null;
-    for (const symbol of SYMBOLS) {
-        const prices = ticksBySymbol[symbol];
-        if (!Array.isArray(prices) || prices.length < 100) continue;
-        const result = scoreSymbol(toDigits(prices));
-        if (result && (!best || result.score > best.score)) best = { symbol, ...result };
-    }
-    return best;
+const pickSymbol = (ticksBySymbol, hourKey) => {
+    const live = SYMBOLS.filter(s => Array.isArray(ticksBySymbol[s]) && ticksBySymbol[s].length > 0);
+    if (!live.length) return null;
+    const hour = Number(hourKey.slice(-2)) || 0;
+    return live[hour % live.length];
 };
 
 // ── Rounds ───────────────────────────────────────────────────────────────────
 
 const hourKeyNow = () => new Date().toISOString().slice(0, 13); // e.g. 2026-08-15T14
 
-const legsFor = (symbol, stake) => [
-    {
-        contract_type: 'DIGITOVER',
-        barrier: '5',
-        params: {
-            amount: stake,
-            basis: 'stake',
-            contract_type: 'DIGITOVER',
-            duration: 1,
-            duration_unit: 't',
-            underlying_symbol: symbol,
-            barrier: '5',
-        },
+const digitLeg = (symbol, stake, contract_type, barrier) => ({
+    contract_type,
+    barrier: barrier ?? '',
+    params: {
+        amount: Number(stake.toFixed(2)),
+        basis: 'stake',
+        contract_type,
+        duration: 1,
+        duration_unit: 't',
+        underlying_symbol: symbol,
+        ...(barrier === undefined ? {} : { barrier }),
     },
-    {
-        contract_type: 'DIGITUNDER',
-        barrier: '4',
-        params: {
-            amount: stake,
-            basis: 'stake',
-            contract_type: 'DIGITUNDER',
-            duration: 1,
-            duration_unit: 't',
-            underlying_symbol: symbol,
-            barrier: '4',
-        },
-    },
+});
+
+/** Normal round: Over 2 and Under 7 at the same stake, bought together. */
+const pairLegs = (symbol, stake) => [
+    digitLeg(symbol, stake, 'DIGITOVER', '2'),
+    digitLeg(symbol, stake, 'DIGITUNDER', '7'),
 ];
 
+/**
+ * Recovery round: one Even contract, staked as a martingale off the configured
+ * base stake rather than off the outstanding deficit.
+ *
+ *   first attempt  → baseStake x multiplier
+ *   each retry     → previous recovery stake x multiplier
+ *
+ * Capped at a multiple of the base stake, because an uncapped Even ladder
+ * doubles without limit.
+ */
+const recoveryLegs = (symbol, baseStake, lastRecoveryStake = 0, multiplier = 2, maxMultiple = MAX_RECOVERY_MULTIPLE) => {
+    const next = lastRecoveryStake > 0 ? lastRecoveryStake * multiplier : baseStake * multiplier;
+    const capped = Math.min(next, baseStake * (maxMultiple || MAX_RECOVERY_MULTIPLE));
+    const stake = Math.max(MIN_STAKE, Number(capped.toFixed(2)));
+    return [digitLeg(symbol, stake, 'DIGITEVEN')];
+};
+
 /** Place one O5U4 round for a session whose hour has already been claimed. */
-const placeRound = async (session, setup) => {
+const placeRound = async (session, symbol) => {
     const token = decryptToken(session.tokenEnc);
     const { account_id: accountId, account_type: accountType, currency, appId, stake } = session;
+
+    // A deficit carried from earlier losing rounds turns this hour into a
+    // recovery round instead of a normal pair.
+    const deficit = Number(session.deficit) || 0;
+    const isRecovery = deficit > 0;
 
     // Captured before the buys so the post-settlement delta is the round's profit.
     const balanceBefore = await fetchBalance(token, appId, accountId).catch(() => null);
 
     // Both legs go out together rather than one after the other. These are 1-tick
     // contracts, so the round-trip between two sequential buys can straddle a tick
-    // boundary and settle the pair against different digits — which takes the
-    // both-lose rate from 20% to 36% for no gain. Firing in parallel narrows the
-    // gap to network jitter. The per-call catch keeps one leg's network failure
-    // from rejecting the pair.
-    const legs = legsFor(setup.symbol, stake);
+    // boundary and settle the pair against different digits, which breaks the
+    // overlap the pair depends on. Firing in parallel narrows the gap to network
+    // jitter. The per-call catch keeps one leg's network failure from rejecting
+    // the other.
+    const legs = isRecovery
+        ? recoveryLegs(
+              symbol,
+              stake,
+              Number(session.lastRecoveryStake) || 0,
+              Number(session.recoveryMultiplier) || 2,
+              Number(session.maxRecoveryMultiple) || MAX_RECOVERY_MULTIPLE
+          )
+        : pairLegs(symbol, stake);
     const results = await Promise.all(
         legs.map(leg =>
             purchaseContract({
@@ -163,13 +157,16 @@ const placeRound = async (session, setup) => {
 
     const filled = placed.filter(l => l.contract_id);
     const anyFilled = filled.length > 0;
-    // One leg filling alone is not an O5U4 round — it is a naked 40% bet. Worth
+    // Half a pair is not the strategy — it is a naked one-sided bet. Worth
     // surfacing rather than logging it as a normal round.
     const partial = anyFilled && filled.length < legs.length;
+    const roundStake = legs[0].params.amount;
+
     const trade = {
         hourKey: session.lastHourKey,
-        symbol: setup.symbol,
-        stake,
+        symbol,
+        stake: roundStake,
+        mode: isRecovery ? 'recovery' : 'pair',
         legs: placed,
         balanceBefore: balanceBefore ?? 0,
         profit: anyFilled ? null : 0,
@@ -179,7 +176,9 @@ const placeRound = async (session, setup) => {
             : partial
               ? `PARTIAL — only ${filled[0].contract_type} filled: ` +
                 `${placed.map(l => l.error).filter(Boolean).join('; ')}`
-              : `last=${setup.current} least=${setup.least} most=${setup.most}`,
+              : isRecovery
+                ? `Even ${roundStake} (martingale, ${deficit.toFixed(2)} owed)`
+                : `Over 2 + Under 7 at ${roundStake} each`,
         placedAt: new Date(),
         settledAt: anyFilled ? null : new Date(),
     };
@@ -188,11 +187,16 @@ const placeRound = async (session, setup) => {
     if (session.trades.length > MAX_TRADES_KEPT) {
         session.trades = session.trades.slice(-MAX_TRADES_KEPT);
     }
+    // Remember the rung so the next recovery can multiply from it.
+    if (isRecovery && anyFilled) session.lastRecoveryStake = roundStake;
+    // A round that never filled will never reach settlement, so release the
+    // in-flight claim here or the session would stop trading permanently.
+    if (!anyFilled) session.roundInFlight = false;
     await session.save();
 
     console.log(
-        `[Printer] ${session.loginid} ${trade.status === 'failed' ? 'FAILED' : 'placed'} O5U4 on ${setup.symbol} ` +
-            `(${trade.reason})`
+        `[Printer] ${session.loginid} ${trade.status === 'failed' ? 'FAILED' : 'placed'} ` +
+            `${isRecovery ? 'RECOVERY Even' : 'Over2+Under7'} on ${symbol} (${trade.reason})`
     );
 };
 
@@ -228,7 +232,24 @@ const settleOpenRounds = async session => {
         session.stats.profit = Number((session.stats.profit + profit).toFixed(2));
         if (profit >= 0) session.stats.wins += 1;
         else session.stats.losses += 1;
+
+        // Counts toward this hour's target only if it belongs to this hour — a
+        // round settling after the hour rolled over must not pollute the new one.
+        if (trade.hourKey === session.lastHourKey) {
+            session.hourlyProfit = Number((session.hourlyProfit + profit).toFixed(2));
+        }
+
+        // A losing round adds to the deficit; a winning one pays it down. While
+        // the deficit is above zero the next round is an Even sized to clear it.
+        const deficit = (Number(session.deficit) || 0) - profit;
+        session.deficit = Math.max(0, Number(deficit.toFixed(2)));
+        // Debt cleared — the ladder resets, so the next recovery starts at the
+        // bottom rung instead of continuing from the last one.
+        if (session.deficit === 0) session.lastRecoveryStake = 0;
     }
+
+    // The round is done, so the session is free to place the next one.
+    session.roundInFlight = false;
 
     // Limits are enforced here rather than in the browser — the browser is gone.
     if (session.takeProfit > 0 && session.stats.profit >= session.takeProfit) {
@@ -246,14 +267,50 @@ const settleOpenRounds = async session => {
 
 // ── Scheduler ────────────────────────────────────────────────────────────────
 
+/**
+ * Roll the session onto the current hour, resetting the hour's tally.
+ * Returns true when the session may trade this hour.
+ */
+const rollHour = async (session, hourKey) => {
+    if (session.lastHourKey !== hourKey) {
+        session.lastHourKey = hourKey;
+        session.hourlyProfit = 0;
+        session.hourRounds = 0;
+        session.hourDone = false;
+        session.hourEndedReason = '';
+        await session.save();
+    }
+    return !session.hourDone;
+};
+
+/** Target reached, or a brake tripped? Ends the hour if so. */
+const checkHourFinished = async session => {
+    const target = Number(session.hourlyTarget) || 0;
+    const maxLoss = (Number(session.maxHourlyLossMultiple) || 0) * session.stake;
+
+    let reason = '';
+    if (target > 0 && session.hourlyProfit >= target) reason = `Target ${target} reached`;
+    else if (maxLoss > 0 && session.hourlyProfit <= -maxLoss) reason = `Hourly loss cap (${maxLoss.toFixed(2)}) hit`;
+
+    if (!reason) return false;
+
+    session.hourDone = true;
+    session.hourEndedReason = reason;
+    await session.save();
+    console.log(`[Printer] ${session.loginid} hour ${session.lastHourKey} ended — ${reason}`);
+    return true;
+};
+
 const tick = async () => {
-    if (running) return; // a slow Deriv call must not overlap the next minute
+    if (running) return; // a slow Deriv call must not overlap the next pass
     running = true;
 
     try {
         const sessions = await PrinterSession.find({ active: true });
         if (!sessions.length) return;
 
+        // Settle first — this hour's tally has to be current before deciding
+        // whether the target is met.
         for (const session of sessions) {
             await settleOpenRounds(session).catch(err =>
                 console.error(`[Printer] settle failed for ${session.loginid}:`, err.message)
@@ -261,26 +318,38 @@ const tick = async () => {
         }
 
         const hourKey = hourKeyNow();
-        const waiting = sessions.filter(s => s.active && s.lastHourKey !== hourKey);
-        if (!waiting.length) return;
+        const candidates = [];
+        for (const session of sessions) {
+            if (!session.active) continue;
+            if (!(await rollHour(session, hourKey))) continue; // hour already finished
+            if (await checkHourFinished(session)) continue; // just finished it
+            if (session.roundInFlight) continue; // previous round still settling
+            candidates.push(session);
+        }
+        if (!candidates.length) return;
 
+        // There is no setup to wait for, so the only reason to touch the market
+        // data is to confirm something is actually streaming before buying on it.
         const ticks = await fetchTickHistory(SYMBOLS, TICK_COUNT);
-        const setup = pickBestSetup(ticks);
-        if (!setup) return; // no valid O5U4 this minute — try again next minute
+        const symbol = pickSymbol(ticks, hourKey);
+        if (!symbol) return; // no market responded — retry next pass
 
-        for (const session of waiting) {
-            // Atomic claim: only the first caller gets the document back, so a
-            // second instance or an overlapping tick cannot double-place.
+        for (const session of candidates) {
+            // Atomic claim on the in-flight flag: only the first caller gets the
+            // document back, so a second instance or an overlapping pass cannot
+            // place two rounds at once.
             const claimed = await PrinterSession.findOneAndUpdate(
-                { _id: session._id, active: true, lastHourKey: { $ne: hourKey } },
-                { $set: { lastHourKey: hourKey } },
+                { _id: session._id, active: true, roundInFlight: false, hourDone: false },
+                { $set: { roundInFlight: true }, $inc: { hourRounds: 1 } },
                 { new: true }
             );
             if (!claimed) continue;
 
-            await placeRound(claimed, setup).catch(err =>
-                console.error(`[Printer] round failed for ${claimed.loginid}:`, err.message)
-            );
+            await placeRound(claimed, symbol).catch(async err => {
+                console.error(`[Printer] round failed for ${claimed.loginid}:`, err.message);
+                // Never leave the flag stuck, or the session stops trading forever.
+                await PrinterSession.updateOne({ _id: claimed._id }, { $set: { roundInFlight: false } });
+            });
         }
     } catch (err) {
         console.error('[Printer] tick error:', err.message);
@@ -291,9 +360,9 @@ const tick = async () => {
 
 const start = () => {
     if (timer) return;
-    console.log('[Printer] Hourly O5U4 engine started (1-minute tick)');
+    console.log('[Printer] Hourly Over2/Under7 engine started (1-minute tick)');
     timer = setInterval(() => tick().catch(() => {}), TICK_MS);
     tick().catch(() => {});
 };
 
-module.exports = { start, tick, pickBestSetup, hourKeyNow };
+module.exports = { start, tick, pickSymbol, pairLegs, recoveryLegs, hourKeyNow };

@@ -65,6 +65,14 @@ const publicSession = session => {
         stoppedReason: session.stoppedReason,
         startedAt: session.startedAt,
         stats: session.stats,
+        deficit: session.deficit || 0,
+        recoveryMultiplier: session.recoveryMultiplier,
+        lastRecoveryStake: session.lastRecoveryStake || 0,
+        hourlyTarget: session.hourlyTarget,
+        hourlyProfit: session.hourlyProfit || 0,
+        hourRounds: session.hourRounds || 0,
+        hourDone: session.hourDone,
+        hourEndedReason: session.hourEndedReason || '',
         tradedThisHour: session.lastHourKey === hourKeyNow(),
         nextHourAt: session.active ? next.toISOString() : null,
         trades: [...session.trades]
@@ -74,6 +82,7 @@ const publicSession = session => {
                 hourKey: t.hourKey,
                 symbol: t.symbol,
                 stake: t.stake,
+                mode: t.mode || 'pair',
                 status: t.status,
                 profit: t.profit,
                 reason: t.reason,
@@ -123,6 +132,8 @@ module.exports = {
             const stake = Number(req.body?.stake);
             const stopLoss = Number(req.body?.stopLoss) || 0;
             const takeProfit = Number(req.body?.takeProfit) || 0;
+            const hourlyTarget = Number(req.body?.hourlyTarget) || 2;
+            const recoveryMultiplier = Number(req.body?.recoveryMultiplier) || 2;
 
             if (!accountId) throw createError(422, 'account_id is required');
             if (!Number.isFinite(stake) || stake < 0.35) throw createError(422, 'stake must be at least 0.35');
@@ -151,11 +162,21 @@ module.exports = {
                         stake,
                         stopLoss,
                         takeProfit,
+                        hourlyTarget,
+                        recoveryMultiplier,
+                        lastRecoveryStake: 0,
+                        hourlyProfit: 0,
+                        hourRounds: 0,
+                        hourDone: false,
+                        hourEndedReason: '',
+                        roundInFlight: false,
                         active: true,
                         stoppedReason: '',
                         startedAt: new Date(),
-                        // A fresh start never inherits the previous hour's claim.
+                        // A fresh start never inherits the previous hour's claim
+                        // or a deficit from an earlier session.
                         lastHourKey: '',
+                        deficit: 0,
                         stats: { trades: 0, wins: 0, losses: 0, profit: 0 },
                         trades: [],
                     },
