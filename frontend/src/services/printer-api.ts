@@ -1,9 +1,9 @@
 /**
- * Admin printer — the hourly O5U4 bot that runs on the server.
+ * Admin printer — the Over 2 / Under 7 bot that runs on the server.
  *
- * Nothing here drives the trading. Once /start succeeds the server places one
- * round per hour on its own; these calls only configure it and read its state,
- * so closing the tab has no effect on a running session.
+ * Nothing here drives the trading. Once /start succeeds the server works each
+ * hour toward its profit target on its own; these calls only configure it and
+ * read its state, so closing the tab has no effect on a running session.
  */
 
 // Empty by default → same-origin (/api/...), proxied to the backend by Vite.
@@ -28,6 +28,8 @@ export interface PrinterTrade {
     hourKey: string;
     symbol: string;
     stake: number;
+    /** 'pair' = Over 2 + Under 7, 'recovery' = a single Even sized to the deficit. */
+    mode: 'pair' | 'recovery';
     status: 'open' | 'settled' | 'failed';
     profit: number | null;
     reason: string;
@@ -48,6 +50,17 @@ export interface PrinterSession {
     stoppedReason: string;
     startedAt: string | null;
     stats: { trades: number; wins: number; losses: number; profit: number };
+    /** Outstanding loss the next round tries to win back. Above 0 = in recovery. */
+    deficit: number;
+    /** Martingale applied to the Even recovery ladder. */
+    recoveryMultiplier: number;
+    lastRecoveryStake: number;
+    /** The session trades rounds until hourlyProfit reaches this, then idles. */
+    hourlyTarget: number;
+    hourlyProfit: number;
+    hourRounds: number;
+    hourDone: boolean;
+    hourEndedReason: string;
     tradedThisHour: boolean;
     nextHourAt: string | null;
     trades: PrinterTrade[];
@@ -60,6 +73,10 @@ export interface StartParams {
     stake: number;
     stopLoss?: number;
     takeProfit?: number;
+    /** Profit the session works toward each hour before idling. Defaults to 2. */
+    hourlyTarget?: number;
+    /** Martingale on the Even recovery ladder. Defaults to 2. */
+    recoveryMultiplier?: number;
 }
 
 const json = async (res: Response) => {
