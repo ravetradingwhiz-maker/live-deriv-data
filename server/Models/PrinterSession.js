@@ -67,15 +67,18 @@ const PrinterSessionSchema = new mongoose.Schema(
         roundInFlight: { type: Boolean, default: false },
         stopLoss: { type: Number, default: 0 }, // 0 = disabled
         takeProfit: { type: Number, default: 0 }, // 0 = disabled
-        // Outstanding loss the next round tries to win back with an Even contract.
-        // Above zero means the session is in recovery.
+        // Outstanding loss from the pair round that started this ladder. Kept for
+        // reporting; the recovery stake itself is a plain martingale off the base
+        // stake, not sized from this number.
         deficit: { type: Number, default: 0 },
-        // Martingale on the recovery ladder. The stake is the larger of what
-        // clears the deficit and the previous recovery stake times this, so a
-        // multiplier above ~2 escalates faster than the deficit alone would.
+        // Recovery martingale: first attempt is baseStake x this; each retry is
+        // the previous recovery stake x this. Uncapped — escalates until a round
+        // wins or the session stop-loss ends it.
         recoveryMultiplier: { type: Number, default: 2 },
         lastRecoveryStake: { type: Number, default: 0 },
-        maxRecoveryMultiple: { type: Number, default: 10 }, // x base stake
+        // First recovery is always Even; each retry after a losing recovery
+        // flips to the other side. Empty means no ladder is in progress.
+        lastRecoveryType: { type: String, default: '' },
         stoppedReason: { type: String, default: '' },
         stats: {
             trades: { type: Number, default: 0 },

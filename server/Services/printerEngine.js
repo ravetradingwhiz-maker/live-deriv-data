@@ -5,11 +5,7 @@
  * whether or not any browser is open.
  *
  * Each clock hour the session trades rounds until it banks its hourly target
- * (default 2), then idles until the next hour. A losing round leaves a deficit,
- * which the next round tries to clear with a single Even; once the deficit is
- * gone it goes straight back to Over 2 / Under 7 and carries on toward the
- * target. The hour is not capped by round count — the session stop-loss is the
- * only brake, so it needs to be set before this runs on real money.
+ * (default 2), then idles until the next hour.
  *
  * A normal round buys Over 2 and Under 7 together, both legs at the same stake:
  *   digit 3-6 (40%) — both legs win   → +0.72 x stake
@@ -18,9 +14,15 @@
  * The two ranges overlap, so every digit pays something and no round is a total
  * loss. The trade-off is that 60% of rounds end slightly down.
  *
- * A losing round leaves a deficit. The next hour then buys a single Even
- * contract sized to clear it (50% at 1.94x — the lowest house edge available),
- * and the session returns to normal pairs as soon as the deficit is gone.
+ * A losing round leaves a deficit and puts the session into recovery: the next
+ * round is a single Even at baseStake x multiplier; each further loss retries
+ * at (previous recovery stake x multiplier), alternating Even/Odd. This ladder
+ * is uncapped by design and escalates until a round wins, at which point the
+ * deficit clears and the session goes straight back to Over 2 / Under 7.
+ *
+ * Neither the hour nor the recovery ladder is capped by round count or stake
+ * multiple — the session stop-loss is the only brake, so it must be set before
+ * this runs on real money.
  *
  * Scheduling deliberately uses a one-minute tick rather than an hourly timer:
  *  - an hourly interval drifts and resets on redeploy (deploy at :59 and the
@@ -38,12 +40,9 @@ const TICK_COUNT = 200; // only used to confirm a market is live before trading 
 const SETTLE_AFTER_MS = 12 * 1000; // 1-tick legs settle in seconds; this is slack
 const MAX_TRADES_KEPT = 200;
 const MIN_STAKE = 0.35; // Deriv's floor
-// Even pays 1.94x, so a win returns 0.94 x stake in profit. Recovery is sized
-// from this. Real proposals vary slightly, so a recovery win can overshoot or
-// undershoot the deficit a little; the next round simply picks up the remainder.
-const EVEN_NET_RETURN = 0.94;
-const MAX_RECOVERY_MULTIPLE = 10; // recovery stake never exceeds 10x the base stake
-const RECOVERY_LADDER_LIMIT = 12; // hard stop on runaway ladders (2^12 is already absurd)
+// No cap on the recovery ladder — it keeps martingaling until a round wins.
+// The session stop-loss is the only brake; without one set, a losing streak
+// escalates without limit until Deriv itself rejects a stake it won't accept.
 
 let timer = null;
 let running = false;
@@ -92,17 +91,23 @@ const pairLegs = (symbol, stake) => [
  * Recovery round: one Even contract, staked as a martingale off the configured
  * base stake rather than off the outstanding deficit.
  *
- *   first attempt  → baseStake x multiplier
- *   each retry     → previous recovery stake x multiplier
+ *   first attempt  → baseStake x multiplier, on Even
+ *   each retry     → previous recovery stake x multiplier, flipped to the other
+ *                    side (Even → Odd → Even …)
  *
- * Capped at a multiple of the base stake, because an uncapped Even ladder
- * doubles without limit.
+ * Uncapped by design — the ladder keeps escalating until a round wins or the
+ * session stop-loss stops it. Even and Odd are the same 50% at 1.94x, so
+ * alternating changes which digits win, not the odds.
  */
-const recoveryLegs = (symbol, baseStake, lastRecoveryStake = 0, multiplier = 2, maxMultiple = MAX_RECOVERY_MULTIPLE) => {
-    const next = lastRecoveryStake > 0 ? lastRecoveryStake * multiplier : baseStake * multiplier;
-    const capped = Math.min(next, baseStake * (maxMultiple || MAX_RECOVERY_MULTIPLE));
-    const stake = Math.max(MIN_STAKE, Number(capped.toFixed(2)));
-    return [digitLeg(symbol, stake, 'DIGITEVEN')];
+const recoveryLegs = (symbol, baseStake, lastRecoveryStake = 0, multiplier = 2, lastType = '') => {
+    const isRetry = lastRecoveryStake > 0;
+    const next = isRetry ? lastRecoveryStake * multiplier : baseStake * multiplier;
+    const stake = Math.max(MIN_STAKE, Number(next.toFixed(2)));
+
+    // Only a retry alternates — the first recovery of a ladder is always Even.
+    const contractType = isRetry && lastType === 'DIGITEVEN' ? 'DIGITODD' : isRetry && lastType === 'DIGITODD' ? 'DIGITEVEN' : 'DIGITEVEN';
+
+    return [digitLeg(symbol, stake, contractType)];
 };
 
 /** Place one O5U4 round for a session whose hour has already been claimed. */
@@ -130,7 +135,7 @@ const placeRound = async (session, symbol) => {
               stake,
               Number(session.lastRecoveryStake) || 0,
               Number(session.recoveryMultiplier) || 2,
-              Number(session.maxRecoveryMultiple) || MAX_RECOVERY_MULTIPLE
+              session.lastRecoveryType || ''
           )
         : pairLegs(symbol, stake);
     const results = await Promise.all(
@@ -187,8 +192,11 @@ const placeRound = async (session, symbol) => {
     if (session.trades.length > MAX_TRADES_KEPT) {
         session.trades = session.trades.slice(-MAX_TRADES_KEPT);
     }
-    // Remember the rung so the next recovery can multiply from it.
-    if (isRecovery && anyFilled) session.lastRecoveryStake = roundStake;
+    // Remember the rung and the side so the next retry can multiply and flip.
+    if (isRecovery && anyFilled) {
+        session.lastRecoveryStake = roundStake;
+        session.lastRecoveryType = legs[0].contract_type;
+    }
     // A round that never filled will never reach settlement, so release the
     // in-flight claim here or the session would stop trading permanently.
     if (!anyFilled) session.roundInFlight = false;
@@ -244,8 +252,11 @@ const settleOpenRounds = async session => {
         const deficit = (Number(session.deficit) || 0) - profit;
         session.deficit = Math.max(0, Number(deficit.toFixed(2)));
         // Debt cleared — the ladder resets, so the next recovery starts at the
-        // bottom rung instead of continuing from the last one.
-        if (session.deficit === 0) session.lastRecoveryStake = 0;
+        // bottom rung on Even instead of continuing from the last one.
+        if (session.deficit === 0) {
+            session.lastRecoveryStake = 0;
+            session.lastRecoveryType = '';
+        }
     }
 
     // The round is done, so the session is free to place the next one.
