@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  History,
   Loader2,
   Play,
   Printer,
@@ -56,6 +57,7 @@ const AdminPrinter = () => {
   const [takeProfit, setTakeProfit] = useState("");
   const [hourlyTarget, setHourlyTarget] = useState("2");
   const [recoveryMultiplier, setRecoveryMultiplier] = useState("2");
+  const [showHistory, setShowHistory] = useState(false);
 
   const countdown = useCountdown(session?.active ? session.nextHourAt : null);
   const selectedAccount = useMemo(
@@ -208,7 +210,8 @@ const AdminPrinter = () => {
         Trades Over 2 and Under 7 together, so digits 3-6 win both legs and no
         round is a total loss. Each hour it keeps placing rounds until it banks
         the target, then idles until the next hour. A losing round is carried as
-        a deficit and the next round buys a single Even sized to clear it. It
+        a deficit, and the next round buys a single Even — retries martingale
+        and alternate Even/Odd until one lands. It
         runs on the server, so it keeps trading after you close this page.
       </p>
 
@@ -254,7 +257,7 @@ const AdminPrinter = () => {
               {session.deficit > 0 && (
                 <p className="mt-1 text-sm text-amber-400">
                   Recovering {session.deficit.toFixed(2)} {session.currency} —
-                  next round is a single Even
+                  next round is a single Even/Odd
                 </p>
               )}
             </div>
@@ -326,14 +329,65 @@ const AdminPrinter = () => {
                   {session.currency}
                 </p>
               </div>
-              <button
-                onClick={forget}
-                disabled={busy}
-                className="btn-admin bg-ink-700 hover:bg-ink-600"
-              >
-                <Trash2 size={15} /> Remove token
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setShowHistory((v) => !v)}
+                  className="btn-admin bg-ink-700 hover:bg-ink-600"
+                >
+                  <History size={15} />{" "}
+                  {showHistory ? "Hide history" : "View history"}
+                </button>
+                <button
+                  onClick={forget}
+                  disabled={busy}
+                  className="btn-admin bg-ink-700 hover:bg-ink-600"
+                >
+                  <Trash2 size={15} /> Remove token
+                </button>
+              </div>
             </div>
+          )}
+
+          {/* The same stats + log the running view shows, for a stopped session. */}
+          {session && !session.active && showHistory && (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="card">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                    Rounds
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-white">
+                    {session.stats.trades}
+                  </p>
+                </div>
+                <div className="card">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                    Wins
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-emerald-400">
+                    {session.stats.wins}
+                  </p>
+                </div>
+                <div className="card">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                    Losses
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-rose-400">
+                    {session.stats.losses}
+                  </p>
+                </div>
+                <div className="card">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                    Net P/L
+                  </p>
+                  <p className={`mt-1 text-2xl font-extrabold ${profitClass}`}>
+                    {session.stats.profit.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <TradeLog session={session} />
+            </>
           )}
 
           <div className="card flex flex-col gap-4">
@@ -530,8 +584,9 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
               <td className="px-4 py-3 text-slate-400">
                 {t.legs
                   .map((l) =>
-                    l.contract_type === "DIGITEVEN"
-                      ? `Even @ ${t.stake}`
+                    l.contract_type === "DIGITEVEN" ||
+                    l.contract_type === "DIGITODD"
+                      ? `${l.contract_type === "DIGITEVEN" ? "Even" : "Odd"} @ ${t.stake}`
                       : `${l.contract_type === "DIGITOVER" ? "Over" : "Under"} ${l.barrier}`,
                   )
                   .join(" + ")}
