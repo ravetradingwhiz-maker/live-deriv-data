@@ -16,13 +16,16 @@
  *
  * A losing round leaves a deficit and puts the session into recovery: the next
  * round is a single Even at baseStake x multiplier; each further loss retries
- * at (previous recovery stake x multiplier), alternating Even/Odd. This ladder
- * is uncapped by design and escalates until a round wins, at which point the
+ * at (previous recovery stake x multiplier), still Even. This ladder is
+ * uncapped by design and escalates until a round wins, at which point the
  * deficit clears and the session goes straight back to Over 2 / Under 7.
  *
  * Neither the hour nor the recovery ladder is capped by round count or stake
  * multiple — the session stop-loss is the only brake, so it must be set before
- * this runs on real money.
+ * this runs on real money. It is checked twice: BEFORE a round is placed
+ * (wouldBreachStopLoss, against the round's worst-case loss, so a large
+ * martingaled stake can't blow past the limit in one shot) and again after a
+ * round settles (in settleOpenRounds, against the actual result).
  *
  * Scheduling deliberately uses a one-minute tick rather than an hourly timer:
  *  - an hourly interval drifts and resets on redeploy (deploy at :59 and the
@@ -91,34 +94,79 @@ const pairLegs = (symbol, stake) => [
  * Recovery round: one Even contract, staked as a martingale off the configured
  * base stake rather than off the outstanding deficit.
  *
- *   first attempt  → baseStake x multiplier, on Even
- *   each retry     → previous recovery stake x multiplier, flipped to the other
- *                    side (Even → Odd → Even …)
+ *   first attempt  → baseStake x multiplier
+ *   each retry     → previous recovery stake x multiplier
+ *
+ * Always Even. Even/Odd are the same 50% at 1.94x on an independent digit
+ * stream, so alternating between them changes nothing about the odds — it was
+ * tried and removed as dead complexity, not for a performance reason.
  *
  * Uncapped by design — the ladder keeps escalating until a round wins or the
- * session stop-loss stops it. Even and Odd are the same 50% at 1.94x, so
- * alternating changes which digits win, not the odds.
+ * session stop-loss stops it.
  */
-const recoveryLegs = (symbol, baseStake, lastRecoveryStake = 0, multiplier = 2, lastType = '') => {
-    const isRetry = lastRecoveryStake > 0;
-    const next = isRetry ? lastRecoveryStake * multiplier : baseStake * multiplier;
+const recoveryLegs = (symbol, baseStake, lastRecoveryStake = 0, multiplier = 2) => {
+    const next = lastRecoveryStake > 0 ? lastRecoveryStake * multiplier : baseStake * multiplier;
     const stake = Math.max(MIN_STAKE, Number(next.toFixed(2)));
+    return [digitLeg(symbol, stake, 'DIGITEVEN')];
+};
 
-    // Only a retry alternates — the first recovery of a ladder is always Even.
-    const contractType = isRetry && lastType === 'DIGITEVEN' ? 'DIGITODD' : isRetry && lastType === 'DIGITODD' ? 'DIGITEVEN' : 'DIGITEVEN';
+// Over 2 (1.36x) and Under 7 (1.36x): if one leg wins and the other loses,
+// net = 0.36 x stake (win) - stake (loss) = -0.64 x stake. That's the worst
+// case for a pair round — it can never lose the full stake, only this fraction.
+const PAIR_WORST_CASE_FRACTION = 0.64;
 
-    return [digitLeg(symbol, stake, contractType)];
+/**
+ * Worst-case net loss if the round about to be placed loses outright.
+ * Recovery is a single Even contract, so its worst case is the whole stake;
+ * a pair round's worst case is bounded because the two legs overlap.
+ */
+const projectedWorstCaseLoss = (session, isRecovery) => {
+    if (isRecovery) {
+        const last = Number(session.lastRecoveryStake) || 0;
+        const multiplier = Number(session.recoveryMultiplier) || 2;
+        const next = last > 0 ? last * multiplier : session.stake * multiplier;
+        return Math.max(MIN_STAKE, Number(next.toFixed(2)));
+    }
+    return Number((session.stake * PAIR_WORST_CASE_FRACTION).toFixed(2));
+};
+
+/**
+ * Would the round about to be placed, if it loses outright, take the session
+ * past its stop-loss? Checked BEFORE the purchase fires, not just after it
+ * settles — otherwise a large martingaled recovery stake can land the session
+ * well past the configured limit before the reactive check ever runs. Uses
+ * the same field (session.stats.profit) the reactive check compares against,
+ * so the two never disagree about where the line is.
+ */
+const wouldBreachStopLoss = (session, isRecovery) => {
+    if (!(session.stopLoss > 0)) return null;
+    const maxLoss = projectedWorstCaseLoss(session, isRecovery);
+    const worstCase = Number((session.stats.profit - maxLoss).toFixed(2));
+    if (worstCase > -Math.abs(session.stopLoss)) return null;
+    return { maxLoss, worstCase };
 };
 
 /** Place one O5U4 round for a session whose hour has already been claimed. */
 const placeRound = async (session, symbol) => {
-    const token = decryptToken(session.tokenEnc);
-    const { account_id: accountId, account_type: accountType, currency, appId, stake } = session;
-
     // A deficit carried from earlier losing rounds turns this hour into a
     // recovery round instead of a normal pair.
     const deficit = Number(session.deficit) || 0;
     const isRecovery = deficit > 0;
+
+    const breach = wouldBreachStopLoss(session, isRecovery);
+    if (breach) {
+        session.active = false;
+        session.stoppedReason =
+            `Stop loss reached — next round could lose ${breach.maxLoss.toFixed(2)}, ` +
+            `which would put net P/L at ${breach.worstCase.toFixed(2)} (limit -${session.stopLoss})`;
+        session.roundInFlight = false;
+        await session.save();
+        console.log(`[Printer] ${session.loginid} stopped pre-trade — ${session.stoppedReason}`);
+        return;
+    }
+
+    const token = decryptToken(session.tokenEnc);
+    const { account_id: accountId, account_type: accountType, currency, appId, stake } = session;
 
     // Captured before the buys so the post-settlement delta is the round's profit.
     const balanceBefore = await fetchBalance(token, appId, accountId).catch(() => null);
@@ -130,13 +178,7 @@ const placeRound = async (session, symbol) => {
     // jitter. The per-call catch keeps one leg's network failure from rejecting
     // the other.
     const legs = isRecovery
-        ? recoveryLegs(
-              symbol,
-              stake,
-              Number(session.lastRecoveryStake) || 0,
-              Number(session.recoveryMultiplier) || 2,
-              session.lastRecoveryType || ''
-          )
+        ? recoveryLegs(symbol, stake, Number(session.lastRecoveryStake) || 0, Number(session.recoveryMultiplier) || 2)
         : pairLegs(symbol, stake);
     const results = await Promise.all(
         legs.map(leg =>
@@ -192,11 +234,8 @@ const placeRound = async (session, symbol) => {
     if (session.trades.length > MAX_TRADES_KEPT) {
         session.trades = session.trades.slice(-MAX_TRADES_KEPT);
     }
-    // Remember the rung and the side so the next retry can multiply and flip.
-    if (isRecovery && anyFilled) {
-        session.lastRecoveryStake = roundStake;
-        session.lastRecoveryType = legs[0].contract_type;
-    }
+    // Remember the rung so the next retry can multiply from it.
+    if (isRecovery && anyFilled) session.lastRecoveryStake = roundStake;
     // A round that never filled will never reach settlement, so release the
     // in-flight claim here or the session would stop trading permanently.
     if (!anyFilled) session.roundInFlight = false;
@@ -248,15 +287,12 @@ const settleOpenRounds = async session => {
         }
 
         // A losing round adds to the deficit; a winning one pays it down. While
-        // the deficit is above zero the next round is an Even sized to clear it.
+        // the deficit is above zero the next round is a martingaled Even.
         const deficit = (Number(session.deficit) || 0) - profit;
         session.deficit = Math.max(0, Number(deficit.toFixed(2)));
         // Debt cleared — the ladder resets, so the next recovery starts at the
-        // bottom rung on Even instead of continuing from the last one.
-        if (session.deficit === 0) {
-            session.lastRecoveryStake = 0;
-            session.lastRecoveryType = '';
-        }
+        // bottom rung instead of continuing from the last one.
+        if (session.deficit === 0) session.lastRecoveryStake = 0;
     }
 
     // The round is done, so the session is free to place the next one.

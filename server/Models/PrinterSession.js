@@ -76,9 +76,6 @@ const PrinterSessionSchema = new mongoose.Schema(
         // wins or the session stop-loss ends it.
         recoveryMultiplier: { type: Number, default: 2 },
         lastRecoveryStake: { type: Number, default: 0 },
-        // First recovery is always Even; each retry after a losing recovery
-        // flips to the other side. Empty means no ladder is in progress.
-        lastRecoveryType: { type: String, default: '' },
         stoppedReason: { type: String, default: '' },
         stats: {
             trades: { type: Number, default: 0 },
