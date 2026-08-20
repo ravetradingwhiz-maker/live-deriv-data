@@ -210,9 +210,9 @@ const AdminPrinter = () => {
         Trades Over 2 and Under 7 together, so digits 3-6 win both legs and no
         round is a total loss. Each hour it keeps placing rounds until it banks
         the target, then idles until the next hour. A losing round is carried as
-        a deficit, and the next round buys a single Even — retries martingale
-        and alternate Even/Odd until one lands. It
-        runs on the server, so it keeps trading after you close this page.
+        a deficit, and the next round buys a single Even — each retry
+        martingales until one lands. It runs on the server, so it keeps trading
+        after you close this page.
       </p>
 
       {error && (
@@ -257,7 +257,7 @@ const AdminPrinter = () => {
               {session.deficit > 0 && (
                 <p className="mt-1 text-sm text-amber-400">
                   Recovering {session.deficit.toFixed(2)} {session.currency} —
-                  next round is a single Even/Odd
+                  next round is a single Even
                 </p>
               )}
             </div>
