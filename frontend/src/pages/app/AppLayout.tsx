@@ -9,7 +9,6 @@ import { PortfolioProvider } from '@/context/PortfolioContext';
 import { SubscriptionProvider } from '@/context/SubscriptionContext';
 import { AdminProvider } from '@/context/AdminContext';
 import PositionsDrawer from '@/components/PositionsDrawer';
-import AdminPanel from '@/components/AdminPanel';
 
 /** Authenticated app shell: header + tab nav (top on desktop, bottom on mobile). */
 const AppLayout = () => {
@@ -53,7 +52,6 @@ const AppLayout = () => {
 
                 <BottomTabNav />
                 <PositionsDrawer />
-                <AdminPanel />
             </div>
         </PortfolioProvider>
         </AdminProvider>

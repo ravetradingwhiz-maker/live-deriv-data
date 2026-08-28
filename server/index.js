@@ -42,6 +42,12 @@ app.use('/api/subscription', require('./Routes/subscription'));
 app.use('/api/admin', require('./Routes/admin'));
 app.use('/api/printer', require('./Routes/printer'));
 
+// Seed the admin allow-list so auto-detection recognises the admins out of the
+// box. Idempotent — queued behind the mongoose connection, safe on every boot.
+require('./Models/Admin')
+    .seedDefaults()
+    .catch(err => console.error('[admin] seed failed:', err.message));
+
 // Background sweep: confirm pending on-chain payments even if the payer closed
 // the checkout tab.
 const { pollPendingOrders } = require('./Controllers/paymentController');
