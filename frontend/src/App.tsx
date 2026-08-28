@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { useAdminOptional } from '@/context/AdminContext';
 import ConsentGate from '@/components/ConsentGate';
+import InstallPrompt from '@/components/InstallPrompt';
 import Home from '@/pages/Home';
 import Callback from '@/pages/Callback';
 import Pricing from '@/pages/Pricing';
@@ -107,6 +108,7 @@ function App() {
         <ThemeProvider>
             <AuthProvider>
                 <ConsentGate />
+                <InstallPrompt appName='Live Deriv' accent='#22d3ee' accentText='#04121a' />
                 <BrowserRouter>
                     <AppBody />
                 </BrowserRouter>
