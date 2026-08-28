@@ -28,26 +28,6 @@ const AccountSwitcher = () => {
     const [copied, setCopied] = useState<string | null>(null);
     const ref = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
-    const exitClicksRef = useRef(0);
-    const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Triple-click the balance to exit admin mode — everything back to the real
-    // account. A no-op (and normal click-to-open) unless admin mode is on.
-    const handleBalanceClick = (e: React.MouseEvent) => {
-        if (!admin?.active) return;
-        e.stopPropagation();
-        exitClicksRef.current += 1;
-        if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-        if (exitClicksRef.current >= 3) {
-            exitClicksRef.current = 0;
-            setOpen(false);
-            admin.exit();
-        } else {
-            exitTimerRef.current = setTimeout(() => {
-                exitClicksRef.current = 0;
-            }, 2000);
-        }
-    };
 
     const copyLoginid = (e: React.MouseEvent, loginid: string) => {
         e.stopPropagation(); // don't switch account
@@ -95,10 +75,7 @@ const AccountSwitcher = () => {
                         // so the real balance never flashes before the admin balance.
                         <span className='my-0.5 block h-4 w-24 animate-pulse rounded bg-ink-600' aria-label='Loading balance' />
                     ) : (
-                        <span
-                            onClick={handleBalanceClick}
-                            className='block whitespace-nowrap font-mono text-sm font-semibold text-emerald-400'
-                        >
+                        <span className='block whitespace-nowrap font-mono text-sm font-semibold text-emerald-400'>
                             {fmt(activeBalance, activeCurrency)}
                         </span>
                     )}
