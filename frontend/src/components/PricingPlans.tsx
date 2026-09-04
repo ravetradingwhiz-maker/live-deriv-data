@@ -10,11 +10,9 @@ import { getPricing, type Tier, type TierPricing } from '@/services/payments-api
 const periodLabel = (months: number) => (months === 1 ? '/ month' : `/ ${months} months`);
 const TIER_RANK: Record<Tier, number> = { alpha: 1, quantum: 2, apex: 3 };
 
-// Pre-filled enquiry links for the support card.
+// Pre-filled enquiry link for the support card.
 const TELEGRAM_URL =
     'https://t.me/live_deriv?text=Hello%2C%20I%27ve%20seen%20your%20trading%20videos%20and%20I%27m%20interested%20in%20buying%20your%20software%20and%20joining%20your%20mentorship.%20What%27s%20the%20price%20and%20how%20do%20I%20get%20started%3F';
-const WHATSAPP_URL =
-    'https://api.whatsapp.com/send/?phone=447575382556&text=Hello%2C+I%27ve+seen+your+trading+videos+and+I%27m+interested+in+buying+your+software+and+joining+your+mentorship.+What%27s+the+price+and+how+do+I+get+started%3F&type=phone_number&app_absent=0';
 
 interface Plan {
     name: string;
@@ -318,15 +316,6 @@ const PricingPlans = () => {
                                 className='font-semibold text-cyan-300 hover:underline'
                             >
                                 Telegram
-                            </a>{' '}
-                            or{' '}
-                            <a
-                                href={WHATSAPP_URL}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                className='font-semibold text-emerald-300 hover:underline'
-                            >
-                                WhatsApp
                             </a>{' '}
                             — we usually reply within a few hours.
                         </p>
