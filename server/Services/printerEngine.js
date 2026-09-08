@@ -1,5 +1,5 @@
 /**
- * Hourly Over 2 / Under 7 printer.
+ * Hourly Differs printer.
  *
  * Runs entirely server-side: once an admin starts a session it keeps trading
  * whether or not any browser is open.
@@ -7,18 +7,25 @@
  * Each clock hour the session trades rounds until it banks its hourly target
  * (default 2), then idles until the next hour.
  *
- * A normal round buys Over 2 and Under 7 together, both legs at the same stake:
- *   digit 3-6 (40%) — both legs win   → +0.72 x stake
- *   digit 0-2 (30%) — Under 7 only    → -0.64 x stake
- *   digit 7-9 (30%) — Over 2 only     → -0.64 x stake
- * The two ranges overlap, so every digit pays something and no round is a total
- * loss. The trade-off is that 60% of rounds end slightly down.
+ * A normal round buys one Digit Differs contract:
+ *   digit != barrier (90%) — win  → roughly +0.07 x stake
+ *   digit == barrier (10%) — loss → -1.00 x stake
+ * Nine rounds in ten win, but the win is small against a full-stake loss, so
+ * the base round is the trigger rather than the earner: one loss costs about
+ * fourteen wins and cannot be ground back inside an hour.
  *
  * A losing round leaves a deficit and puts the session into recovery: the next
- * round is a single Even at baseStake x multiplier; each further loss retries
- * at (previous recovery stake x multiplier), still Even. This ladder is
- * uncapped by design and escalates until a round wins, at which point the
- * deficit clears and the session goes straight back to Over 2 / Under 7.
+ * round is a single Even at the configured recovery start stake; each further
+ * loss retries at (previous recovery stake x multiplier), still Even. That
+ * ladder is what actually banks the hour — an Even pays 1.94x, so one win
+ * clears the deficit and puts the hour in profit. It is uncapped by design and
+ * escalates until a round wins, at which point the deficit clears and the
+ * session goes straight back to Differs.
+ *
+ * This replaced an Over 2 / Under 7 pair. The pair's legs overlapped, so 60% of
+ * rounds lost a bounded 0.64 x stake and the ladder was entered constantly.
+ * Differs enters it on 10% of rounds instead, which is the whole point of the
+ * switch — the ladder is where the risk lives.
  *
  * Neither the hour nor the recovery ladder is capped by round count or stake
  * multiple — the session stop-loss is the only brake, so it must be set before
@@ -50,20 +57,104 @@ const MIN_STAKE = 0.35; // Deriv's floor
 let timer = null;
 let running = false;
 
-// ── Market selection ─────────────────────────────────────────────────────────
+// ── Digit analysis ───────────────────────────────────────────────────────────
+
+/** Below this many ticks a market is treated as not streaming rather than analysed. */
+const MIN_SAMPLE = 50;
 
 /**
- * Over 2 / Under 7 has no entry condition to wait for — the pair covers every
- * digit, and measurement on 60k ticks found no predictive signal in the digit
- * history anyway. So the only job here is picking a market that is actually
- * streaming, rotating by the hour so a session spreads across all ten rather
- * than hammering one.
+ * How many decimals a symbol is quoted to.
+ *
+ * The last digit is the last of those decimals, but JSON numbers have already
+ * dropped trailing zeros — 1234.50 arrives as 1234.5 — so reading the final
+ * character of the raw number would report 5 where the true digit is 0. The
+ * width is recovered from the sample instead: across a few hundred ticks the
+ * widest price is the symbol's real pip size, because a tick ending in a
+ * non-zero digit turns up almost immediately.
  */
-const pickSymbol = (ticksBySymbol, hourKey) => {
-    const live = SYMBOLS.filter(s => Array.isArray(ticksBySymbol[s]) && ticksBySymbol[s].length > 0);
-    if (!live.length) return null;
-    const hour = Number(hourKey.slice(-2)) || 0;
-    return live[hour % live.length];
+const pipSizeOf = prices => {
+    let width = 0;
+    for (const price of prices) {
+        const text = String(price);
+        const dot = text.indexOf('.');
+        if (dot >= 0) width = Math.max(width, text.length - dot - 1);
+    }
+    return width;
+};
+
+/** Last digits for a price series, oldest first — the order Deriv returns. */
+const digitsOf = prices => {
+    const pip = pipSizeOf(prices);
+    return prices.map(price => Number(price.toFixed(pip).slice(-1)));
+};
+
+/**
+ * The digit to buy Differs against on one market: whichever has come up least
+ * across the sample, since a Differs round loses only when its barrier lands.
+ *
+ * Worth being straight about what this is. Deriv's digit streams are uniform
+ * and independent, so a digit being rare in the last few hundred ticks says
+ * nothing about the next one — the true odds are 90% whichever barrier is
+ * picked, and measurement on 60k ticks found no signal here. This chooses the
+ * least-seen digit because that is the ranking asked for; it does not make the
+ * round more likely to win.
+ */
+const rarestDigit = digits => {
+    const counts = new Array(10).fill(0);
+    for (const digit of digits) counts[digit] += 1;
+
+    let best = 0;
+    for (let digit = 1; digit < 10; digit++) {
+        if (counts[digit] < counts[best]) best = digit;
+    }
+    return { barrier: String(best), count: counts[best], share: counts[best] / digits.length };
+};
+
+/** Markets with enough history to act on, last traded one dropped. */
+const usableMarkets = (ticksBySymbol, excludeSymbol) => {
+    const out = [];
+    for (const symbol of SYMBOLS) {
+        // Consecutive rounds never reuse a market.
+        if (symbol === excludeSymbol) continue;
+        const prices = ticksBySymbol[symbol];
+        if (!Array.isArray(prices) || prices.length < MIN_SAMPLE) continue;
+        out.push({ symbol, digits: digitsOf(prices) });
+    }
+    return out;
+};
+
+/**
+ * Scan every market and return the one whose rarest digit is rarest of all,
+ * along with that digit. Null when nothing is streaming.
+ */
+const scanForDiffers = (ticksBySymbol, excludeSymbol) => {
+    const scored = usableMarkets(ticksBySymbol, excludeSymbol).map(market => ({
+        ...market,
+        ...rarestDigit(market.digits),
+    }));
+    if (!scored.length) return null;
+
+    scored.sort((a, b) => a.share - b.share);
+    return scored[0];
+};
+
+/** Are the two most recent digits both odd? History is oldest first. */
+const endsWithTwoOdd = digits =>
+    digits.length >= 2 && digits[digits.length - 1] % 2 === 1 && digits[digits.length - 2] % 2 === 1;
+
+/**
+ * Market for a recovery Even.
+ *
+ * The first rung of a ladder waits for a market showing two odd digits in a
+ * row and takes it immediately; every rung after that fires on whatever is
+ * streaming. Returns null while an armed ladder has nothing to trade on yet,
+ * which is the signal to hold and look again next pass.
+ */
+const scanForRecovery = (ticksBySymbol, excludeSymbol, mustWaitForTwoOdd) => {
+    const markets = usableMarkets(ticksBySymbol, excludeSymbol);
+    if (!markets.length) return null;
+    if (!mustWaitForTwoOdd) return markets[0];
+    return markets.find(market => endsWithTwoOdd(market.digits)) ?? null;
 };
 
 // ── Rounds ───────────────────────────────────────────────────────────────────
@@ -84,18 +175,29 @@ const digitLeg = (symbol, stake, contract_type, barrier) => ({
     },
 });
 
-/** Normal round: Over 2 and Under 7 at the same stake, bought together. */
-const pairLegs = (symbol, stake) => [
-    digitLeg(symbol, stake, 'DIGITOVER', '2'),
-    digitLeg(symbol, stake, 'DIGITUNDER', '7'),
+/** Fallback if a caller ever omits the scanned barrier. */
+const DEFAULT_DIFFERS_BARRIER = '0';
+
+/**
+ * Normal round: one Differs contract. Wins on 9 digits in 10.
+ * The barrier comes from `scanForDiffers` — see the note there on what that
+ * ranking does and does not buy you.
+ */
+const differsLegs = (symbol, stake, barrier = DEFAULT_DIFFERS_BARRIER) => [
+    digitLeg(symbol, stake, 'DIGITDIFF', barrier),
 ];
 
 /**
- * Recovery round: one Even contract, staked as a martingale off the configured
- * base stake rather than off the outstanding deficit.
+ * Recovery round: one Even contract, martingaled until it lands.
  *
- *   first attempt  → baseStake x multiplier
+ *   first attempt  → recoveryStartStake (its own setting, not the base stake)
  *   each retry     → previous recovery stake x multiplier
+ *
+ * The opening rung is configured rather than derived. Differs stakes are sized
+ * so one win banks the hour, which makes them far larger than the recovery
+ * needs to be: at 1.94x, an Even only has to cover the deficit, and starting
+ * the ladder at `baseStake x multiplier` would open several times higher than
+ * necessary and burn rungs that the stop-loss would rather have.
  *
  * Always Even. Even/Odd are the same 50% at 1.94x on an independent digit
  * stream, so alternating between them changes nothing about the odds — it was
@@ -104,30 +206,33 @@ const pairLegs = (symbol, stake) => [
  * Uncapped by design — the ladder keeps escalating until a round wins or the
  * session stop-loss stops it.
  */
-const recoveryLegs = (symbol, baseStake, lastRecoveryStake = 0, multiplier = 2) => {
-    const next = lastRecoveryStake > 0 ? lastRecoveryStake * multiplier : baseStake * multiplier;
+const recoveryLegs = (symbol, startStake, lastRecoveryStake = 0, multiplier = 2) => {
+    const next = lastRecoveryStake > 0 ? lastRecoveryStake * multiplier : startStake;
     const stake = Math.max(MIN_STAKE, Number(next.toFixed(2)));
     return [digitLeg(symbol, stake, 'DIGITEVEN')];
 };
 
-// Over 2 (1.36x) and Under 7 (1.36x): if one leg wins and the other loses,
-// net = 0.36 x stake (win) - stake (loss) = -0.64 x stake. That's the worst
-// case for a pair round — it can never lose the full stake, only this fraction.
-const PAIR_WORST_CASE_FRACTION = 0.64;
+/** The configured opening rung, falling back to the old default. */
+const recoveryStartOf = session => {
+    const configured = Number(session.recoveryStartStake) || 0;
+    return Math.max(MIN_STAKE, configured > 0 ? configured : 1);
+};
 
 /**
  * Worst-case net loss if the round about to be placed loses outright.
- * Recovery is a single Even contract, so its worst case is the whole stake;
- * a pair round's worst case is bounded because the two legs overlap.
+ *
+ * Both round types are a single contract now, so either one can lose its whole
+ * stake. The pair round this replaced could not — its two legs overlapped, so
+ * only 0.64 x stake was ever at risk. Differs has no such floor.
  */
 const projectedWorstCaseLoss = (session, isRecovery) => {
     if (isRecovery) {
         const last = Number(session.lastRecoveryStake) || 0;
         const multiplier = Number(session.recoveryMultiplier) || 2;
-        const next = last > 0 ? last * multiplier : session.stake * multiplier;
+        const next = last > 0 ? last * multiplier : recoveryStartOf(session);
         return Math.max(MIN_STAKE, Number(next.toFixed(2)));
     }
-    return Number((session.stake * PAIR_WORST_CASE_FRACTION).toFixed(2));
+    return Number(session.stake.toFixed(2));
 };
 
 /**
@@ -146,10 +251,14 @@ const wouldBreachStopLoss = (session, isRecovery) => {
     return { maxLoss, worstCase };
 };
 
-/** Place one O5U4 round for a session whose hour has already been claimed. */
-const placeRound = async (session, symbol) => {
+/**
+ * Place one round for a session whose hour has already been claimed.
+ * `barrier` is the digit the scan chose for this market; recovery rounds are
+ * Even and ignore it.
+ */
+const placeRound = async (session, symbol, barrier) => {
     // A deficit carried from earlier losing rounds turns this hour into a
-    // recovery round instead of a normal pair.
+    // recovery round instead of a normal Differs round.
     const deficit = Number(session.deficit) || 0;
     const isRecovery = deficit > 0;
 
@@ -171,15 +280,17 @@ const placeRound = async (session, symbol) => {
     // Captured before the buys so the post-settlement delta is the round's profit.
     const balanceBefore = await fetchBalance(token, appId, accountId).catch(() => null);
 
-    // Both legs go out together rather than one after the other. These are 1-tick
-    // contracts, so the round-trip between two sequential buys can straddle a tick
-    // boundary and settle the pair against different digits, which breaks the
-    // overlap the pair depends on. Firing in parallel narrows the gap to network
-    // jitter. The per-call catch keeps one leg's network failure from rejecting
-    // the other.
+    // A round is a single contract either way now, but the shape is kept so the
+    // per-call catch still turns a network failure into a recorded failed round
+    // rather than an exception that leaves the in-flight flag set.
     const legs = isRecovery
-        ? recoveryLegs(symbol, stake, Number(session.lastRecoveryStake) || 0, Number(session.recoveryMultiplier) || 2)
-        : pairLegs(symbol, stake);
+        ? recoveryLegs(
+              symbol,
+              recoveryStartOf(session),
+              Number(session.lastRecoveryStake) || 0,
+              Number(session.recoveryMultiplier) || 2
+          )
+        : differsLegs(symbol, stake, barrier);
     const results = await Promise.all(
         legs.map(leg =>
             purchaseContract({
@@ -204,28 +315,22 @@ const placeRound = async (session, symbol) => {
 
     const filled = placed.filter(l => l.contract_id);
     const anyFilled = filled.length > 0;
-    // Half a pair is not the strategy — it is a naked one-sided bet. Worth
-    // surfacing rather than logging it as a normal round.
-    const partial = anyFilled && filled.length < legs.length;
     const roundStake = legs[0].params.amount;
 
     const trade = {
         hourKey: session.lastHourKey,
         symbol,
         stake: roundStake,
-        mode: isRecovery ? 'recovery' : 'pair',
+        mode: isRecovery ? 'recovery' : 'differs',
         legs: placed,
         balanceBefore: balanceBefore ?? 0,
         profit: anyFilled ? null : 0,
         status: anyFilled ? 'open' : 'failed',
         reason: !anyFilled
             ? placed.map(l => l.error).filter(Boolean).join('; ') || 'Purchase failed'
-            : partial
-              ? `PARTIAL — only ${filled[0].contract_type} filled: ` +
-                `${placed.map(l => l.error).filter(Boolean).join('; ')}`
-              : isRecovery
-                ? `Even ${roundStake} (martingale, ${deficit.toFixed(2)} owed)`
-                : `Over 2 + Under 7 at ${roundStake} each`,
+            : isRecovery
+              ? `Even ${roundStake} (martingale, ${deficit.toFixed(2)} owed)`
+              : `Differs ${barrier} at ${roundStake}`,
         placedAt: new Date(),
         settledAt: anyFilled ? null : new Date(),
     };
@@ -236,6 +341,14 @@ const placeRound = async (session, symbol) => {
     }
     // Remember the rung so the next retry can multiply from it.
     if (isRecovery && anyFilled) session.lastRecoveryStake = roundStake;
+    if (anyFilled) {
+        // Consecutive rounds never reuse a market. Only a round that actually
+        // filled burns one — a rejected purchase leaves the market available.
+        session.lastSymbol = symbol;
+        // The two-odd wait is spent on the first rung of a ladder. Every retry
+        // after this one goes straight in.
+        if (isRecovery) session.recoveryWaitArmed = false;
+    }
     // A round that never filled will never reach settlement, so release the
     // in-flight claim here or the session would stop trading permanently.
     if (!anyFilled) session.roundInFlight = false;
@@ -243,7 +356,7 @@ const placeRound = async (session, symbol) => {
 
     console.log(
         `[Printer] ${session.loginid} ${trade.status === 'failed' ? 'FAILED' : 'placed'} ` +
-            `${isRecovery ? 'RECOVERY Even' : 'Over2+Under7'} on ${symbol} (${trade.reason})`
+            `${isRecovery ? 'RECOVERY Even' : 'Differs'} on ${symbol} (${trade.reason})`
     );
 };
 
@@ -288,11 +401,22 @@ const settleOpenRounds = async session => {
 
         // A losing round adds to the deficit; a winning one pays it down. While
         // the deficit is above zero the next round is a martingaled Even.
+        const wasInRecovery = (Number(session.deficit) || 0) > 0;
         const deficit = (Number(session.deficit) || 0) - profit;
         session.deficit = Math.max(0, Number(deficit.toFixed(2)));
+
+        // Opening a fresh ladder arms the two-odd wait for its first rung only.
+        // Deepening one that is already open must not re-arm it — that is the
+        // whole point of the wait applying once: a rung that loses is followed
+        // immediately, not after another confirmation.
+        if (!wasInRecovery && session.deficit > 0) session.recoveryWaitArmed = true;
+
         // Debt cleared — the ladder resets, so the next recovery starts at the
         // bottom rung instead of continuing from the last one.
-        if (session.deficit === 0) session.lastRecoveryStake = 0;
+        if (session.deficit === 0) {
+            session.lastRecoveryStake = 0;
+            session.recoveryWaitArmed = false;
+        }
     }
 
     // The round is done, so the session is free to place the next one.
@@ -375,13 +499,23 @@ const tick = async () => {
         }
         if (!candidates.length) return;
 
-        // There is no setup to wait for, so the only reason to touch the market
-        // data is to confirm something is actually streaming before buying on it.
+        // One fetch feeds every session's scan. The digit history is the same
+        // for all of them; only the market each may use differs.
         const ticks = await fetchTickHistory(SYMBOLS, TICK_COUNT);
-        const symbol = pickSymbol(ticks, hourKey);
-        if (!symbol) return; // no market responded — retry next pass
 
         for (const session of candidates) {
+            // Selection is per session: each carries its own last-traded market
+            // to skip, and its own ladder state.
+            const isRecovery = (Number(session.deficit) || 0) > 0;
+            const pick = isRecovery
+                ? scanForRecovery(ticks, session.lastSymbol, Boolean(session.recoveryWaitArmed))
+                : scanForDiffers(ticks, session.lastSymbol);
+
+            // Nothing streaming, or an armed ladder still waiting on two odd
+            // digits. Either way, hold and look again next pass — the hour is
+            // not consumed and nothing is placed.
+            if (!pick) continue;
+
             // Atomic claim on the in-flight flag: only the first caller gets the
             // document back, so a second instance or an overlapping pass cannot
             // place two rounds at once.
@@ -392,7 +526,7 @@ const tick = async () => {
             );
             if (!claimed) continue;
 
-            await placeRound(claimed, symbol).catch(async err => {
+            await placeRound(claimed, pick.symbol, pick.barrier).catch(async err => {
                 console.error(`[Printer] round failed for ${claimed.loginid}:`, err.message);
                 // Never leave the flag stuck, or the session stops trading forever.
                 await PrinterSession.updateOne({ _id: claimed._id }, { $set: { roundInFlight: false } });
@@ -407,9 +541,21 @@ const tick = async () => {
 
 const start = () => {
     if (timer) return;
-    console.log('[Printer] Hourly Over2/Under7 engine started (1-minute tick)');
+    console.log('[Printer] Hourly Differs engine started (1-minute tick)');
     timer = setInterval(() => tick().catch(() => {}), TICK_MS);
     tick().catch(() => {});
 };
 
-module.exports = { start, tick, pickSymbol, pairLegs, recoveryLegs, hourKeyNow };
+module.exports = {
+    start,
+    tick,
+    hourKeyNow,
+    differsLegs,
+    recoveryLegs,
+    // Exported for inspection and testing — these hold the strategy's judgement.
+    digitsOf,
+    rarestDigit,
+    endsWithTwoOdd,
+    scanForDiffers,
+    scanForRecovery,
+};

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
-// One leg of an O5U4 round (Over 5 / Under 4 are bought as a pair).
+// One leg of a round. Rounds are a single contract, but the shape is kept from
+// the retired pair round so stored history still reads back.
 const LegSchema = new mongoose.Schema(
     {
         contract_type: { type: String, required: true },
@@ -21,8 +22,10 @@ const TradeSchema = new mongoose.Schema(
         hourKey: { type: String, required: true },
         symbol: { type: String, required: true },
         stake: { type: Number, required: true },
-        // 'pair' = Over 2 + Under 7, 'recovery' = a single Even sized to the deficit
-        mode: { type: String, enum: ['pair', 'recovery'], default: 'pair' },
+        // 'differs' = one Digit Differs contract, 'recovery' = one martingaled Even.
+        // 'pair' is the retired Over 2 / Under 7 round, kept so rounds already on
+        // file still load.
+        mode: { type: String, enum: ['differs', 'recovery', 'pair'], default: 'differs' },
         legs: { type: [LegSchema], default: [] },
         balanceBefore: { type: Number, default: 0 },
         profit: { type: Number, default: null },
@@ -34,7 +37,7 @@ const TradeSchema = new mongoose.Schema(
     { _id: false }
 );
 
-// One row per admin running the hourly O5U4 printer. The Deriv PAT is stored
+// One row per admin running the hourly Differs printer. The Deriv PAT is stored
 // encrypted (Services/printerCrypto) and is never returned by any endpoint.
 const PrinterSessionSchema = new mongoose.Schema(
     {
@@ -49,6 +52,13 @@ const PrinterSessionSchema = new mongoose.Schema(
         // hourly job never has to reach for request-time configuration.
         appId: { type: String, required: true },
         stake: { type: Number, required: true, min: 0.35 },
+        // Market of the last round that actually filled. The next round skips it,
+        // so consecutive rounds never reuse a market.
+        lastSymbol: { type: String, default: '' },
+        // True while a freshly opened recovery ladder still owes its first rung
+        // the two-consecutive-odd-digits confirmation. Cleared once that rung is
+        // placed, so every retry after it goes straight in.
+        recoveryWaitArmed: { type: Boolean, default: false },
         active: { type: Boolean, default: false, index: true },
         // The hour currently being worked, plus its running tally. The session
         // trades within an hour until it banks `hourlyTarget`, then idles until
@@ -67,13 +77,17 @@ const PrinterSessionSchema = new mongoose.Schema(
         roundInFlight: { type: Boolean, default: false },
         stopLoss: { type: Number, default: 0 }, // 0 = disabled
         takeProfit: { type: Number, default: 0 }, // 0 = disabled
-        // Outstanding loss from the pair round that started this ladder. Kept for
-        // reporting; the recovery stake itself is a plain martingale off the base
-        // stake, not sized from this number.
+        // Outstanding loss from the Differs round that started this ladder. Kept
+        // for reporting; the recovery stake itself is a plain martingale off the
+        // opening rung, not sized from this number.
         deficit: { type: Number, default: 0 },
-        // Recovery martingale: first attempt is baseStake x this; each retry is
-        // the previous recovery stake x this. Uncapped — escalates until a round
-        // wins or the session stop-loss ends it.
+        // Where the Even ladder opens. Its own setting rather than a multiple of
+        // the base stake: Differs stakes are sized so one win banks the hour, and
+        // an Even at 1.94x only has to cover the deficit, so deriving it from the
+        // base stake would open several times higher than necessary.
+        recoveryStartStake: { type: Number, default: 1, min: 0.35 },
+        // Recovery martingale: each retry is the previous recovery stake x this.
+        // Uncapped — escalates until a round wins or the session stop-loss ends it.
         recoveryMultiplier: { type: Number, default: 2 },
         lastRecoveryStake: { type: Number, default: 0 },
         stoppedReason: { type: String, default: '' },

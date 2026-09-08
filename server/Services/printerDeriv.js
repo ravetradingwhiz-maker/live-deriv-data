@@ -11,8 +11,19 @@
 const DERIV_REST = 'https://api.derivws.com';
 const DERIV_PUBLIC_WS = 'wss://api.derivws.com/trading/v1/options/ws/public';
 
-// The 10 volatility indices the O5U4 strategy trades.
-const SYMBOLS = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100', '1HZ10V', '1HZ25V', '1HZ50V', '1HZ75V', '1HZ100V'];
+/**
+ * The five 1-second volatility indices.
+ *
+ * Rounds are 1-tick contracts, so the tick interval *is* the round length: a 1s
+ * index settles in about a second where the standard R_ indices take two. That
+ * roughly doubles the rounds an hour can fit, which matters because a Differs
+ * win is small — the hour needs volume to reach its target, and a recovery
+ * ladder needs room to run before the hour is gone.
+ *
+ * The standard R_10/R_25/R_50/R_75/R_100 set was dropped for that reason alone.
+ * Digit distribution is uniform on both, so this changes speed, not odds.
+ */
+const SYMBOLS = ['1HZ10V', '1HZ25V', '1HZ50V', '1HZ75V', '1HZ100V'];
 
 /** Deriv-App-ID header value. Reuses the markup app id already in the server env. */
 const getAppId = () => process.env.MARKUP_APP_ID || process.env.CLIENT_ID || '';

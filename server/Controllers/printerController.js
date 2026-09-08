@@ -66,6 +66,11 @@ const publicSession = session => {
         startedAt: session.startedAt,
         stats: session.stats,
         deficit: session.deficit || 0,
+        recoveryStartStake: session.recoveryStartStake || 1,
+        lastSymbol: session.lastSymbol || '',
+        // Shown so a stalled-looking session reads as "waiting for two odd
+        // digits" rather than as a bug.
+        recoveryWaitArmed: Boolean(session.recoveryWaitArmed),
         recoveryMultiplier: session.recoveryMultiplier,
         lastRecoveryStake: session.lastRecoveryStake || 0,
         hourlyTarget: session.hourlyTarget,
@@ -82,7 +87,7 @@ const publicSession = session => {
                 hourKey: t.hourKey,
                 symbol: t.symbol,
                 stake: t.stake,
-                mode: t.mode || 'pair',
+                mode: t.mode || 'differs',
                 status: t.status,
                 profit: t.profit,
                 reason: t.reason,
@@ -134,9 +139,11 @@ module.exports = {
             const takeProfit = Number(req.body?.takeProfit) || 0;
             const hourlyTarget = Number(req.body?.hourlyTarget) || 2;
             const recoveryMultiplier = Number(req.body?.recoveryMultiplier) || 2;
+            const recoveryStartStake = Number(req.body?.recoveryStartStake) || 1;
 
             if (!accountId) throw createError(422, 'account_id is required');
             if (!Number.isFinite(stake) || stake < 0.35) throw createError(422, 'stake must be at least 0.35');
+            if (recoveryStartStake < 0.35) throw createError(422, 'recoveryStartStake must be at least 0.35');
 
             const appId = getAppId();
             if (!appId) throw createError(503, 'MARKUP_APP_ID is not configured on the server');
@@ -164,7 +171,11 @@ module.exports = {
                         takeProfit,
                         hourlyTarget,
                         recoveryMultiplier,
+                        recoveryStartStake,
                         lastRecoveryStake: 0,
+                        // A fresh start owes nothing and has no market to avoid.
+                        lastSymbol: '',
+                        recoveryWaitArmed: false,
                         hourlyProfit: 0,
                         hourRounds: 0,
                         hourDone: false,
