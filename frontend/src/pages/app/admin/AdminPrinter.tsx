@@ -57,6 +57,7 @@ const AdminPrinter = () => {
   const [takeProfit, setTakeProfit] = useState("");
   const [hourlyTarget, setHourlyTarget] = useState("2");
   const [recoveryMultiplier, setRecoveryMultiplier] = useState("2");
+  const [recoveryStartStake, setRecoveryStartStake] = useState("1");
   const [showHistory, setShowHistory] = useState(false);
 
   const countdown = useCountdown(session?.active ? session.nextHourAt : null);
@@ -93,6 +94,7 @@ const AdminPrinter = () => {
     setTakeProfit(session.takeProfit ? String(session.takeProfit) : "");
     setHourlyTarget(String(session.hourlyTarget ?? 2));
     setRecoveryMultiplier(String(session.recoveryMultiplier ?? 2));
+    setRecoveryStartStake(String(session.recoveryStartStake ?? 1));
 
     if (!session.hasToken) return;
     resolvePrinterAccounts(loginids)
@@ -157,6 +159,7 @@ const AdminPrinter = () => {
         takeProfit: Number(takeProfit) || 0,
         hourlyTarget: Number(hourlyTarget) || 2,
         recoveryMultiplier: Number(recoveryMultiplier) || 2,
+        recoveryStartStake: Number(recoveryStartStake) || 1,
       });
       setSession(next);
       setToken("");
@@ -207,12 +210,15 @@ const AdminPrinter = () => {
         <Printer size={20} className="text-cyan-400" /> Printer
       </h1>
       <p className="text-sm text-slate-400">
-        Trades Over 2 and Under 7 together, so digits 3-6 win both legs and no
-        round is a total loss. Each hour it keeps placing rounds until it banks
+        Scans the five 1-second markets each round and buys Digit Differs on
+        the one whose rarest digit is rarest of all, never reusing the market it
+        just traded. Nine rounds in ten win, but the win is small and a loss
+        costs the whole stake. Each hour it keeps placing rounds until it banks
         the target, then idles until the next hour. A losing round is carried as
-        a deficit, and the next round buys a single Even — each retry
-        martingales until one lands. It runs on the server, so it keeps trading
-        after you close this page.
+        a deficit: the next round is a single Even, held back until a market
+        shows two odd digits in a row and then placed immediately. If that one
+        loses, the retries martingale straight through without waiting again. It
+        runs on the server, so it keeps trading after you close this page.
       </p>
 
       {error && (
@@ -245,7 +251,8 @@ const AdminPrinter = () => {
                 </span>
                 {session.account_id}
                 <span className="text-sm font-medium text-slate-400">
-                  · {session.stake} {session.currency} per leg
+                  · {session.stake} {session.currency} per round
+                  {session.lastSymbol ? ` · last on ${session.lastSymbol}` : ""}
                 </span>
               </p>
               <p className="mt-1 text-sm text-slate-400">
@@ -257,7 +264,9 @@ const AdminPrinter = () => {
               {session.deficit > 0 && (
                 <p className="mt-1 text-sm text-amber-400">
                   Recovering {session.deficit.toFixed(2)} {session.currency} —
-                  next round is a single Even
+                  {session.recoveryWaitArmed
+                    ? " holding for two odd digits in a row, then Even goes in immediately"
+                    : " next round is a single Even"}
                 </p>
               )}
             </div>
@@ -451,7 +460,7 @@ const AdminPrinter = () => {
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field
-                    label="Stake per leg"
+                    label="Differs stake"
                     value={stake}
                     onChange={setStake}
                     placeholder="1"
@@ -475,6 +484,12 @@ const AdminPrinter = () => {
                     placeholder="off"
                   />
                   <Field
+                    label="Recovery start stake"
+                    value={recoveryStartStake}
+                    onChange={setRecoveryStartStake}
+                    placeholder="1"
+                  />
+                  <Field
                     label="Recovery martingale"
                     value={recoveryMultiplier}
                     onChange={setRecoveryMultiplier}
@@ -483,12 +498,19 @@ const AdminPrinter = () => {
                 </div>
 
                 <p className="text-xs text-slate-500">
-                  Each round buys two contracts at this stake, so a normal hour
-                  commits {(Number(stake) * 2 || 0).toFixed(2)}{" "}
-                  {selectedAccount?.currency ?? ""} — of which at most{" "}
-                  {(Number(stake) * 0.64 || 0).toFixed(2)} can actually be lost,
-                  since one leg always pays. Recovery hours stake more, capped at{" "}
-                  {(Number(stake) * 10 || 0).toFixed(2)}.
+                  Each round scans the five 1-second markets, buys one Differs
+                  contract on the one whose rarest digit is rarest of all, and
+                  never reuses the market it just traded. That puts{" "}
+                  {(Number(stake) || 0).toFixed(2)}{" "}
+                  {selectedAccount?.currency ?? ""} at risk per round — nine
+                  rounds in ten win, but a loss costs the whole stake. A loss
+                  opens the Even recovery ladder at{" "}
+                  {(Number(recoveryStartStake) || 0).toFixed(2)} — its first rung
+                  waits for a market showing two odd digits in a row and goes in
+                  immediately, and every retry after that fires at once,
+                  multiplying by {Number(recoveryMultiplier) || 2} until it
+                  lands. The ladder is uncapped — the stop loss is the only
+                  brake.
                 </p>
 
                 <button
@@ -583,12 +605,14 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
               </td>
               <td className="px-4 py-3 text-slate-400">
                 {t.legs
-                  .map((l) =>
-                    l.contract_type === "DIGITEVEN" ||
-                    l.contract_type === "DIGITODD"
-                      ? `${l.contract_type === "DIGITEVEN" ? "Even" : "Odd"} @ ${t.stake}`
-                      : `${l.contract_type === "DIGITOVER" ? "Over" : "Under"} ${l.barrier}`,
-                  )
+                  .map((l) => {
+                    if (l.contract_type === "DIGITEVEN") return `Even @ ${t.stake}`;
+                    if (l.contract_type === "DIGITODD") return `Odd @ ${t.stake}`;
+                    if (l.contract_type === "DIGITDIFF")
+                      return `Differs ${l.barrier} @ ${t.stake}`;
+                    // Over/Under only appear in rounds from the retired pair strategy.
+                    return `${l.contract_type === "DIGITOVER" ? "Over" : "Under"} ${l.barrier}`;
+                  })
                   .join(" + ")}
               </td>
               <td className="px-4 py-3">

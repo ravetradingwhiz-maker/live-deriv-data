@@ -1,5 +1,5 @@
 /**
- * Admin printer — the Over 2 / Under 7 bot that runs on the server.
+ * Admin printer — the Differs bot that runs on the server.
  *
  * Nothing here drives the trading. Once /start succeeds the server works each
  * hour toward its profit target on its own; these calls only configure it and
@@ -28,8 +28,11 @@ export interface PrinterTrade {
     hourKey: string;
     symbol: string;
     stake: number;
-    /** 'pair' = Over 2 + Under 7, 'recovery' = a single Even sized to the deficit. */
-    mode: 'pair' | 'recovery';
+    /**
+     * 'differs' = one Digit Differs contract, 'recovery' = one martingaled Even.
+     * 'pair' is the retired Over 2 / Under 7 round, still present in old history.
+     */
+    mode: 'differs' | 'recovery' | 'pair';
     status: 'open' | 'settled' | 'failed';
     profit: number | null;
     reason: string;
@@ -52,7 +55,13 @@ export interface PrinterSession {
     stats: { trades: number; wins: number; losses: number; profit: number };
     /** Outstanding loss the next round tries to win back. Above 0 = in recovery. */
     deficit: number;
-    /** Martingale applied to the Even recovery ladder. */
+    /** Stake the Even recovery ladder opens at. */
+    recoveryStartStake: number;
+    /** Market of the last filled round — the next one skips it. */
+    lastSymbol: string;
+    /** Ladder is holding until a market shows two odd digits in a row. */
+    recoveryWaitArmed: boolean;
+    /** Martingale applied to each rung after the first. */
     recoveryMultiplier: number;
     lastRecoveryStake: number;
     /** The session trades rounds until hourlyProfit reaches this, then idles. */
@@ -75,7 +84,9 @@ export interface StartParams {
     takeProfit?: number;
     /** Profit the session works toward each hour before idling. Defaults to 2. */
     hourlyTarget?: number;
-    /** Martingale on the Even recovery ladder. Defaults to 2. */
+    /** Stake the Even recovery ladder opens at. Defaults to 1. */
+    recoveryStartStake?: number;
+    /** Martingale on each rung after the first. Defaults to 2. */
     recoveryMultiplier?: number;
 }
 
