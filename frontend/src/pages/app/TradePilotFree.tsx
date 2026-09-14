@@ -23,6 +23,14 @@ const RISKS: { id: RiskLevel; label: string; tone: string }[] = [
 // Allow demo accounts to run the bot. false = locked to real accounts only.
 const ALLOW_DEMO_TRADING = false;
 
+/**
+ * Stands in for a market while the strategy is choosing its own, so the picker
+ * says what is happening instead of naming a market that is not being traded.
+ * Only ever rendered on a disabled select, so it can never be selected.
+ */
+const AUTO_MARKET = '__auto';
+const AUTO_MARKET_LABEL = 'Smart AI will auto select the best';
+
 const MARKETS: { symbol: string; name: string }[] = [
     { symbol: '1HZ100V', name: 'Volatility 100 (1s)' },
     { symbol: '1HZ75V', name: 'Volatility 75 (1s)' },
@@ -188,11 +196,16 @@ const TradePilotFree = () => {
                     <label className='flex flex-col gap-1'>
                         <span className='text-xs font-medium text-slate-400'>Market</span>
                         <select
-                            value={symbol}
+                            value={isSmart ? AUTO_MARKET : symbol}
                             disabled={isRunning || isSmart}
                             onChange={e => setSymbol(e.target.value)}
                             className='rounded-lg border border-line bg-ink-800 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-cyan-500 disabled:opacity-50'
                         >
+                            {isSmart && (
+                                <option value={AUTO_MARKET} className='bg-ink-800'>
+                                    {AUTO_MARKET_LABEL}
+                                </option>
+                            )}
                             {MARKETS.map(m => (
                                 <option key={m.symbol} value={m.symbol} className='bg-ink-800'>
                                     {m.name}
