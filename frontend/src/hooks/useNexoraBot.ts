@@ -23,6 +23,15 @@ import {
     type ActiveSymbol,
 } from '@/services/trade-api';
 import type { Subscription } from '@/services/trade-ws';
+import {
+    chooseSmartAiRound,
+    freshSmartAiState,
+    markSmartAiPlaced,
+    settleSmartAiRound,
+    wouldBreachMaxLoss,
+    SMART_AI_MARKETS,
+    type SmartAiRound,
+} from '@/utils/smart-ai';
 import { useAdminOptional } from '@/context/AdminContext';
 import { usePortfolioOptional } from '@/context/PortfolioContext';
 import { FALLBACK_SYMBOLS } from '@/constants/symbols';
@@ -96,6 +105,12 @@ export interface NexoraSignal {
     barrier?: number;
     /** Contract duration in ticks. Falls back to the family default when omitted. */
     duration?: number;
+    /** Market to trade. Falls back to the configured symbol when omitted. */
+    symbol?: string;
+    /** Stake to trade. Falls back to the risk profile's martingale when omitted. */
+    stake?: number;
+    /** Set on a Smart AI round, which owns its own market, stake and recovery. */
+    smart?: SmartAiRound;
 }
 
 export interface DigitStat {
@@ -310,10 +325,10 @@ const evaluateFamilies = (
 /** Pick the signal a (non-premium) strategy would act on right now. */
 const selectSignal = (
     sigs: Record<NexoraFamily, NexoraSignal>,
-    strategy: NexoraFamily | 'mix' | 'smart_ai',
+    strategy: NexoraFamily | 'mix',
     families: NexoraFamily[]
 ): NexoraSignal => {
-    if (strategy === 'mix' || strategy === 'smart_ai') {
+    if (strategy === 'mix') {
         return families.map(f => sigs[f]).reduce((a, b) => (b.strength > a.strength ? b : a));
     }
     return sigs[strategy];
@@ -429,9 +444,13 @@ const premiumSignal = (
     };
 };
 
-/** The signal the current config would act on right now (premium or family). */
+/**
+ * The signal the current config would act on right now (premium or family).
+ * Smart AI is not one of them: it scans its own markets rather than modelling
+ * the selected one, so it is built straight from the round it would place.
+ */
 const currentSignal = (
-    strategy: NexoraStrategy,
+    strategy: Exclude<NexoraStrategy, 'smart_ai'>,
     quotes: number[],
     decimals: number,
     risk: RiskLevel,
@@ -440,6 +459,28 @@ const currentSignal = (
     isPremiumStrategy(strategy)
         ? premiumSignal(strategy, quotes, decimals, risk)
         : selectSignal(evaluateFamilies(quotes, decimals, risk), strategy, families);
+
+/** Presents a Smart AI round the way the rest of the hook expects a signal. */
+const smartSignalOf = (round: SmartAiRound): NexoraSignal => ({
+    family: 'smart_ai',
+    contract_type: round.contract_type,
+    label: round.label,
+    predictionText: round.isRecovery
+        ? 'Recovering — last digit even'
+        : round.contract_type === 'DIGITUNDER'
+          ? 'Last digit under 8'
+          : 'Last digit over 1',
+    // The real odds, not a model output: 8 digits in 10 for the base rotation,
+    // 5 in 10 for an Even.
+    conf: round.isRecovery ? 0.5 : 0.8,
+    passes: true,
+    strength: 1,
+    barrier: round.barrier,
+    duration: 1,
+    symbol: round.symbol,
+    stake: round.stake,
+    smart: round,
+});
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
@@ -471,6 +512,10 @@ export const useNexoraBot = (config: NexoraConfig) => {
     const [sessionResult, setSessionResult] = useState<SessionResult | null>(null);
 
     const quotesRef = useRef<number[]>([]);
+    // Smart AI scans several markets at once, so it keeps a price window per
+    // symbol rather than the single one the family models read.
+    const windowsRef = useRef<Record<string, number[]>>({});
+    const smartRef = useRef(freshSmartAiState());
     const decimalsRef = useRef(2);
     const cfgRef = useRef(config);
     cfgRef.current = config;
@@ -543,7 +588,12 @@ export const useNexoraBot = (config: NexoraConfig) => {
         });
 
         const cfg = cfgRef.current;
-        setSignal(currentSignal(cfg.strategy, q, dec, cfg.risk, cfg.families ?? DEFAULT_FAMILIES));
+        if (cfg.strategy === 'smart_ai') {
+            const round = chooseSmartAiRound(windowsRef.current, smartRef.current, cfg.stake);
+            setSignal(round ? smartSignalOf(round) : null);
+        } else {
+            setSignal(currentSignal(cfg.strategy, q, dec, cfg.risk, cfg.families ?? DEFAULT_FAMILIES));
+        }
     }, []);
 
     const onContractSettled = useCallback(
@@ -563,6 +613,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 profit,
             });
             inFlightRef.current = false;
+            if (sig.smart) settleSmartAiRound(smartRef.current, sig.smart, profit);
 
             const cfg = cfgRef.current;
             if (netRef.current >= cfg.profitTarget) {
@@ -583,7 +634,12 @@ export const useNexoraBot = (config: NexoraConfig) => {
             inFlightRef.current = true;
             const cfg = cfgRef.current;
             const prof = RISK[cfg.risk];
-            const stake = round2(cfg.stake * Math.pow(prof.martingale, Math.min(stepRef.current, prof.maxStep)));
+            // Smart AI sizes its own stake — flat for the rotation, doubling up the
+            // recovery ladder — so the risk profile's martingale does not apply to it.
+            const stake =
+                sig.stake ??
+                round2(cfg.stake * Math.pow(prof.martingale, Math.min(stepRef.current, prof.maxStep)));
+            const symbol = sig.symbol ?? cfg.symbol;
             const duration = sig.duration ?? (sig.family === 'rise_fall' ? prof.riseDuration : 1);
 
             setStatus({
@@ -597,7 +653,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 // Send the REAL proposal first so the simulated payout matches Deriv.
                 const payout = await getProposalPayout({
                     contract_type: sig.contract_type,
-                    symbol: cfg.symbol,
+                    symbol,
                     amount: stake,
                     duration,
                     duration_unit: 't',
@@ -613,13 +669,14 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 }
                 // Show the simulated trade live in Open Positions with its fixed value
                 // (like a real position), then settle it after the contract duration.
+                if (sig.smart) markSmartAiPlaced(smartRef.current, sig.smart);
                 const contractId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
                 const finalProfit = outcome.profit;
                 portfolioRef.current?.addAdminPosition({
                     contract_id: contractId,
                     contract_type: sig.contract_type,
-                    display_name: symbolDisplayName(cfg.symbol),
-                    underlying: cfg.symbol,
+                    display_name: symbolDisplayName(symbol),
+                    underlying: symbol,
                     buy_price: stake,
                     bid_price: round2(Math.max(0, stake + finalProfit)),
                     profit: finalProfit,
@@ -636,7 +693,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
 
             const res = await buyWithParameters({
                 contract_type: sig.contract_type,
-                symbol: cfg.symbol,
+                symbol,
                 amount: stake,
                 duration,
                 duration_unit: 't',
@@ -650,6 +707,8 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 stopInternal('error', res.error?.message);
                 return;
             }
+
+            if (sig.smart) markSmartAiPlaced(smartRef.current, sig.smart);
 
             pocSubRef.current = await subscribeOpenContract(res.contract_id, (poc: any) => {
                 if (poc?.is_sold) {
@@ -678,13 +737,23 @@ export const useNexoraBot = (config: NexoraConfig) => {
             return;
         }
 
-        const sigs = evaluateFamilies(q, decimalsRef.current, cfg.risk);
+        // Smart AI picks its own market and stake and never consults the family
+        // models, so it is routed out before they are evaluated. A null round means
+        // nothing is streaming yet, or a fresh ladder is still waiting for its two
+        // odd digits — either way, hold and look again on the next tick.
         if (strat === 'smart_ai') {
-            // Trade the single highest-edge family that clears its gate.
-            const fams = cfg.families ?? DEFAULT_FAMILIES;
-            const passing = fams.map(f => sigs[f]).filter(s => s.passes);
-            if (passing.length) pick = passing.reduce((a, b) => (b.strength > a.strength ? b : a));
-        } else if (strat === 'mix') {
+            const round = chooseSmartAiRound(windowsRef.current, smartRef.current, cfg.stake);
+            if (!round) return;
+            if (wouldBreachMaxLoss(netRef.current, cfg.maxLoss, round)) {
+                stopInternal('maxloss');
+                return;
+            }
+            void placeTrade(smartSignalOf(round));
+            return;
+        }
+
+        const sigs = evaluateFamilies(q, decimalsRef.current, cfg.risk);
+        if (strat === 'mix') {
             // Round-robin across families so the split stays balanced; if the
             // family whose turn it is stays quiet, let another go once.
             const fams = cfg.families ?? DEFAULT_FAMILIES;
@@ -712,12 +781,13 @@ export const useNexoraBot = (config: NexoraConfig) => {
 
         if (!pick) return;
         void placeTrade(pick);
-    }, [placeTrade]);
+    }, [placeTrade, stopInternal]);
 
     const handleTick = useCallback(
         (msg: any) => {
             if (msg?.history?.prices) {
                 quotesRef.current = msg.history.prices.map(Number).slice(-500);
+                windowsRef.current[cfgRef.current.symbol] = quotesRef.current;
                 setTicksReady(true);
                 refreshDisplay();
                 return;
@@ -725,6 +795,9 @@ export const useNexoraBot = (config: NexoraConfig) => {
             if (msg?.tick?.quote != null) {
                 quotesRef.current.push(Number(msg.tick.quote));
                 if (quotesRef.current.length > 600) quotesRef.current.shift();
+                // Re-pointed every tick rather than once: the history message above
+                // replaces the array outright instead of mutating it.
+                windowsRef.current[cfgRef.current.symbol] = quotesRef.current;
                 setTicksReady(true);
                 refreshDisplay();
                 maybeTrade();
@@ -766,6 +839,55 @@ export const useNexoraBot = (config: NexoraConfig) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [config.symbol]);
 
+    /**
+     * Smart AI ranks five markets against each other, so it needs all five
+     * streaming, not just the selected one.
+     *
+     * The selected symbol is deliberately skipped — the feed above already
+     * covers it and mirrors it into the same window store. Asking for it twice
+     * would be a second identical subscription on one connection, which Deriv
+     * refuses outright (`AlreadySubscribed`).
+     */
+    const isSmart = config.strategy === 'smart_ai';
+    useEffect(() => {
+        if (!isSmart) return;
+        let active = true;
+        const subs: Subscription[] = [];
+
+        (async () => {
+            for (const symbol of SMART_AI_MARKETS) {
+                if (symbol === config.symbol) continue;
+                try {
+                    const sub = await subscribeTicks({
+                        symbol,
+                        style: 'ticks',
+                        count: 500,
+                        onData: (msg: any) => {
+                            if (msg?.history?.prices) {
+                                windowsRef.current[symbol] = msg.history.prices.map(Number).slice(-500);
+                            } else if (msg?.tick?.quote != null) {
+                                const window = (windowsRef.current[symbol] ??= []);
+                                window.push(Number(msg.tick.quote));
+                                if (window.length > 600) window.shift();
+                            }
+                        },
+                    });
+                    if (!active) sub.forget();
+                    else subs.push(sub);
+                } catch {
+                    // One market failing to open is survivable: the scan only
+                    // considers markets that are actually streaming.
+                }
+            }
+        })();
+
+        return () => {
+            active = false;
+            subs.forEach(sub => sub.forget());
+            windowsRef.current = {};
+        };
+    }, [isSmart, config.symbol]);
+
     // Tear down on unmount.
     useEffect(
         () => () => {
@@ -780,6 +902,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
         stepRef.current = 0;
         mixTurnRef.current = 0;
         mixWaitRef.current = 0;
+        smartRef.current = freshSmartAiState();
         statsRef.current = { netProfit: 0, trades: 0, wins: 0, losses: 0 };
         setStats({ ...statsRef.current });
         setJournal([]);

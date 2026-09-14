@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Hash, Layers, Lock, Play, Shuffle, Square, TrendingUp, TriangleAlert } from 'lucide-react';
+import { Brain, Hash, Layers, Lock, Play, Shuffle, Square, TrendingUp, TriangleAlert } from 'lucide-react';
 import NexoraStar from '@/components/NexoraStar';
 import BotResultModal from '@/components/BotResultModal';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +10,7 @@ const STRATEGIES: { id: NexoraStrategy; label: string; icon: typeof TrendingUp }
     { id: 'rise_fall', label: 'Rise / Fall', icon: TrendingUp },
     { id: 'even_odd', label: 'Even / Odd', icon: Hash },
     { id: 'mix', label: 'Mix Both', icon: Shuffle },
+    { id: 'smart_ai', label: 'Smart AI', icon: Brain },
 ];
 
 const RISKS: { id: RiskLevel; label: string; tone: string }[] = [
@@ -112,11 +113,15 @@ const TradePilotFree = () => {
     const currency = balanceCurrency || getActiveCurrency();
 
     const [strategy, setStrategy] = useState<NexoraStrategy>('mix');
-    const [risk, setRisk] = useState<RiskLevel>('low');
+    const [risk, setRisk] = useState<RiskLevel>('medium');
     const [symbol, setSymbol] = useState('1HZ100V');
     const [stake, setStake] = useState(1);
     const [profitTarget, setProfitTarget] = useState(10);
     const [maxLoss, setMaxLoss] = useState(10);
+
+    // Smart AI ranks the 1-second markets against each other and trades the one
+    // it picks, so the market selector does not apply while it is chosen.
+    const isSmart = strategy === 'smart_ai';
 
     const config = useMemo(
         () => ({ strategy, risk, symbol, stake, profitTarget, maxLoss, currency }),
@@ -178,7 +183,7 @@ const TradePilotFree = () => {
                         <span className='text-xs font-medium text-slate-400'>Market</span>
                         <select
                             value={symbol}
-                            disabled={isRunning}
+                            disabled={isRunning || isSmart}
                             onChange={e => setSymbol(e.target.value)}
                             className='rounded-lg border border-line bg-ink-800 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-cyan-500 disabled:opacity-50'
                         >
