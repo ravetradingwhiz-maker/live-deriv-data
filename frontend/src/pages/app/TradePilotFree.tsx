@@ -6,11 +6,12 @@ import { useAuth } from '@/context/AuthContext';
 import { getActiveCurrency } from '@/services/trade-api';
 import { riskStakingLabel, useNexoraBot, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
 
-const STRATEGIES: { id: NexoraStrategy; label: string; icon: typeof TrendingUp }[] = [
+/** `recommended` greens the tile and tags it, selected or not. */
+const STRATEGIES: { id: NexoraStrategy; label: string; icon: typeof TrendingUp; recommended?: boolean }[] = [
     { id: 'rise_fall', label: 'Rise / Fall', icon: TrendingUp },
     { id: 'even_odd', label: 'Even / Odd', icon: Hash },
     { id: 'mix', label: 'Mix Both', icon: Shuffle },
-    { id: 'smart_ai', label: 'Smart AI', icon: Brain },
+    { id: 'smart_ai', label: 'Smart AI', icon: Brain, recommended: true },
 ];
 
 const RISKS: { id: RiskLevel; label: string; tone: string }[] = [
@@ -41,7 +42,7 @@ const Segmented = <T extends string>({
     onChange,
     disabled,
 }: {
-    options: { id: T; label: string; icon?: typeof TrendingUp; desc?: string; tone?: string }[];
+    options: { id: T; label: string; icon?: typeof TrendingUp; desc?: string; tone?: string; recommended?: boolean }[];
     value: T;
     onChange: (v: T) => void;
     disabled?: boolean;
@@ -56,12 +57,23 @@ const Segmented = <T extends string>({
                     type='button'
                     disabled={disabled}
                     onClick={() => onChange(opt.id)}
-                    className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`relative flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                         active
-                            ? 'border-cyan-400 bg-cyan-400/10 shadow-[0_0_16px_rgba(34,211,238,0.25)]'
-                            : 'border-line bg-ink-800 hover:border-cyan-700'
+                            ? 'bg-cyan-400/10 shadow-[0_0_16px_rgba(34,211,238,0.25)]'
+                            : 'bg-ink-800'
+                    } ${
+                        opt.recommended
+                            ? 'border-emerald-400'
+                            : active
+                              ? 'border-cyan-400'
+                              : 'border-line hover:border-cyan-700'
                     }`}
                 >
+                    {opt.recommended && (
+                        <span className='absolute -top-[7px] right-[-1px] rounded-[4px_4px_0_4px] bg-emerald-500 px-1.5 py-px text-[9px] font-bold leading-[1.5] text-white'>
+                            Recommended
+                        </span>
+                    )}
                     {Icon && <Icon size={18} className={active ? 'text-cyan-300' : opt.tone ?? 'text-slate-400'} />}
                     <span className={`text-sm font-semibold ${active ? 'text-white' : opt.tone ?? 'text-slate-300'}`}>
                         {opt.label}
