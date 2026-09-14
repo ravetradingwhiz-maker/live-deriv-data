@@ -59,14 +59,8 @@ const Segmented = <T extends string>({
                     onClick={() => onChange(opt.id)}
                     className={`relative flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                         active
-                            ? 'bg-cyan-400/10 shadow-[0_0_16px_rgba(34,211,238,0.25)]'
-                            : 'bg-ink-800'
-                    } ${
-                        opt.recommended
-                            ? 'border-emerald-400'
-                            : active
-                              ? 'border-cyan-400'
-                              : 'border-line hover:border-cyan-700'
+                            ? 'border-cyan-400 bg-cyan-400/10 shadow-[0_0_16px_rgba(34,211,238,0.25)]'
+                            : 'border-line bg-ink-800 hover:border-cyan-700'
                     }`}
                 >
                     {opt.recommended && (
