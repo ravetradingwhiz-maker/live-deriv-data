@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { CandlestickChart, Crown, History, ListChecks, Tag } from 'lucide-react';
+import { CandlestickChart, Crown, Tag } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import NexoraStar from '@/components/NexoraStar';
 
@@ -19,8 +19,8 @@ export const APP_TABS: Tab[] = [
     { to: '/app/manual', label: 'Manual Trading', lines: ['Manual', 'Trading'], icon: CandlestickChart, color: 'text-cyan-400' },
     { to: '/app/trade-pilot-free', label: 'Nexora AI Free', lines: ['Nexora AI', 'Free'], star: true },
     { to: '/app/trade-pilot-premium', label: 'Nexora AI Premium', lines: ['Nexora AI', 'Premium'], icon: Crown, color: 'text-amber-400' },
-    { to: '/app/open-positions', label: 'Open Positions', lines: ['Open', 'Positions'], icon: ListChecks, color: 'text-sky-400' },
-    { to: '/app/trade-history', label: 'Trade History', lines: ['Trade', 'History'], icon: History, color: 'text-violet-400' },
+    // Open positions and trade history are not tabs: both live in the
+    // positions panel, which is reachable from every tab rather than being one.
     { to: '/app/pricing', label: 'AI Pricing', lines: ['AI', 'Pricing'], icon: Tag, color: 'text-emerald-400' },
 ];
 

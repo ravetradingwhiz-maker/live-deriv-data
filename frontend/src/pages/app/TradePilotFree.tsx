@@ -3,6 +3,7 @@ import { Brain, Hash, Layers, Lock, Play, Shuffle, Square, TrendingUp, TriangleA
 import NexoraStar from '@/components/NexoraStar';
 import BotResultModal from '@/components/BotResultModal';
 import { useAuth } from '@/context/AuthContext';
+import { usePublishBotRun } from '@/context/BotRunContext';
 import { getActiveCurrency } from '@/services/trade-api';
 import { riskStakingLabel, useNexoraBot, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
 
@@ -144,6 +145,9 @@ const TradePilotFree = () => {
 
     const { ticksReady, isRunning, status, stats, sessionResult, clearSessionResult, start, stop } =
         useNexoraBot(config);
+
+    // Lets the positions panel offer a Stop from anywhere in the app.
+    usePublishBotRun(isRunning, stop);
 
     const demoLocked = isDemo && !ALLOW_DEMO_TRADING;
 

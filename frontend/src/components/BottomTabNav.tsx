@@ -8,7 +8,11 @@ import { APP_TABS } from '@/components/TabNav';
  */
 const BottomTabNav = () => (
     <nav
-        className='fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-ink-900 md:hidden'
+        // The positions panel measures this to sit above it rather than over it.
+        data-bottom-nav
+        // z-50: above the positions panel, so the tabs can never end up
+        // underneath it even if its measurement of this bar is off.
+        className='fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-ink-900 md:hidden'
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
         {APP_TABS.map(tab => {

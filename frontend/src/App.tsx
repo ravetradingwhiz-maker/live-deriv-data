@@ -12,8 +12,7 @@ import AppLayout from '@/pages/app/AppLayout';
 import ManualTrading from '@/pages/app/ManualTrading';
 import TradePilotFree from '@/pages/app/TradePilotFree';
 import TradePilotPremium from '@/pages/app/TradePilotPremium';
-import OpenPositions from '@/pages/app/OpenPositions';
-import TradeHistory from '@/pages/app/TradeHistory';
+
 import PricingTab from '@/pages/app/PricingTab';
 import Checkout from '@/pages/app/Checkout';
 import AdminMarkup from '@/pages/app/admin/AdminMarkup';
@@ -82,8 +81,7 @@ const AppBody = () => {
                 <Route path='manual' element={<ManualTrading />} />
                 <Route path='trade-pilot-free' element={<TradePilotFree />} />
                 <Route path='trade-pilot-premium' element={<TradePilotPremium />} />
-                <Route path='open-positions' element={<OpenPositions />} />
-                <Route path='trade-history' element={<TradeHistory />} />
+
                 <Route path='pricing' element={<PricingTab />} />
                 <Route path='checkout' element={<Checkout />} />
 

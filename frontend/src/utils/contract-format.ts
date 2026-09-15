@@ -1,4 +1,4 @@
-/** Small display helpers shared by the positions / history pages. */
+/** Small display helpers for the positions panel. */
 
 const TYPE_LABEL: Record<string, string> = {
     CALL: 'Rise',

@@ -6,6 +6,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import TabNav from '@/components/TabNav';
 import BottomTabNav from '@/components/BottomTabNav';
 import { PortfolioProvider } from '@/context/PortfolioContext';
+import { BotRunProvider } from '@/context/BotRunContext';
 import { SubscriptionProvider } from '@/context/SubscriptionContext';
 import { AdminProvider } from '@/context/AdminContext';
 import PositionsDrawer from '@/components/PositionsDrawer';
@@ -24,6 +25,7 @@ const AppLayout = () => {
         <SubscriptionProvider>
         <AdminProvider>
         <PortfolioProvider>
+        <BotRunProvider>
             <div className={`flex flex-col bg-ink-900 ${is_manual ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
                 <header className='sticky top-0 z-40 border-b border-line bg-ink-900/90 backdrop-blur'>
                     <div className='container-page flex h-16 items-center justify-between'>
@@ -53,6 +55,7 @@ const AppLayout = () => {
                 <BottomTabNav />
                 <PositionsDrawer />
             </div>
+        </BotRunProvider>
         </PortfolioProvider>
         </AdminProvider>
         </SubscriptionProvider>

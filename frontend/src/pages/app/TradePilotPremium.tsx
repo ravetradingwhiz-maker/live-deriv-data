@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import BotResultModal from '@/components/BotResultModal';
 import { useAuth } from '@/context/AuthContext';
+import { usePublishBotRun } from '@/context/BotRunContext';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { useAdminOptional } from '@/context/AdminContext';
 import { getActiveCurrency } from '@/services/trade-api';
@@ -113,6 +114,9 @@ const TradePilotPremium = () => {
 
     const { ticksReady, isRunning, status, stats, sessionResult, clearSessionResult, start, stop } =
         useNexoraBot(config);
+
+    // Lets the positions panel offer a Stop from anywhere in the app.
+    usePublishBotRun(isRunning, stop);
 
     // The selected bot's required tier gates running.
     const selectedBot = PREMIUM_BOTS.find(b => b.id === strategy) ?? PREMIUM_BOTS[0];
