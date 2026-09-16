@@ -10,6 +10,7 @@ import { BotRunProvider } from '@/context/BotRunContext';
 import { SubscriptionProvider } from '@/context/SubscriptionContext';
 import { AdminProvider } from '@/context/AdminContext';
 import PositionsDrawer from '@/components/PositionsDrawer';
+import ActivityToasts from '@/components/ActivityToasts';
 
 /** Authenticated app shell: header + tab nav (top on desktop, bottom on mobile). */
 const AppLayout = () => {
@@ -54,6 +55,7 @@ const AppLayout = () => {
 
                 <BottomTabNav />
                 <PositionsDrawer />
+                <ActivityToasts />
             </div>
         </BotRunProvider>
         </PortfolioProvider>

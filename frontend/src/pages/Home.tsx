@@ -152,13 +152,19 @@ const Home = () => {
                                     </>
                                 )}
                             </button>
-                            <a href='#how-it-works' className='btn-ghost px-7 py-3 text-base'>
-                                See how it works
+                            {/* Leaves the site, so it opens in its own tab. `noreferrer`
+                                alongside `noopener` because the target is a third party. */}
+                            <a
+                                href='https://t.me/livederiv_dataanalysis'
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className='btn-ghost btn-ring px-7 py-3 text-base'
+                            >
+                                Join Community
+                                <ArrowRight size={20} />
                             </a>
                         </div>
                         <div className='mt-8 flex items-center gap-2 text-sm text-slate-500'>
-                            <Check size={16} className='text-cyan-400' /> OAuth 2.0 &amp; legacy login
-                            <span className='mx-2 text-slate-700'>•</span>
                             <Check size={16} className='text-cyan-400' /> No card required
                         </div>
 

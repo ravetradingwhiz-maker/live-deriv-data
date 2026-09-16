@@ -200,4 +200,75 @@
         font-weight: 700;
         letter-spacing: 0.01em;
     }
+
+    /*
+     * A call to action that rings for attention.
+     *
+     * The movement is a short burst followed by stillness rather than constant
+     * motion: something that never stops moving is something the eye stops
+     * seeing, and it makes the rest of the page hard to read.
+     *
+     * 0.9s of ring, 2.1s of quiet. The percentages and the duration are set
+     * together: the ring is 30% of a 3s cycle, so each step lasts the same 0.09s
+     * it would at any other pause length. Shortening the wait means moving both,
+     * or the ring speeds up with it.
+     *
+     * It decays like a struck bell — each swing smaller than the last, out of a
+     * small scale bump — which is what makes it read as rung rather than
+     * wobbling.
+     */
+    .btn-ring {
+        animation: btn-ring 3s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+        transform-origin: center;
+        /* The transform is the only thing changing, so the compositor can keep
+           this off the main thread. */
+        will-change: transform;
+    }
+
+    /* Once it has been noticed there is nothing left to advertise, and a button
+       that moves under the cursor is harder to click. */
+    .btn-ring:hover,
+    .btn-ring:focus-visible {
+        animation-play-state: paused;
+    }
+}
+
+@keyframes btn-ring {
+    0%,
+    70%,
+    100% {
+        transform: rotate(0) scale(1);
+    }
+    73% {
+        transform: rotate(-5deg) scale(1.03);
+    }
+    76% {
+        transform: rotate(4.5deg) scale(1.03);
+    }
+    79% {
+        transform: rotate(-3.5deg) scale(1.02);
+    }
+    82% {
+        transform: rotate(2.5deg) scale(1.02);
+    }
+    85% {
+        transform: rotate(-1.8deg) scale(1.01);
+    }
+    88% {
+        transform: rotate(1.2deg) scale(1.01);
+    }
+    91% {
+        transform: rotate(-0.7deg) scale(1);
+    }
+    94% {
+        transform: rotate(0.3deg) scale(1);
+    }
+}
+
+/* Some people get motion sick from this, and the browser is already telling us
+   who. The button keeps its glow and hover states, it simply holds still. */
+@media (prefers-reduced-motion: reduce) {
+    .btn-ring {
+        animation: none;
+    }
 }
