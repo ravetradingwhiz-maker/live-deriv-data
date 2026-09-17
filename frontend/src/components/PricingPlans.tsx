@@ -51,12 +51,11 @@ interface Plan {
     /** Billing length, used for the per-month figure. Omitted on the free plan. */
     months?: number;
     /**
-     * How many seats remain at the discounted price.
+     * Fallback seat count, used only when the pricing request fails.
      *
-     * This is a claim shown to someone deciding whether to spend money, so it
-     * has to stay true: keep the number in step with what you will actually
-     * honour, and take the line off a plan by removing this field rather than
-     * leaving a figure that never moves.
+     * The live figure comes from the server and is edited under Admin →
+     * Pricing; this is what the card falls back to so it does not render an
+     * empty strip when the network is down.
      */
     slotsLeft?: number;
     account: string;
@@ -275,6 +274,11 @@ const PricingPlans = () => {
                 // Only worth stating when it differs from the headline figure.
                 const months = dyn ? dyn.months : plan.months;
                 const perMonth = months && months > 1 ? Math.round(Number(price) / months) : null;
+                /* Set under Admin → Pricing. Zero means the admin has turned the
+                   line off, so it is a real value rather than a missing one —
+                   hence `??` and not `||`. */
+                const slotsLeft = dyn?.slotsLeft ?? plan.slotsLeft;
+                const showSlots = showOffer && slotsLeft != null && slotsLeft > 0;
                 return (
                     <div
                         key={`${plan.name}-${i}`}
@@ -367,13 +371,13 @@ const PricingPlans = () => {
                             </span>
                         </div>
 
-                        {showOffer && plan.slotsLeft != null && (
+                        {showSlots && (
                             <div className='mt-3 flex items-center gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3'>
                                 <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-400'>
                                     <ShoppingCart size={16} />
                                 </span>
                                 <p className='min-w-0 text-sm font-bold text-rose-400'>
-                                    Only {plan.slotsLeft} slots left
+                                    {slotsLeft === 1 ? 'Only 1 slot left' : `Only ${slotsLeft} slots left`}
                                     <span className='block text-xs font-medium text-slate-400'>at this price</span>
                                 </p>
                             </div>
@@ -429,7 +433,7 @@ const PricingPlans = () => {
                             ))}
                         </div>
 
-                        {showOffer && plan.slotsLeft != null && original != null ? (
+                        {showSlots && original != null ? (
                             <div className='mt-4 flex items-start gap-3 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3'>
                                 <Bell size={16} className='mt-0.5 shrink-0 text-rose-400' />
                                 <p className='min-w-0 text-xs text-slate-400'>

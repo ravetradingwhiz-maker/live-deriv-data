@@ -229,7 +229,7 @@ module.exports = {
         }
     },
 
-    // PUT /api/admin/pricing  { alpha:{priceUSD,months}, quantum:{...}, apex:{...} }
+    // PUT /api/admin/pricing  { alpha:{priceUSD,months,slotsLeft}, quantum:{...}, apex:{...} }
     setPricing: async (req, res, next) => {
         try {
             const body = req.body || {};
@@ -240,6 +240,12 @@ module.exports = {
                 const entry = {};
                 if (o.priceUSD != null && !Number.isNaN(Number(o.priceUSD))) entry.priceUSD = Number(o.priceUSD);
                 if (o.months != null && !Number.isNaN(Number(o.months))) entry.months = Number(o.months);
+                // Zero is a meaningful value here — it takes the "slots left"
+                // line off the card — so it is stored rather than treated as
+                // an empty field.
+                if (o.slotsLeft != null && !Number.isNaN(Number(o.slotsLeft))) {
+                    entry.slotsLeft = Math.max(0, Math.floor(Number(o.slotsLeft)));
+                }
                 if (Object.keys(entry).length) value[key] = entry;
             }
             await Setting.updateOne({ key: 'pricing' }, { $set: { value } }, { upsert: true });

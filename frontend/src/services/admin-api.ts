@@ -107,6 +107,8 @@ export interface TierConfig {
     priceUSD: number;
     months: number;
     rank: number;
+    /** Seats the pricing card says are left at this price. 0 hides the line. */
+    slotsLeft: number;
 }
 export type TierTable = Record<Tier, TierConfig>;
 
@@ -127,7 +129,7 @@ export const getMarkup = (dateFrom: string, dateTo: string): Promise<MarkupTotal
     fetch(`${API_URL}/api/admin/markup?date_from=${dateFrom}&date_to=${dateTo}`).then(json);
 
 export const setAdminPricing = (
-    body: Partial<Record<Tier, { priceUSD?: number; months?: number }>>
+    body: Partial<Record<Tier, { priceUSD?: number; months?: number; slotsLeft?: number }>>
 ): Promise<{ tiers: TierTable }> =>
     fetch(`${API_URL}/api/admin/pricing`, {
         method: 'PUT',

@@ -92,6 +92,8 @@ export interface TierPricing {
     priceUSD: number;
     months: number;
     rank: number;
+    /** Seats the pricing card says are left at this price. 0 hides the line. */
+    slotsLeft: number;
 }
 
 /** Which checkout methods an admin has enabled. */

@@ -27,7 +27,7 @@ const AdminPricing = () => {
         })();
     }, []);
 
-    const edit = (tier: Tier, field: 'priceUSD' | 'months', value: number) =>
+    const edit = (tier: Tier, field: 'priceUSD' | 'months' | 'slotsLeft', value: number) =>
         setTiers(t => (t ? { ...t, [tier]: { ...t[tier], [field]: value } } : t));
 
     const save = async () => {
@@ -37,8 +37,11 @@ const AdminPricing = () => {
         setSaved(false);
         try {
             const body = ORDER.reduce(
-                (acc, t) => ({ ...acc, [t]: { priceUSD: tiers[t].priceUSD, months: tiers[t].months } }),
-                {} as Record<Tier, { priceUSD: number; months: number }>
+                (acc, t) => ({
+                    ...acc,
+                    [t]: { priceUSD: tiers[t].priceUSD, months: tiers[t].months, slotsLeft: tiers[t].slotsLeft },
+                }),
+                {} as Record<Tier, { priceUSD: number; months: number; slotsLeft: number }>
             );
             const res = await setAdminPricing(body);
             setTiers(res.tiers);
@@ -57,7 +60,8 @@ const AdminPricing = () => {
                 <Tag size={20} className='text-cyan-400' /> Pricing
             </h1>
             <p className='text-sm text-slate-400'>
-                Edit tier prices and durations. Changes apply to new checkouts and the public pricing cards immediately.
+                Edit tier prices, durations and remaining slots. Changes apply to new checkouts and the public pricing
+                cards immediately.
             </p>
 
             {error && <div className='card border-rose-500/40 text-sm text-rose-300'>{error}</div>}
@@ -100,6 +104,20 @@ const AdminPricing = () => {
                                         onChange={e => edit(tier, 'months', Number(e.target.value))}
                                         className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
                                     />
+                                </label>
+                                <label className='flex flex-col gap-1'>
+                                    <span className='text-[11px] text-slate-400'>Slots left at this price</span>
+                                    <input
+                                        type='number'
+                                        min={0}
+                                        step={1}
+                                        value={tiers[tier].slotsLeft ?? 0}
+                                        onChange={e => edit(tier, 'slotsLeft', Number(e.target.value))}
+                                        className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
+                                    />
+                                    <span className='text-[10px] text-slate-500'>
+                                        Shown on the public card. Set to 0 to hide the line.
+                                    </span>
                                 </label>
                             </div>
                         ))}
