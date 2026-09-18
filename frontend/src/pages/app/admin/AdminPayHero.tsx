@@ -23,7 +23,12 @@ const AdminPayHero = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const [amount, setAmount] = useState(1000);
+    /* Held as text, not as a number. A controlled numeric input that clamps on
+       every keystroke cannot be typed into: clearing it to type 200 parses as
+       0, clamps straight back to 1, and the 2 then lands after that 1. The
+       figure is derived below and the button guards what it accepts. */
+    const [amountText, setAmountText] = useState('1000');
+    const amount = Math.floor(Number(amountText)) || 0;
     const [phone, setPhone] = useState('');
     const [sending, setSending] = useState(false);
     const [queued, setQueued] = useState<string | null>(null);
@@ -137,7 +142,7 @@ const AdminPayHero = () => {
                             <button
                                 key={v}
                                 type='button'
-                                onClick={() => setAmount(v)}
+                                onClick={() => setAmountText(String(v))}
                                 className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
                                     amount === v
                                         ? 'border-cyan-500 bg-cyan-500/10 text-cyan-300'
@@ -152,8 +157,8 @@ const AdminPayHero = () => {
                         type='number'
                         min={1}
                         step={1}
-                        value={amount}
-                        onChange={e => setAmount(Math.max(1, Math.floor(Number(e.target.value)) || 0))}
+                        value={amountText}
+                        onChange={e => setAmountText(e.target.value)}
                         className='mt-1 rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
                     />
                 </div>
