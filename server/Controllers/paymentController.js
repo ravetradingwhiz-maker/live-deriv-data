@@ -9,7 +9,7 @@ const tron = require('../Services/tronChainService');
 const paystack = require('../Services/paystackService');
 const payhero = require('../Services/payHeroService');
 const fx = require('../Services/fxService');
-const { sendSubscriptionReceipt } = require('../Services/emailService');
+const { sendSubscriptionReceipt, sendAdminSaleAlert } = require('../Services/emailService');
 
 // Currency Paystack charges in (must be enabled on the account). Amount is sent
 // in the currency's smallest unit, so priceUSD * 100 for USD.
@@ -88,6 +88,25 @@ const activatePayment = async payment => {
         });
     } catch (e) {
         console.error('[payment] receipt email failed:', e.message);
+    }
+
+    // Separately caught: a failed admin alert must not look like a failed
+    // receipt, and neither may take down an activation that has already been
+    // written. The sale is done either way.
+    try {
+        await sendAdminSaleAlert({
+            tier: payment.tier,
+            priceUSD: payment.priceUSD,
+            payCurrency: payment.payCurrency,
+            payAmount: payment.payAmount,
+            orderId: payment.orderId,
+            email: payment.email,
+            loginids: payment.loginids,
+            provider: payment.provider,
+            receipt: payment.providerReceipt || payment.providerPaymentId || '',
+        });
+    } catch (e) {
+        console.error('[payment] admin alert failed:', e.message);
     }
 };
 
