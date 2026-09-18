@@ -104,6 +104,8 @@ const Checkout = () => {
     const term = dyn ? (dyn.months === 1 ? '1 month' : `${dyn.months} months`) : plan.term;
 
     const [email, setEmail] = useState('');
+    /** M-Pesa only — the handset the STK prompt is pushed to. */
+    const [phone, setPhone] = useState('');
     const [method, setMethod] = useState<Method>('crypto');
     // Which methods the admin has enabled. `null` = still loading — we render a
     // skeleton rather than guessing, otherwise disabled methods flash on screen
@@ -122,6 +124,15 @@ const Checkout = () => {
 
     const loginids = accounts.map(a => a.loginid);
     const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+
+    /* M-Pesa needs the number to push the prompt to. The server normalises and
+       has the final say; this only decides whether the button is live, so it
+       accepts every shape someone might type their own number in. */
+    const phoneDigits = phone.replace(/\D/g, '');
+    const phoneValid =
+        (phoneDigits.length === 10 && phoneDigits.startsWith('0')) ||
+        (phoneDigits.length === 12 && phoneDigits.startsWith('254')) ||
+        (phoneDigits.length === 9 && /^[17]/.test(phoneDigits));
 
     useEffect(() => {
         getPaymentMethods()
@@ -169,16 +180,29 @@ const Checkout = () => {
         }
     };
 
-    // M-Pesa: same hand-off as card, but Paystack charges in KES and triggers an
-    // STK push on the hosted page.
+    /* M-Pesa: no hand-off at all. PayHero pushes the PIN prompt straight to the
+       handset, so the page stays put and drops into the same polling phase the
+       crypto flow uses — the order confirms underneath the customer while they
+       are still looking at it. */
     const startMpesaPayment = async () => {
         setSubmitting(true);
         setError(null);
         try {
-            const { authorizationUrl } = await initMpesaPayment({ tier, email, loginids });
-            window.location.href = authorizationUrl;
+            const created = await initMpesaPayment({ tier, email, loginids, phone });
+            setOrder({
+                orderId: created.orderId,
+                status: created.status,
+                provider: 'payhero',
+                tier,
+                priceUSD,
+                payCurrency: created.currency.toLowerCase(),
+                payAddress: created.phone,
+                payAmount: created.amount,
+            } as PaymentOrder);
+            setPhase('pending');
         } catch (e: any) {
             setError(e?.message ?? 'Could not start the M-Pesa payment.');
+        } finally {
             setSubmitting(false);
         }
     };
@@ -259,7 +283,31 @@ const Checkout = () => {
                     </button>
                 </div>
             ) : phase === 'pending' && order ? (
-                order.provider === 'paystack' ? (
+                order.provider === 'payhero' ? (
+                    /* The prompt is already on their phone, so this screen's job
+                       is to say what to do with it and then get out of the way.
+                       The figures are repeated because the PIN dialog shows an
+                       amount and people check the two against each other. */
+                    <div className='card flex flex-col items-center gap-3 text-center'>
+                        <Smartphone size={40} className='text-emerald-400' />
+                        <h2 className='text-lg font-bold text-white'>Check your phone</h2>
+                        <p className='text-sm text-slate-400'>
+                            We sent an M-Pesa request to{' '}
+                            <strong className='text-slate-200'>{order.payAddress}</strong>. Enter your PIN to pay{' '}
+                            <strong className='text-slate-200'>
+                                KES {order.payAmount.toLocaleString()}
+                            </strong>
+                            .
+                        </p>
+                        <p className='flex items-center gap-2 text-xs text-slate-500'>
+                            <Loader2 size={13} className='animate-spin text-cyan-400' /> Waiting for confirmation —
+                            this page updates on its own.
+                        </p>
+                        <p className='text-[11px] text-slate-600'>
+                            No prompt after a minute? It may have timed out. Go back and try again.
+                        </p>
+                    </div>
+                ) : order.provider === 'paystack' ? (
                     <div className='card flex flex-col items-center gap-3 text-center'>
                         <Loader2 size={42} className='animate-spin text-cyan-400' />
                         <h2 className='text-lg font-bold text-white'>Confirming your payment…</h2>
@@ -415,13 +463,28 @@ const Checkout = () => {
                     )}
 
                     {activeMethod === 'mpesa' && (
-                        <p className='flex items-start gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
-                            <Smartphone size={14} className='mt-0.5 shrink-0 text-emerald-400' />
-                            <span>
-                                Charged in <strong className='text-slate-200'>KES</strong> (converted from ${priceUSD}{' '}
-                                at today&apos;s live rate). You&apos;ll get an M-Pesa PIN prompt on your phone.
-                            </span>
-                        </p>
+                        <>
+                            <label className='flex flex-col gap-1.5'>
+                                <span className='text-xs font-semibold text-slate-400'>M-Pesa number</span>
+                                <input
+                                    type='tel'
+                                    inputMode='tel'
+                                    autoComplete='tel'
+                                    value={phone}
+                                    onChange={e => setPhone(e.target.value)}
+                                    placeholder='07XX XXX XXX'
+                                    className='rounded-xl border border-line bg-ink-800 px-4 py-3 text-sm font-semibold text-white outline-none transition-colors focus:border-cyan-400'
+                                />
+                            </label>
+                            <p className='flex items-start gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
+                                <Smartphone size={14} className='mt-0.5 shrink-0 text-emerald-400' />
+                                <span>
+                                    Charged in <strong className='text-slate-200'>KES</strong> (converted from $
+                                    {priceUSD} at today&apos;s live rate). Keep this page open — the PIN prompt arrives
+                                    on your phone and the order confirms here.
+                                </span>
+                            </p>
+                        </>
                     )}
 
                     {error && (
@@ -460,7 +523,13 @@ const Checkout = () => {
                                   ? startMpesaPayment
                                   : startPayment
                         }
-                        disabled={!emailValid || submitting || loginids.length === 0 || !agreed}
+                        disabled={
+                            !emailValid ||
+                            submitting ||
+                            loginids.length === 0 ||
+                            !agreed ||
+                            (activeMethod === 'mpesa' && !phoneValid)
+                        }
                         className='btn-nexora w-full disabled:cursor-not-allowed disabled:opacity-50'
                     >
                         {submitting ? (

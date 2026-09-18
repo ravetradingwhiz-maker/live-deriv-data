@@ -5,7 +5,7 @@
 // Static metadata — the admin UI renders these; ids match the frontend Method type.
 const METHOD_DEFS = {
     card: { label: 'Card', desc: 'Credit / debit card via Paystack (USD)' },
-    mpesa: { label: 'M-Pesa', desc: 'Safaricom mobile money via Paystack (KES)' },
+    mpesa: { label: 'M-Pesa', desc: 'Safaricom mobile money via PayHero (KES)' },
     crypto: { label: 'Crypto', desc: 'USDT (TRC-20) on the TRON network' },
 };
 

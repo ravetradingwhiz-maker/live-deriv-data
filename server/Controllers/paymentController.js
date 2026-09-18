@@ -2,11 +2,12 @@ const crypto = require('crypto');
 const createError = require('http-errors');
 const Payment = require('../Models/Payment');
 const Subscription = require('../Models/Subscription');
-const { createPaymentSchema, paystackInitSchema } = require('../Middlewares/validation');
+const { createPaymentSchema, paystackInitSchema, mpesaInitSchema } = require('../Middlewares/validation');
 const { getTiers } = require('../config/tiers');
 const { getPaymentMethods } = require('../config/paymentMethods');
 const tron = require('../Services/tronChainService');
 const paystack = require('../Services/paystackService');
+const payhero = require('../Services/payHeroService');
 const fx = require('../Services/fxService');
 const { sendSubscriptionReceipt } = require('../Services/emailService');
 
@@ -161,12 +162,53 @@ const verifyPaystack = async payment => {
     // 'abandoned' / 'ongoing' / 'pending' → leave as-is; the poll retries.
 };
 
+/**
+ * Confirms a PayHero (M-Pesa) order against PayHero's own record.
+ *
+ * This is the only thing that may settle an M-Pesa order. PayHero's callback
+ * carries no signature of any kind, so a POST claiming success proves nothing —
+ * it is treated as a prompt to call this, and this asks PayHero directly.
+ *
+ * Idempotent via `payment.activated`, so the callback, the checkout poll and the
+ * background sweep can all call it safely.
+ */
+const verifyPayHero = async payment => {
+    if (payment.status !== 'pending') return;
+    // The STK push is what mints the reference; until it returns there is
+    // nothing to ask about.
+    if (!payment.providerPaymentId) return;
+
+    let data;
+    try {
+        data = await payhero.getTransactionStatus(payment.providerPaymentId);
+    } catch (e) {
+        console.error('[payment] PayHero status check failed:', e.message);
+        return;
+    }
+
+    const status = String(data.status || '').toUpperCase();
+
+    if (status === 'SUCCESS' || data.success === true) {
+        // The M-Pesa receipt, which is what a customer quotes when they query a
+        // payment, so it is worth keeping over PayHero's own id.
+        const receipt = data.provider_reference || data.third_party_reference || '';
+        if (receipt) payment.providerReceipt = String(receipt);
+        await activatePayment(payment);
+    } else if (status === 'FAILED') {
+        payment.status = 'failed';
+        await payment.save();
+    }
+    // QUEUED → the customer has not finished with the prompt yet. Leave it
+    // pending; the poll and the sweep come back round.
+};
+
 /** Background sweep so orders confirm even if the user closed the checkout tab. */
 const pollPendingOrders = async () => {
     const since = new Date(Date.now() - ORDER_TTL_MS);
     const pending = await Payment.find({ status: 'pending', createdAt: { $gt: since } }).limit(50);
     for (const p of pending) {
-        if (p.provider === 'paystack') await verifyPaystack(p);
+        if (p.provider === 'payhero') await verifyPayHero(p);
+        else if (p.provider === 'paystack') await verifyPaystack(p);
         else await checkOnchain(p);
     }
 };
@@ -289,11 +331,26 @@ module.exports = {
     // POST /api/payments/mpesa/init — start an M-Pesa (Paystack mobile money)
     // checkout. M-Pesa settles only in KES, so the USD tier price is converted
     // at the live rate and the transaction is created in KES.
+    /**
+     * POST /api/payments/mpesa/init — pushes an STK prompt via PayHero.
+     *
+     * Unlike the card flow there is no page to send anyone to: the prompt goes
+     * straight to the handset, so the response carries no URL and the checkout
+     * stays put and polls.
+     */
     createMpesa: async (req, res, next) => {
         try {
-            const { tier, email, loginids } = await paystackInitSchema.validateAsync(req.body);
+            const { tier, email, loginids, phone } = await mpesaInitSchema.validateAsync(req.body);
             await assertMethodEnabled('mpesa');
-            if (!process.env.PAYSTACK_SECRET_KEY) throw createError(500, 'M-Pesa payments not configured');
+
+            // Normalise before anything is written, so a bad number fails as a
+            // 422 rather than leaving a pending order nobody can pay.
+            let msisdn;
+            try {
+                msisdn = payhero.normalisePhone(phone);
+            } catch (e) {
+                throw createError(422, e.message);
+            }
 
             const tiers = await getTiers();
             const tierCfg = tiers[tier];
@@ -303,30 +360,29 @@ module.exports = {
 
             const payment = await Payment.create({
                 orderId: genOrderId(),
-                provider: 'paystack',
+                provider: 'payhero',
                 tier,
                 priceUSD: tierCfg.priceUSD,
                 payCurrency: 'kes',
-                payAddress: '',
-                payAmount: kesAmount, // charged amount, in KES — used by the underpayment guard
+                payAddress: msisdn, // the handset the prompt went to
+                payAmount: kesAmount,
                 email,
                 loginids,
                 status: 'pending',
             });
 
-            const base = (process.env.CHECKOUT_RETURN_URL || process.env.ALLOWED_ORIGIN_1 || '').replace(/\/$/, '');
-            const callbackUrl = base ? `${base}/app/checkout?tier=${tier}` : undefined;
+            // Where PayHero posts the result. Unsigned, so it only ever triggers
+            // a status check — see Services/payHeroService.js.
+            const apiBase = (process.env.PUBLIC_API_URL || '').replace(/\/$/, '');
+            const callbackUrl = apiBase ? `${apiBase}/api/payments/payhero/callback` : undefined;
 
             let init;
             try {
-                init = await paystack.initTransaction({
-                    email,
-                    amountSubunit: kesAmount * 100, // KES minor unit
-                    currency: 'KES',
+                init = await payhero.initiateStkPush({
+                    amount: kesAmount,
+                    phone: msisdn,
                     reference: payment.orderId,
                     callbackUrl,
-                    channels: ['mobile_money'],
-                    metadata: { orderId: payment.orderId, tier, loginids, method: 'mpesa', usdKesRate: rate },
                 });
             } catch (e) {
                 payment.status = 'failed';
@@ -334,17 +390,49 @@ module.exports = {
                 throw createError(502, `Could not start M-Pesa payment: ${e.message}`);
             }
 
+            // PayHero's own id, and the only thing its status endpoint accepts.
+            payment.providerPaymentId = String(init.reference || init.CheckoutRequestID || '');
+            await payment.save();
+
             res.status(201).json({
                 orderId: payment.orderId,
-                authorizationUrl: init.authorization_url,
                 status: payment.status,
                 currency: 'KES',
                 amount: kesAmount,
+                phone: msisdn,
             });
         } catch (error) {
             if (error.isJoi) error.status = 422;
             next(error);
         }
+    },
+
+    /**
+     * POST /api/payments/payhero/callback — PayHero posts the result here.
+     *
+     * The body is NOT trusted for anything. PayHero signs nothing, so this reads
+     * one field out of it — which order it concerns — and then asks PayHero
+     * directly what happened. A forged post can at most cause a status check on
+     * an order that is already pending, which is what the checkout page is doing
+     * every few seconds anyway.
+     *
+     * Always answers 200: a non-2xx would have PayHero retry a callback whose
+     * contents were never going to be believed.
+     */
+    payHeroCallback: async (req, res) => {
+        try {
+            const body = req.body || {};
+            const inner = body.response || {};
+            const orderId = inner.ExternalReference || body.external_reference;
+
+            if (orderId) {
+                const payment = await Payment.findOne({ orderId: String(orderId) });
+                if (payment && payment.status === 'pending') await verifyPayHero(payment);
+            }
+        } catch (e) {
+            console.error('[payment] PayHero callback error:', e.message);
+        }
+        res.json({ received: true });
     },
 
     // POST /api/payments/paystack/webhook — Paystack calls this on charge events.
@@ -378,7 +466,8 @@ module.exports = {
             if (!payment) throw createError.NotFound('Order not found');
 
             if (payment.status === 'pending') {
-                if (payment.provider === 'paystack') await verifyPaystack(payment);
+                if (payment.provider === 'payhero') await verifyPayHero(payment);
+                else if (payment.provider === 'paystack') await verifyPaystack(payment);
                 else await checkOnchain(payment);
             }
 

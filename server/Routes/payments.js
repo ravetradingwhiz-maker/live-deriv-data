@@ -13,9 +13,13 @@ router.get('/methods', paymentController.methods);
 router.post('/create', createLimiter, paymentController.create);
 // Card (Paystack): start a hosted checkout + receive charge webhooks.
 router.post('/paystack/init', createLimiter, paymentController.createCard);
-// M-Pesa (Paystack mobile money, KES): shares the same webhook/verify path.
+// M-Pesa (PayHero STK push, KES). The prompt goes straight to the handset, so
+// there is no hosted page and no redirect — the checkout polls /:orderId.
 router.post('/mpesa/init', createLimiter, paymentController.createMpesa);
 router.post('/paystack/webhook', paymentController.webhook);
+// PayHero posts the STK result here. Unsigned, so it only ever prompts a
+// server-side status check — see Services/payHeroService.js.
+router.post('/payhero/callback', paymentController.payHeroCallback);
 router.get('/:orderId', paymentController.getOrder);
 
 module.exports = router;

@@ -70,12 +70,29 @@ export const initCardPayment = (body: {
         body: JSON.stringify(body),
     }).then(json);
 
-/** Start an M-Pesa (Paystack mobile money) checkout; redirect to authorizationUrl. */
+/** What an M-Pesa push returns. No URL — the prompt goes to the handset. */
+export interface MpesaInitResult {
+    orderId: string;
+    status: string;
+    currency: string;
+    /** Whole shillings actually charged, converted from USD at today's rate. */
+    amount: number;
+    /** The number the prompt went to, normalised server-side. */
+    phone: string;
+}
+
+/**
+ * Push an M-Pesa STK prompt via PayHero.
+ *
+ * Unlike the card flow there is nowhere to send the browser: the prompt arrives
+ * on the phone, so the checkout stays where it is and polls the order.
+ */
 export const initMpesaPayment = (body: {
     tier: Tier;
     email: string;
     loginids: string[];
-}): Promise<CardInitResult> =>
+    phone: string;
+}): Promise<MpesaInitResult> =>
     fetch(`${API_URL}/api/payments/mpesa/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

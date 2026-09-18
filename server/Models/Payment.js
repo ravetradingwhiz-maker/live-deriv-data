@@ -5,6 +5,9 @@ const PaymentSchema = new mongoose.Schema(
         orderId: { type: String, required: true, unique: true, index: true },
         provider: { type: String, default: 'nowpayments' },
         providerPaymentId: { type: String, index: true },
+        // The receipt the customer sees on their own side — an M-Pesa code for
+        // PayHero orders. What they quote when they ask about a payment.
+        providerReceipt: { type: String, default: '' },
         tier: { type: String, enum: ['alpha', 'quantum', 'apex'], required: true },
         priceUSD: { type: Number, required: true },
         payCurrency: { type: String, required: true }, // e.g. btc, eth, usdttrc20
