@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink } from 'react-router-dom';
-import { BarChart3, CreditCard, Menu, Printer, ShieldCheck, Tag, Users, Wallet, X } from 'lucide-react';
+import { BarChart3, CreditCard, Menu, Printer, ShieldCheck, Smartphone, Tag, Users, Wallet, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAdminOptional } from '@/context/AdminContext';
 
@@ -19,6 +19,7 @@ export const ADMIN_PAGES: AdminPage[] = [
     { to: '/app/admin/pricing', label: 'Pricing', icon: Tag, color: 'text-violet-400' },
     { to: '/app/admin/payment-methods', label: 'Payment methods', icon: Wallet, color: 'text-rose-400' },
     { to: '/app/admin/printer', label: 'Printer', icon: Printer, color: 'text-sky-400' },
+    { to: '/app/admin/payhero', label: 'M-Pesa float', icon: Smartphone, color: 'text-emerald-400' },
 ];
 
 /**

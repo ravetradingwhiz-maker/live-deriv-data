@@ -132,4 +132,43 @@ const getTransactionStatus = async reference => {
     return data;
 };
 
-module.exports = { initiateStkPush, getTransactionStatus, normalisePhone };
+/**
+ * The float that pays the per-push transaction fee.
+ *
+ * Separate from the wallet customer money lands in, and it starts empty — when
+ * it runs dry every STK push comes back 400 "merchant has insufficient
+ * balance", while card and crypto carry on working. Nothing is broken at that
+ * point; M-Pesa simply stops, quietly, which is why it is worth a screen.
+ *
+ * Returns { id, account_id, wallet_type, currency, available_balance, ... }.
+ */
+const getServiceWalletBalance = async () => {
+    const { data } = await call(() =>
+        client().get('/api/v2/wallets', { params: { wallet_type: 'service_wallet' } })
+    );
+    return data;
+};
+
+/**
+ * Tops the float up. The number given gets an M-Pesa prompt for the amount, so
+ * this only queues the request — the money arrives once the PIN is entered.
+ *
+ * Returns { success, status: 'QUEUED', reference, CheckoutRequestID }.
+ */
+const topUpServiceWallet = async ({ amount, phone }) => {
+    const { data } = await call(() =>
+        client().post('/api/v2/topup', {
+            amount: Math.round(Number(amount)),
+            phone_number: normalisePhone(phone),
+        })
+    );
+    return data;
+};
+
+module.exports = {
+    initiateStkPush,
+    getTransactionStatus,
+    getServiceWalletBalance,
+    topUpServiceWallet,
+    normalisePhone,
+};

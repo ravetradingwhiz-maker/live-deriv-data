@@ -35,4 +35,8 @@ router.put('/pricing', adminController.setPricing);
 router.get('/payment-methods', adminController.getPaymentMethods);
 router.put('/payment-methods', adminController.setPaymentMethods);
 
+// PayHero service wallet — the float every M-Pesa push draws its fee from.
+router.get('/payhero/wallet', adminController.payHeroWallet);
+router.post('/payhero/topup', adminController.payHeroTopUp);
+
 module.exports = router;

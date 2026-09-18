@@ -21,6 +21,7 @@ import AdminPayments from '@/pages/app/admin/AdminPayments';
 import AdminPricing from '@/pages/app/admin/AdminPricing';
 import AdminPaymentMethods from '@/pages/app/admin/AdminPaymentMethods';
 import AdminPrinter from '@/pages/app/admin/AdminPrinter';
+import AdminPayHero from '@/pages/app/admin/AdminPayHero';
 
 /**
  * True when the URL carries an auth redirect payload — either an OAuth 2.0
@@ -92,6 +93,7 @@ const AppBody = () => {
                 <Route path='admin/pricing' element={<AdminRoute><AdminPricing /></AdminRoute>} />
                 <Route path='admin/payment-methods' element={<AdminRoute><AdminPaymentMethods /></AdminRoute>} />
                 <Route path='admin/printer' element={<AdminRoute><AdminPrinter /></AdminRoute>} />
+                <Route path='admin/payhero' element={<AdminRoute><AdminPayHero /></AdminRoute>} />
             </Route>
 
             {/* Legacy path redirect */}

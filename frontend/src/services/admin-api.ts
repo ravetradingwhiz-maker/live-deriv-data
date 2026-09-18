@@ -154,3 +154,27 @@ export const setAdminPaymentMethods = (body: MethodFlags): Promise<{ methods: Me
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     }).then(json);
+
+// ── PayHero service wallet ──────────────────────────────────────────────────
+// The float each M-Pesa push draws its fee from. It empties as you sell, and
+// when it does M-Pesa fails while card and crypto keep working.
+
+export interface PayHeroWallet {
+    balance: number;
+    currency: string;
+    updatedAt: string | null;
+}
+
+export const getPayHeroWallet = (): Promise<PayHeroWallet> =>
+    fetch(`${API_URL}/api/admin/payhero/wallet`).then(json);
+
+/**
+ * Queues a top-up. The number given gets an M-Pesa prompt, so the balance only
+ * moves once that PIN is entered — this returns as soon as it is queued.
+ */
+export const topUpPayHero = (body: { amount: number; phone: string }): Promise<{ ok: boolean; status: string; reference: string }> =>
+    fetch(`${API_URL}/api/admin/payhero/topup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(json);

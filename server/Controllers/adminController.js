@@ -5,6 +5,7 @@ const Payment = require('../Models/Payment');
 const Setting = require('../Models/Setting');
 const { TIERS, getTiers } = require('../config/tiers');
 const { METHOD_DEFS, DEFAULTS: METHOD_DEFAULTS, getPaymentMethods } = require('../config/paymentMethods');
+const payhero = require('../Services/payHeroService');
 
 // Deriv v4 markup-statistics REST endpoint (must be called server-side with a
 // read-scoped app token — the browser gets 403). Mirrors quantum-vault.
@@ -279,6 +280,50 @@ module.exports = {
             }
             await Setting.updateOne({ key: 'payment_methods' }, { $set: { value } }, { upsert: true });
             res.json({ ok: true, methods: await getPaymentMethods() });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // ── PayHero service wallet ───────────────────────────────────────────────
+    // The float that pays the fee on every M-Pesa push. It empties as you sell,
+    // and when it does M-Pesa stops working while everything else carries on.
+
+    // GET /api/admin/payhero/wallet
+    payHeroWallet: async (req, res, next) => {
+        try {
+            const wallet = await payhero.getServiceWalletBalance();
+            res.json({
+                balance: Number(wallet.available_balance) || 0,
+                currency: wallet.currency || 'KES',
+                updatedAt: wallet.updated_at || null,
+            });
+        } catch (error) {
+            // A missing key or a PayHero outage is a state of the integration,
+            // not a server fault — say which, so the page can show it.
+            next(createError(502, error.message));
+        }
+    },
+
+    // POST /api/admin/payhero/topup  { amount, phone }
+    payHeroTopUp: async (req, res, next) => {
+        try {
+            const amount = Math.round(Number((req.body || {}).amount));
+            const phone = String((req.body || {}).phone || '').trim();
+            if (!Number.isInteger(amount) || amount < 1) throw createError(422, 'Enter an amount of at least 1 KES');
+            if (!phone) throw createError(422, 'Enter the phone number to charge');
+
+            let result;
+            try {
+                result = await payhero.topUpServiceWallet({ amount, phone });
+            } catch (e) {
+                // normalisePhone's complaint is the admin's to fix, so it reads
+                // as a 422 rather than a gateway failure.
+                if (/valid Safaricom number/i.test(e.message)) throw createError(422, e.message);
+                throw createError(502, e.message);
+            }
+
+            res.json({ ok: true, status: result.status || 'QUEUED', reference: result.reference || '' });
         } catch (error) {
             next(error);
         }
