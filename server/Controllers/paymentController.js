@@ -186,20 +186,30 @@ const verifyPayHero = async payment => {
         return;
     }
 
+    /* `status` is the ONLY field that says whether money moved.
+       `data.success` is the envelope — it means the lookup itself worked, and
+       PayHero sets it on every answer they can give: their own STK response is
+       `{ success: true, status: "QUEUED" }`, a push nobody has paid yet. Reading
+       it as an outcome handed a subscription to anyone who cancelled the
+       prompt, and to every order on its first poll. */
     const status = String(data.status || '').toUpperCase();
 
-    if (status === 'SUCCESS' || data.success === true) {
-        // The M-Pesa receipt, which is what a customer quotes when they query a
-        // payment, so it is worth keeping over PayHero's own id.
-        const receipt = data.provider_reference || data.third_party_reference || '';
-        if (receipt) payment.providerReceipt = String(receipt);
+    // A real M-Pesa collection always carries a receipt. No receipt, no money,
+    // whatever the status says.
+    const receipt = String(data.provider_reference || data.third_party_reference || '').trim();
+
+    if (status === 'SUCCESS' && receipt) {
+        payment.providerReceipt = receipt;
         await activatePayment(payment);
     } else if (status === 'FAILED') {
+        // Cancelled prompt, wrong PIN, timeout, or not enough on the line.
         payment.status = 'failed';
         await payment.save();
     }
-    // QUEUED → the customer has not finished with the prompt yet. Leave it
-    // pending; the poll and the sweep come back round.
+    /* Anything else — QUEUED, or SUCCESS with no receipt — is left pending on
+       purpose. The poll and the hourly sweep come back round, and an order that
+       never settles expires on its own. Waiting costs a customer a few seconds;
+       guessing costs a subscription. */
 };
 
 /** Background sweep so orders confirm even if the user closed the checkout tab. */
