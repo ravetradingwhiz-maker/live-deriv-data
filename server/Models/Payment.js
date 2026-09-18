@@ -8,7 +8,7 @@ const PaymentSchema = new mongoose.Schema(
         // The receipt the customer sees on their own side — an M-Pesa code for
         // PayHero orders. What they quote when they ask about a payment.
         providerReceipt: { type: String, default: '' },
-        tier: { type: String, enum: ['alpha', 'quantum', 'apex'], required: true },
+        tier: { type: String, enum: ['alpha', 'quantum', 'apex', 'quantumsyn'], required: true },
         priceUSD: { type: Number, required: true },
         payCurrency: { type: String, required: true }, // e.g. btc, eth, usdttrc20
         payAddress: { type: String, default: '' },

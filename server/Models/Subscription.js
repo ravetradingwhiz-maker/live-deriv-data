@@ -7,7 +7,9 @@ const SubscriptionSchema = new mongoose.Schema(
     {
         loginids: { type: [String], required: true, index: true },
         email: { type: String, default: '' },
-        tier: { type: String, enum: ['alpha', 'quantum', 'apex'], required: true },
+        // Includes 'quantumsyn' — a different product on a different site. Which
+        // site honours it is decided by the tier's `product`, in config/tiers.js.
+        tier: { type: String, enum: ['alpha', 'quantum', 'apex', 'quantumsyn'], required: true },
         startedAt: { type: Date, default: Date.now },
         expiresAt: { type: Date, required: true, index: true },
         status: { type: String, enum: ['active', 'expired'], default: 'active' },

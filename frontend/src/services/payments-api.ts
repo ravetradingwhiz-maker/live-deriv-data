@@ -5,7 +5,21 @@
 const API_URL = (process.env.API_URL || '').replace(/\/$/, '');
 
 export type PayCurrency = 'usdt';
+/** What live-deriv itself sells. The checkout and pricing cards use this. */
 export type Tier = 'alpha' | 'quantum' | 'apex';
+
+/**
+ * Every tier the server knows, including ones sold on other sites.
+ *
+ * `quantumsyn` is QuantumSyn's Quantum — a different product, bought and
+ * honoured over there. It is deliberately outside `Tier`, so the type system
+ * keeps it out of this app's checkout and pricing cards; only the admin screens
+ * that set its price ever widen to this.
+ */
+export type AnyTier = Tier | 'quantumsyn';
+
+/** Which product a tier belongs to. Ranks only compare within one. */
+export type Product = 'nexora' | 'quantumsyn';
 
 export interface CreatePaymentBody {
     tier: Tier;

@@ -1,8 +1,8 @@
 const Subscription = require('../Models/Subscription');
-const { TIERS } = require('../config/tiers');
+const { TIERS, tiersForProduct } = require('../config/tiers');
 
 module.exports = {
-    // GET /api/subscription?loginids=CR123,VRTC456
+    // GET /api/subscription?loginids=CR123,VRTC456[&product=quantumsyn]
     // Returns the highest active tier across the supplied loginids.
     check: async (req, res, next) => {
         try {
@@ -16,10 +16,21 @@ module.exports = {
                 .slice(0, 50);
             if (!loginids.length) return res.json({ active: false });
 
+            /* Which product is asking. Defaults to nexora so every existing
+               caller keeps the behaviour it had, and quantumsyn asks for its
+               own by name. This filter is what keeps the two apart: an Apex
+               subscription is invisible to quantumsyn and a Quantum one is
+               invisible to live-deriv, whatever loginids they share. An
+               unknown product matches no tiers and so is never active. */
+            const product = String(req.query.product || 'nexora');
+            const tiers = tiersForProduct(product);
+            if (!tiers.length) return res.json({ active: false });
+
             const now = new Date();
             const subs = await Subscription.find({
                 // `loginids` (current array form) or legacy single `loginid`.
                 $or: [{ loginids: { $in: loginids } }, { loginid: { $in: loginids } }],
+                tier: { $in: tiers },
                 status: 'active',
                 expiresAt: { $gt: now },
             });

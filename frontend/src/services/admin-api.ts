@@ -1,6 +1,6 @@
 /** Admin role check + management against the payments/subscription server. */
 
-import type { Tier } from '@/services/payments-api';
+import type { AnyTier, Product, Tier } from '@/services/payments-api';
 
 // Empty by default → same-origin (/api/...), proxied to the backend by Vite.
 // Set API_URL only when the API lives on another host.
@@ -104,13 +104,17 @@ export const listPayments = (params: { q?: string; status?: string } = {}): Prom
 // ── Pricing ─────────────────────────────────────────────────────────────────
 export interface TierConfig {
     label: string;
+    /** Which product this tier belongs to — see config/tiers.js on the server. */
+    product: Product;
     priceUSD: number;
     months: number;
     rank: number;
     /** Seats the pricing card says are left at this price. 0 hides the line. */
     slotsLeft: number;
 }
-export type TierTable = Record<Tier, TierConfig>;
+// Every tier the server knows, not just the ones this app sells — the pricing
+// screen is where QuantumSyn's price is set.
+export type TierTable = Record<AnyTier, TierConfig>;
 
 export const getAdminPricing = (): Promise<{ tiers: TierTable; defaults: TierTable }> =>
     fetch(`${API_URL}/api/admin/pricing`).then(json);
@@ -129,7 +133,7 @@ export const getMarkup = (dateFrom: string, dateTo: string): Promise<MarkupTotal
     fetch(`${API_URL}/api/admin/markup?date_from=${dateFrom}&date_to=${dateTo}`).then(json);
 
 export const setAdminPricing = (
-    body: Partial<Record<Tier, { priceUSD?: number; months?: number; slotsLeft?: number }>>
+    body: Partial<Record<AnyTier, { priceUSD?: number; months?: number; slotsLeft?: number }>>
 ): Promise<{ tiers: TierTable }> =>
     fetch(`${API_URL}/api/admin/pricing`, {
         method: 'PUT',
