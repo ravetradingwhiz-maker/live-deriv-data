@@ -41,6 +41,28 @@ const client = () =>
     });
 
 /**
+ * Runs a call and, if it fails, raises what PayHero actually said.
+ *
+ * Axios turns a 4xx into "Request failed with status code 400", which names
+ * neither the field nor the reason; PayHero puts that in `error_message` in the
+ * body, and it is the only thing that tells you whether the channel is wrong,
+ * the amount is out of range, or the number was refused. The whole body is
+ * logged too, because their message is sometimes thinner than the payload.
+ */
+const call = async fn => {
+    try {
+        return await fn();
+    } catch (e) {
+        const body = e.response && e.response.data;
+        if (body) console.error('[payhero] %s →', e.response.status, JSON.stringify(body));
+        const detail =
+            body && (body.error_message || body.message || body.error || (typeof body === 'string' ? body : ''));
+        if (detail) throw new Error(`PayHero: ${detail}`);
+        throw e;
+    }
+};
+
+/**
  * Kenyan mobile number in the `07xxxxxxxx` shape PayHero's own examples use.
  *
  * People type their number every which way — with the country code, with a
@@ -79,15 +101,17 @@ const initiateStkPush = async ({ amount, phone, reference, customerName, callbac
     const channelId = Number(process.env.PAYHERO_CHANNEL_ID);
     if (!Number.isInteger(channelId)) throw new Error('PAYHERO_CHANNEL_ID not configured');
 
-    const { data } = await client().post('/api/v2/payments', {
-        amount: Math.round(Number(amount)),
-        phone_number: normalisePhone(phone),
-        channel_id: channelId,
-        provider: 'm-pesa',
-        external_reference: reference,
-        ...(customerName ? { customer_name: customerName } : {}),
-        ...(callbackUrl ? { callback_url: callbackUrl } : {}),
-    });
+    const { data } = await call(() =>
+        client().post('/api/v2/payments', {
+            amount: Math.round(Number(amount)),
+            phone_number: normalisePhone(phone),
+            channel_id: channelId,
+            provider: 'm-pesa',
+            external_reference: reference,
+            ...(customerName ? { customer_name: customerName } : {}),
+            ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+        })
+    );
 
     if (!data || data.success === false) {
         throw new Error((data && (data.error_message || data.message)) || 'PayHero STK push failed');
@@ -103,7 +127,7 @@ const initiateStkPush = async ({ amount, phone, reference, customerName, callbac
  * FAILED.
  */
 const getTransactionStatus = async reference => {
-    const { data } = await client().get('/api/v2/transaction-status', { params: { reference } });
+    const { data } = await call(() => client().get('/api/v2/transaction-status', { params: { reference } }));
     if (!data) throw new Error('PayHero status check returned nothing');
     return data;
 };
