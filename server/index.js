@@ -55,6 +55,10 @@ require('./Models/Admin')
 const { pollPendingOrders } = require('./Controllers/paymentController');
 setInterval(() => pollPendingOrders().catch(() => {}), 30000);
 
+// Retires lapsed subscriptions so the stored status stops contradicting the
+// expiry date. Access does not depend on this — the check compares dates.
+require('./Services/subscriptionService').start();
+
 // Hourly O5U4 printer — keeps trading for started sessions with no browser open.
 require('./Services/printerEngine').start();
 

@@ -6,6 +6,7 @@ const { createPaymentSchema, paystackInitSchema, mpesaInitSchema } = require('..
 const { getTiers } = require('../config/tiers');
 const { getPaymentMethods } = require('../config/paymentMethods');
 const tron = require('../Services/tronChainService');
+const { addMonths } = require('../Services/subscriptionService');
 const paystack = require('../Services/paystackService');
 const payhero = require('../Services/payHeroService');
 const fx = require('../Services/fxService');
@@ -29,12 +30,6 @@ const assertMethodEnabled = async id => {
     if (!methods[id]) throw createError(403, 'That payment method is currently unavailable');
 };
 const round6 = n => Math.round(n * 1e6) / 1e6;
-
-const addMonths = (date, months) => {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() + months);
-    return d;
-};
 
 /**
  * Picks a payable USDT amount that's unique among the currently-pending orders,

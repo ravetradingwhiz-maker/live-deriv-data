@@ -26,23 +26,61 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const loginids = useMemo(() => accounts.map(a => a.loginid), [accounts]);
     const loginKey = loginids.join(',');
 
-    const refresh = useCallback(() => {
-        if (!isAuthenticated || loginids.length === 0) {
-            setStatus({ active: false });
-            setLoading(false);
-            return;
-        }
-        setLoading(true);
-        getSubscription(loginids)
-            .then(setStatus)
-            .catch(() => setStatus({ active: false }))
-            .finally(() => setLoading(false));
+    /**
+     * `silent` is for background revalidation: no spinner, and a failed request
+     * leaves the last known answer in place. A network blip must not read as
+     * "subscription cancelled" and lock a paying user out of the app.
+     */
+    const fetchStatus = useCallback(
+        (opts?: { silent?: boolean }) => {
+            if (!isAuthenticated || loginids.length === 0) {
+                setStatus({ active: false });
+                setLoading(false);
+                return;
+            }
+            if (!opts?.silent) setLoading(true);
+            getSubscription(loginids)
+                .then(setStatus)
+                .catch(() => {
+                    if (!opts?.silent) setStatus({ active: false });
+                })
+                .finally(() => setLoading(false));
+        },
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, loginKey]);
+        [isAuthenticated, loginKey]
+    );
+
+    const refresh = useCallback(() => fetchStatus(), [fetchStatus]);
 
     useEffect(() => {
-        refresh();
-    }, [refresh]);
+        fetchStatus();
+    }, [fetchStatus]);
+
+    /* The answer is true only for the moment it was fetched, and this app is
+       installed as a PWA — a session stays open for days. Without the two
+       effects below, a subscription that lapses mid-session keeps working until
+       the next cold start. */
+
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchStatus({ silent: true });
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [fetchStatus]);
+
+    useEffect(() => {
+        if (!status.active || !status.expiresAt) return;
+        const ms = new Date(status.expiresAt).getTime() - Date.now();
+        if (ms <= 0) {
+            fetchStatus({ silent: true });
+            return;
+        }
+        /* setTimeout saturates above ~24.8 days and would then fire at once, so
+           a distant expiry is capped and the effect re-arms on each wake. */
+        const t = setTimeout(() => fetchStatus({ silent: true }), Math.min(ms + 1000, 6 * 60 * 60 * 1000));
+        return () => clearTimeout(t);
+    }, [status.active, status.expiresAt, fetchStatus]);
 
     const covers = useCallback(
         (tier: Tier) => !!status.active && (status.rank ?? 0) >= TIER_RANK[tier],

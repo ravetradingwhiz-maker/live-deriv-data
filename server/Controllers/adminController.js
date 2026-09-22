@@ -4,6 +4,7 @@ const Subscription = require('../Models/Subscription');
 const Payment = require('../Models/Payment');
 const Setting = require('../Models/Setting');
 const { TIERS, getTiers } = require('../config/tiers');
+const { addMonths } = require('../Services/subscriptionService');
 const { METHOD_DEFS, DEFAULTS: METHOD_DEFAULTS, getPaymentMethods } = require('../config/paymentMethods');
 const payhero = require('../Services/payHeroService');
 
@@ -123,11 +124,25 @@ module.exports = {
     // GET /api/admin/subscriptions?q=&status=
     listSubscriptions: async (req, res, next) => {
         try {
-            const filter = {};
+            /* Both clauses below can be an $or, and assigning filter.$or twice
+               silently drops the first — so they are collected into an $and. */
+            const clauses = [];
+
+            /* Effective state, not the stored field. The sweep marks lapsed rows
+               `expired` hourly, so between sweeps a row can still read `active`
+               with a date in the past; the date is what decides. */
             const status = String(req.query.status || '').trim();
-            if (status === 'active' || status === 'expired') filter.status = status;
+            const now = new Date();
+            if (status === 'active') {
+                clauses.push({ status: 'active' }, { expiresAt: { $gt: now } });
+            } else if (status === 'expired') {
+                clauses.push({ $or: [{ status: 'expired' }, { expiresAt: { $lte: now } }] });
+            }
+
             const q = String(req.query.q || '').trim();
-            if (q) filter.$or = [{ loginids: new RegExp(q, 'i') }, { email: new RegExp(q, 'i') }];
+            if (q) clauses.push({ $or: [{ loginids: new RegExp(q, 'i') }, { email: new RegExp(q, 'i') }] });
+
+            const filter = clauses.length ? { $and: clauses } : {};
             const subs = await Subscription.find(filter).sort('-createdAt').limit(1000).lean();
             res.json({ count: subs.length, subscriptions: subs });
         } catch (error) {
@@ -146,8 +161,9 @@ module.exports = {
             if (!loginids.length) throw createError(422, 'at least one loginid is required');
             if (!TIERS[tier]) throw createError(422, 'tier must be alpha, quantum or apex');
             const months = Number(req.body.months) || TIERS[tier].months;
-            const expiresAt = new Date();
-            expiresAt.setMonth(expiresAt.getMonth() + months);
+            // Shared with paid activation so a granted month and a bought one
+            // are the same length — `setMonth` alone overflows on the 31st.
+            const expiresAt = addMonths(Date.now(), months);
             const sub = await Subscription.create({
                 loginids,
                 email: String(req.body.email || ''),
@@ -185,6 +201,12 @@ module.exports = {
                 const d = new Date(req.body.expiresAt);
                 if (Number.isNaN(d.getTime())) throw createError(422, 'invalid expiresAt');
                 patch.expiresAt = d;
+                /* Extending a lapsed subscription has to revive it too. The
+                   sweep will have set `expired`, and the access check demands
+                   both an active status and a future date — so moving only the
+                   date would look like it worked and change nothing. An
+                   explicit status in the same request still wins. */
+                if (!patch.status && d > new Date()) patch.status = 'active';
             }
             const sub = await Subscription.findByIdAndUpdate(req.params.id, patch, { new: true });
             if (!sub) throw createError(404, 'subscription not found');

@@ -13,6 +13,19 @@ const TIERS: Tier[] = ['alpha', 'quantum', 'apex'];
 const fmtDate = (s?: string) => (s ? new Date(s).toLocaleDateString() : '—');
 const toDateInput = (s?: string) => (s ? new Date(s).toISOString().slice(0, 10) : '');
 
+/**
+ * Whether the expiry date has passed, regardless of the stored status.
+ *
+ * The server sweeps lapsed rows to `expired` hourly, so for up to an hour a row
+ * can still read `active` with a date in the past. The date is what the access
+ * check actually compares, so it is what this page shows — the stored field
+ * used to be rendered raw, which is why every subscription ever sold looked
+ * active forever.
+ */
+const isLapsed = (r: AdminSubscription) => new Date(r.expiresAt).getTime() <= Date.now();
+const effectiveStatus = (r: AdminSubscription): 'active' | 'expired' =>
+    r.status === 'expired' || isLapsed(r) ? 'expired' : 'active';
+
 const AdminSubscriptions = () => {
     const [rows, setRows] = useState<AdminSubscription[]>([]);
     const [loading, setLoading] = useState(true);
@@ -168,11 +181,19 @@ const AdminSubscriptions = () => {
                                     </option>
                                 ))}
                             </select>
+                            {/* Disabled once the date has passed: picking
+                                "active" could not revive the row on its own,
+                                because access needs a future date too. The date
+                                input beside it is the control that works, and
+                                the server flips the status back when it moves
+                                into the future. */}
                             <select
-                                value={r.status}
+                                value={effectiveStatus(r)}
+                                disabled={isLapsed(r)}
+                                title={isLapsed(r) ? 'Expiry date has passed — set a future date to reactivate' : ''}
                                 onChange={e => patch(r._id, { status: e.target.value as 'active' | 'expired' })}
-                                className={`rounded-lg border border-line bg-ink-800 px-2 py-1.5 text-xs outline-none ${
-                                    r.status === 'active' ? 'text-emerald-400' : 'text-slate-400'
+                                className={`rounded-lg border border-line bg-ink-800 px-2 py-1.5 text-xs outline-none disabled:opacity-60 ${
+                                    effectiveStatus(r) === 'active' ? 'text-emerald-400' : 'text-slate-400'
                                 }`}
                             >
                                 <option value='active'>active</option>
