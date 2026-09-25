@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Brain, Hash, Layers, Lock, Play, Shuffle, Square, TrendingUp, TriangleAlert } from 'lucide-react';
 import NexoraStar from '@/components/NexoraStar';
 import BotResultModal from '@/components/BotResultModal';
+import MarketScannerModal from '@/components/MarketScannerModal';
 import { useAuth } from '@/context/AuthContext';
 import { usePublishBotRun } from '@/context/BotRunContext';
 import { getActiveCurrency } from '@/services/trade-api';
@@ -22,7 +23,7 @@ const RISKS: { id: RiskLevel; label: string; tone: string }[] = [
 ];
 
 // Allow demo accounts to run the bot. false = locked to real accounts only.
-const ALLOW_DEMO_TRADING = false;
+const ALLOW_DEMO_TRADING = true;
 
 /**
  * Stands in for a market while the strategy is choosing its own, so the picker
@@ -294,6 +295,11 @@ const TradePilotFree = () => {
                     </p>
                 )}
             </div>
+
+            {/* Covers the gap between Run and the first trade. The bot reports
+                `running` while it hunts for a signal and `trading` the moment it
+                places one, so the scan clears itself without any extra state. */}
+            {isRunning && status.kind === 'running' && <MarketScannerModal />}
 
             {sessionResult && <BotResultModal result={sessionResult} onClose={clearSessionResult} />}
         </div>

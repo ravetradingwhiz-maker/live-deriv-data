@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import BotResultModal from '@/components/BotResultModal';
+import MarketScannerModal from '@/components/MarketScannerModal';
 import { useAuth } from '@/context/AuthContext';
 import { usePublishBotRun } from '@/context/BotRunContext';
 import { useSubscription } from '@/context/SubscriptionContext';
@@ -283,6 +284,11 @@ const TradePilotPremium = () => {
                     <TriangleAlert size={12} /> Enter a stake, profit target and max loss greater than 0.
                 </p>
             )}
+
+            {/* Covers the gap between Run and the first trade. The bot reports
+                `running` while it hunts for a signal and `trading` the moment it
+                places one, so the scan clears itself without any extra state. */}
+            {isRunning && status.kind === 'running' && <MarketScannerModal />}
 
             {sessionResult && <BotResultModal result={sessionResult} onClose={clearSessionResult} />}
         </div>

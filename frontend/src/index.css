@@ -231,6 +231,17 @@
     .btn-ring:focus-visible {
         animation-play-state: paused;
     }
+
+    /**
+     * The terminal rain behind the market scanner.
+     *
+     * The text node holds two identical halves, so translating up by exactly
+     * half its height lands on the same content and the loop has no seam.
+     */
+    .scanner-rain {
+        animation: scanner-rain 3s linear infinite;
+        will-change: transform;
+    }
 }
 
 @keyframes btn-ring {
@@ -269,6 +280,23 @@
    who. The button keeps its glow and hover states, it simply holds still. */
 @media (prefers-reduced-motion: reduce) {
     .btn-ring {
+        animation: none;
+    }
+}
+
+@keyframes scanner-rain {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(-50%);
+    }
+}
+
+/* A full-screen wall of moving text is exactly what this setting is for; the
+   scanner still reads as working through its spinner and dots. */
+@media (prefers-reduced-motion: reduce) {
+    .scanner-rain {
         animation: none;
     }
 }
