@@ -24,7 +24,7 @@ const RISKS: { id: RiskLevel; label: string; tone: string }[] = [
 ];
 
 // Allow demo accounts to run the bot. false = locked to real accounts only.
-const ALLOW_DEMO_TRADING = true;
+const ALLOW_DEMO_TRADING = false;
 
 /**
  * Stands in for a market while the strategy is choosing its own, so the picker
