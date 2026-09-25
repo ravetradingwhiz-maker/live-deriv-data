@@ -3,6 +3,7 @@ import { Brain, Hash, Layers, Lock, Play, Shuffle, Square, TrendingUp, TriangleA
 import NexoraStar from '@/components/NexoraStar';
 import BotResultModal from '@/components/BotResultModal';
 import MarketScannerModal from '@/components/MarketScannerModal';
+import useMarketScan from '@/hooks/useMarketScan';
 import { useAuth } from '@/context/AuthContext';
 import { usePublishBotRun } from '@/context/BotRunContext';
 import { getActiveCurrency } from '@/services/trade-api';
@@ -146,6 +147,10 @@ const TradePilotFree = () => {
 
     const { ticksReady, isRunning, status, stats, sessionResult, clearSessionResult, start, stop } =
         useNexoraBot(config);
+
+    /* Once per run, not once per scan — the bot returns to `running` between
+       every trade while it looks for the next signal. */
+    const showScan = useMarketScan(isRunning, status);
 
     // Lets the positions panel offer a Stop from anywhere in the app.
     usePublishBotRun(isRunning, stop);
@@ -296,10 +301,7 @@ const TradePilotFree = () => {
                 )}
             </div>
 
-            {/* Covers the gap between Run and the first trade. The bot reports
-                `running` while it hunts for a signal and `trading` the moment it
-                places one, so the scan clears itself without any extra state. */}
-            {isRunning && status.kind === 'running' && <MarketScannerModal />}
+            {showScan && <MarketScannerModal />}
 
             {sessionResult && <BotResultModal result={sessionResult} onClose={clearSessionResult} />}
         </div>
