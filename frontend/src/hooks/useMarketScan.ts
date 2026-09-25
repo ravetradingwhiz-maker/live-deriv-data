@@ -1,54 +1,56 @@
-import { useEffect, useRef, useState } from 'react';
-import type { BotStatus } from '@/hooks/useNexoraBot';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * When to show the market scan.
+ * The market scan that runs before the bot does.
  *
- * Once per session, at the start. The bot drops back to `running` after every
- * trade settles while it looks for the next signal, so keying the modal
- * straight off that status put it back over the screen between every trade —
- * which is what this hook exists to prevent.
+ * Pressing Run opens the scan and holds it for SCAN_MS, and only then starts
+ * the bot. Nothing trades while it is up, which is the point: gating the modal
+ * on the bot's own status instead meant the first trades were placed behind it,
+ * and the bot drops back to "scanning" between every trade, so the modal also
+ * kept returning mid-session.
  *
- * It clears when the first trade is placed, but never before MIN_VISIBLE_MS:
- * the bot can find a signal almost immediately, and a scan that flashes up and
- * vanishes reads as a glitch rather than as work being done.
+ * Owning the delay rather than reacting to status is what makes both problems
+ * go away — the scan is a fixed opening act, and the bot starts when it ends.
  */
 
-/** The floor. A scan shorter than this is not worth showing. */
-const MIN_VISIBLE_MS = 5000;
+/** How long the scan runs before the bot is started. */
+const SCAN_MS = 5000;
 
-export const useMarketScan = (isRunning: boolean, status: BotStatus): boolean => {
-    const [visible, setVisible] = useState(false);
-    /** Whether this run has already had its scan. Reset when the bot stops. */
-    const spentRef = useRef(false);
-    const openedAtRef = useRef(0);
+interface MarketScan {
+    /** Whether the scan is on screen. */
+    scanning: boolean;
+    /** Call in place of the bot's own start — scans first, then starts it. */
+    beginScan: () => void;
+}
 
-    useEffect(() => {
-        if (isRunning) {
-            if (spentRef.current) return;
-            spentRef.current = true;
-            openedAtRef.current = Date.now();
-            setVisible(true);
-            return;
-        }
-        // Stopped: hide it, and arm the next run for its own scan.
-        spentRef.current = false;
-        setVisible(false);
-    }, [isRunning]);
+export const useMarketScan = (start: () => void): MarketScan => {
+    const [scanning, setScanning] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    /* The caller passes a fresh closure on most renders, so the timer reads it
+       from here rather than capturing whichever one was current when it was set. */
+    const startRef = useRef(start);
+    startRef.current = start;
 
-    useEffect(() => {
-        if (!visible || status.kind !== 'trading') return;
-        // Trading has started. Hold the rest of the floor, if any is left.
-        const remaining = MIN_VISIBLE_MS - (Date.now() - openedAtRef.current);
-        if (remaining <= 0) {
-            setVisible(false);
-            return;
-        }
-        const timer = setTimeout(() => setVisible(false), remaining);
-        return () => clearTimeout(timer);
-    }, [visible, status.kind]);
+    const clear = useCallback(() => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = null;
+    }, []);
 
-    return visible;
+    const beginScan = useCallback(() => {
+        // Ignore a second press while one is already running.
+        if (timerRef.current) return;
+        setScanning(true);
+        timerRef.current = setTimeout(() => {
+            timerRef.current = null;
+            setScanning(false);
+            startRef.current();
+        }, SCAN_MS);
+    }, []);
+
+    // Leaving the screen mid-scan must not start a bot onto a page that has gone.
+    useEffect(() => clear, [clear]);
+
+    return { scanning, beginScan };
 };
 
 export default useMarketScan;

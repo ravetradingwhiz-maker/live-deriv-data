@@ -117,9 +117,9 @@ const TradePilotPremium = () => {
     const { ticksReady, isRunning, status, stats, sessionResult, clearSessionResult, start, stop } =
         useNexoraBot(config);
 
-    /* Once per run, not once per scan — the bot returns to `running` between
-       every trade while it looks for the next signal. */
-    const showScan = useMarketScan(isRunning, status);
+    /* The scan runs first and the bot starts when it ends, so nothing trades
+       while it is on screen. */
+    const { scanning, beginScan } = useMarketScan(start);
 
     // Lets the positions panel offer a Stop from anywhere in the app.
     usePublishBotRun(isRunning, stop);
@@ -273,7 +273,7 @@ const TradePilotPremium = () => {
             ) : (
                 <button
                     type='button'
-                    onClick={start}
+                    onClick={beginScan}
                     disabled={!inputsValid || !ticksReady}
                     className='flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-violet-500 px-6 py-3 text-sm font-bold text-[#06141a] shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
                 >
@@ -290,7 +290,7 @@ const TradePilotPremium = () => {
                 </p>
             )}
 
-            {showScan && <MarketScannerModal />}
+            {scanning && <MarketScannerModal />}
 
             {sessionResult && <BotResultModal result={sessionResult} onClose={clearSessionResult} />}
         </div>
