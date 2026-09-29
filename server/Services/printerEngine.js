@@ -156,18 +156,34 @@ const endsWithTwoOdd = digits =>
     digits.length >= 2 && digits[digits.length - 1] % 2 === 1 && digits[digits.length - 2] % 2 === 1;
 
 /**
- * Market for a recovery Even.
+ * Market for a recovery Even: the one the losing round was placed on.
  *
- * The first rung of a ladder waits for a market showing two odd digits in a
- * row and takes it immediately; every rung after that fires on whatever is
- * streaming. Returns null while an armed ladder has nothing to trade on yet,
- * which is the signal to hold and look again next pass.
+ * A ladder stays where it started, whichever strategy opened it. It used to do
+ * the opposite — the market that had just lost was the one market excluded —
+ * so a ladder walked away from the loss and could end up spread across several
+ * markets before it was paid off.
+ *
+ * The two-odd wait is therefore read on that market and no other. The first
+ * rung holds until the pinned market itself ends on two odd digits; every rung
+ * after it goes straight in. Null means hold and look again next pass — either
+ * the market is not streaming enough history, or the wait is not satisfied yet.
+ *
+ * Pinning narrows the wait from "any of ten markets shows two odds" to "this
+ * one does", so a first rung can sit for noticeably longer than it used to.
+ * That is the intended trade: the ladder recovers where it lost.
  */
-const scanForRecovery = (ticksBySymbol, excludeSymbol, mustWaitForTwoOdd) => {
-    const markets = usableMarkets(ticksBySymbol, excludeSymbol);
+const scanForRecovery = (ticksBySymbol, pinnedSymbol, mustWaitForTwoOdd) => {
+    const markets = usableMarkets(ticksBySymbol);
     if (!markets.length) return null;
-    if (!mustWaitForTwoOdd) return markets[0];
-    return markets.find(market => endsWithTwoOdd(market.digits)) ?? null;
+
+    /* No pinned market means no round has filled yet, which a ladder cannot
+       reach — guarded anyway so a ladder can never be stranded with nothing to
+       trade on. */
+    const market = pinnedSymbol ? markets.find(m => m.symbol === pinnedSymbol) : markets[0];
+    if (!market) return null;
+
+    if (mustWaitForTwoOdd && !endsWithTwoOdd(market.digits)) return null;
+    return market;
 };
 
 // ── Rounds ───────────────────────────────────────────────────────────────────
@@ -357,8 +373,9 @@ const placeRound = async (session, symbol, barrier) => {
     // Remember the rung so the next retry can multiply from it.
     if (isRecovery && anyFilled) session.lastRecoveryStake = roundStake;
     if (anyFilled) {
-        // Consecutive rounds never reuse a market. Only a round that actually
-        // filled burns one — a rejected purchase leaves the market available.
+        // What the next round reads: Differs skips this market, a recovery
+        // ladder stays on it. Only a round that actually filled records one — a
+        // rejected purchase leaves the previous market standing.
         session.lastSymbol = symbol;
         // The two-odd wait is spent on the first rung of a ladder. Every retry
         // after this one goes straight in.
@@ -526,6 +543,7 @@ const tick = async () => {
                differs. Even takes the first streaming market and buys, so it
                only ever returns null when nothing is streaming at all. */
             const pick = isRecovery
+                // lastSymbol PINS the ladder here; for Differs below it excludes.
                 ? scanForRecovery(ticks, session.lastSymbol, Boolean(session.recoveryWaitArmed))
                 : session.strategy === 'even'
                   ? scanForEven(ticks)
