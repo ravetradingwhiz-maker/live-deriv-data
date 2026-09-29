@@ -57,6 +57,8 @@ export interface PrinterSession {
     deficit: number;
     /** Stake the Even recovery ladder opens at. */
     recoveryStartStake: number;
+    /** Which opening trade the session makes. Recovery is the same either way. */
+    strategy: PrinterStrategy;
     /** Market of the last filled round — the next one skips it. */
     lastSymbol: string;
     /** Ladder is holding until a market shows two odd digits in a row. */
@@ -75,6 +77,16 @@ export interface PrinterSession {
     trades: PrinterTrade[];
 }
 
+/**
+ * The opening trade.
+ *
+ *   differs — scan for the rarest digit, buy Differs on it
+ *   even    — buy Even immediately, no scan and nothing to wait for
+ *
+ * A loss puts either into the same recovery ladder.
+ */
+export type PrinterStrategy = 'differs' | 'even';
+
 export interface StartParams {
     /** Omit to reuse the token already stored server-side. */
     token?: string;
@@ -88,6 +100,8 @@ export interface StartParams {
     recoveryStartStake?: number;
     /** Martingale on each rung after the first. Defaults to 2. */
     recoveryMultiplier?: number;
+    /** Opening trade. Fixed for the session. Defaults to 'differs'. */
+    strategy?: PrinterStrategy;
 }
 
 const json = async (res: Response) => {

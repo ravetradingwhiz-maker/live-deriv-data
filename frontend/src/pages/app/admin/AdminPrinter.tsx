@@ -17,6 +17,7 @@ import {
   stopPrinter,
   type PrinterAccount,
   type PrinterSession,
+  type PrinterStrategy,
 } from "@/services/printer-api";
 
 const POLL_MS = 15000;
@@ -58,6 +59,7 @@ const AdminPrinter = () => {
   const [hourlyTarget, setHourlyTarget] = useState("2");
   const [recoveryMultiplier, setRecoveryMultiplier] = useState("2");
   const [recoveryStartStake, setRecoveryStartStake] = useState("1");
+  const [strategy, setStrategy] = useState<PrinterStrategy>("differs");
   const [showHistory, setShowHistory] = useState(false);
 
   const countdown = useCountdown(session?.active ? session.nextHourAt : null);
@@ -95,6 +97,7 @@ const AdminPrinter = () => {
     setHourlyTarget(String(session.hourlyTarget ?? 2));
     setRecoveryMultiplier(String(session.recoveryMultiplier ?? 2));
     setRecoveryStartStake(String(session.recoveryStartStake ?? 1));
+    setStrategy(session.strategy ?? "differs");
 
     if (!session.hasToken) return;
     resolvePrinterAccounts(loginids)
@@ -160,6 +163,7 @@ const AdminPrinter = () => {
         hourlyTarget: Number(hourlyTarget) || 2,
         recoveryMultiplier: Number(recoveryMultiplier) || 2,
         recoveryStartStake: Number(recoveryStartStake) || 1,
+        strategy,
       });
       setSession(next);
       setToken("");
@@ -458,9 +462,24 @@ const AdminPrinter = () => {
                   )}
                 </div>
 
+                {/* Fixed once the session starts: a ladder opened under one
+                    opening trade should not be paid off under the other. */}
+                <label className="flex flex-col gap-1 text-xs text-slate-400">
+                  Strategy
+                  <select
+                    value={strategy}
+                    onChange={e => setStrategy(e.target.value as PrinterStrategy)}
+                    disabled={session?.active}
+                    className="rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none disabled:opacity-50"
+                  >
+                    <option value="differs">Differs</option>
+                    <option value="even">Even</option>
+                  </select>
+                </label>
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field
-                    label="Differs stake"
+                    label={strategy === "even" ? "Even stake" : "Differs stake"}
                     value={stake}
                     onChange={setStake}
                     placeholder="1"

@@ -140,10 +140,17 @@ module.exports = {
             const hourlyTarget = Number(req.body?.hourlyTarget) || 2;
             const recoveryMultiplier = Number(req.body?.recoveryMultiplier) || 2;
             const recoveryStartStake = Number(req.body?.recoveryStartStake) || 1;
+            // Fixed for the life of the session: changing the opening trade
+            // halfway would leave a ladder that began under one strategy being
+            // paid off under the other.
+            const strategy = req.body?.strategy === 'even' ? 'even' : 'differs';
 
             if (!accountId) throw createError(422, 'account_id is required');
             if (!Number.isFinite(stake) || stake < 0.35) throw createError(422, 'stake must be at least 0.35');
             if (recoveryStartStake < 0.35) throw createError(422, 'recoveryStartStake must be at least 0.35');
+            if (req.body?.strategy && !['differs', 'even'].includes(req.body.strategy)) {
+                throw createError(422, 'strategy must be differs or even');
+            }
 
             const appId = getAppId();
             if (!appId) throw createError(503, 'MARKUP_APP_ID is not configured on the server');
@@ -172,6 +179,7 @@ module.exports = {
                         hourlyTarget,
                         recoveryMultiplier,
                         recoveryStartStake,
+                        strategy,
                         lastRecoveryStake: 0,
                         // A fresh start owes nothing and has no market to avoid.
                         lastSymbol: '',

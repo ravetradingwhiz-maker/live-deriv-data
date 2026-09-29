@@ -138,6 +138,19 @@ const scanForDiffers = (ticksBySymbol, excludeSymbol) => {
     return scored[0];
 };
 
+/**
+ * Market for an opening Even round.
+ *
+ * No scan and no confirmation — the point of this strategy is that it trades
+ * immediately. It also does not rotate: `usableMarkets` is asked to exclude
+ * nothing, and the list is in a fixed order, so a session stays on one market
+ * instead of moving between them the way Differs does.
+ */
+const scanForEven = ticksBySymbol => usableMarkets(ticksBySymbol)[0] ?? null;
+
+/** Opening round for the Even strategy: one Even contract at the base stake. */
+const evenLegs = (symbol, stake) => [digitLeg(symbol, stake, 'DIGITEVEN')];
+
 /** Are the two most recent digits both odd? History is oldest first. */
 const endsWithTwoOdd = digits =>
     digits.length >= 2 && digits[digits.length - 1] % 2 === 1 && digits[digits.length - 2] % 2 === 1;
@@ -290,7 +303,9 @@ const placeRound = async (session, symbol, barrier) => {
               Number(session.lastRecoveryStake) || 0,
               Number(session.recoveryMultiplier) || 2
           )
-        : differsLegs(symbol, stake, barrier);
+        : session.strategy === 'even'
+          ? evenLegs(symbol, stake)
+          : differsLegs(symbol, stake, barrier);
     const results = await Promise.all(
         legs.map(leg =>
             purchaseContract({
@@ -507,9 +522,14 @@ const tick = async () => {
             // Selection is per session: each carries its own last-traded market
             // to skip, and its own ladder state.
             const isRecovery = (Number(session.deficit) || 0) > 0;
+            /* Recovery is the same for both strategies; only the opening round
+               differs. Even takes the first streaming market and buys, so it
+               only ever returns null when nothing is streaming at all. */
             const pick = isRecovery
                 ? scanForRecovery(ticks, session.lastSymbol, Boolean(session.recoveryWaitArmed))
-                : scanForDiffers(ticks, session.lastSymbol);
+                : session.strategy === 'even'
+                  ? scanForEven(ticks)
+                  : scanForDiffers(ticks, session.lastSymbol);
 
             // Nothing streaming, or an armed ladder still waiting on two odd
             // digits. Either way, hold and look again next pass — the hour is

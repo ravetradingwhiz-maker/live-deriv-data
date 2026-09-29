@@ -55,6 +55,17 @@ const PrinterSessionSchema = new mongoose.Schema(
         // Market of the last round that actually filled. The next round skips it,
         // so consecutive rounds never reuse a market.
         lastSymbol: { type: String, default: '' },
+        /**
+         * Which opening trade the session makes.
+         *
+         *   differs — scan for the rarest digit and buy Differs on it
+         *   even    — buy Even straight away, with no scan and nothing to wait for
+         *
+         * Only the opening trade differs. A loss puts either into the same
+         * recovery ladder. Fixed when the session starts, and defaulted so
+         * sessions written before this keep the behaviour they had.
+         */
+        strategy: { type: String, enum: ['differs', 'even'], default: 'differs' },
         // True while a freshly opened recovery ladder still owes its first rung
         // the two-consecutive-odd-digits confirmation. Cleared once that rung is
         // placed, so every retry after it goes straight in.
