@@ -49,7 +49,6 @@ const {
     fetchBalance,
     purchaseContract,
     priceContracts,
-    purchaseOverSocket,
 } = require('./printerDeriv');
 
 /**
@@ -562,36 +561,32 @@ const placeRound = async (session, symbol, barrier, hedge = null) => {
        Falls back to REST when the socket cannot be used. That path is the one
        every other strategy already takes, and a round placed a few milliseconds
        apart is better than a round not placed at all. */
-    let results = null;
-    /* Only a one-window hedge needs the socket. Its two legs must start together
-       or the guarantee that one of them wins does not hold. A three-outcome
-       hedge puts its legs on deliberately different windows, so a few
-       milliseconds between them changes nothing worth the extra round trip —
-       and the digit strategies are a single contract, with nothing to align. */
-    if (hedge?.sameWindow) {
-        results = await purchaseOverSocket({ token, accountId, currency, legs }).catch(() => null);
-        if (!results) {
-            console.warn(
-                `[Printer] ${session.loginid}: buy socket unavailable, using REST — ` +
-                    'the two legs will start milliseconds apart, so a one-window round can still lose both'
-            );
-        }
-    }
+    /* Sent as parallel REST calls, which for a hedge means the two legs start
+       milliseconds apart rather than together.
 
-    if (!results) {
-        results = await Promise.all(
-            legs.map(leg =>
-                purchaseContract({
-                    token,
-                    appId,
-                    accountId,
-                    accountType,
-                    currency,
-                    contractParameters: leg.params,
-                }).catch(err => ({ error: err?.message || 'Purchase failed' }))
-            )
-        );
-    }
+       A socket would have sent both down one connection, as QuantumSyn's speed
+       bot does. It cannot be used here: the only auth method that socket
+       accepts is `authorize`, which wants a legacy Deriv API token, while the
+       printer holds a Bearer credential for the newer REST API. Tried with a
+       live token and it answers InvalidToken — the same as sending nothing.
+
+       For a three-outcome round this costs nothing, since its legs sit on
+       different windows by design. For a one-window round it is the reason both
+       legs can still occasionally lose: the windows match exactly, but each
+       contract expires two minutes from its own start. Closing that would need
+       a legacy token stored alongside this one. */
+    const results = await Promise.all(
+        legs.map(leg =>
+            purchaseContract({
+                token,
+                appId,
+                accountId,
+                accountType,
+                currency,
+                contractParameters: leg.params,
+            }).catch(err => ({ error: err?.message || 'Purchase failed' }))
+        )
+    );
 
     const placed = legs.map((leg, i) => ({
         contract_type: leg.contract_type,

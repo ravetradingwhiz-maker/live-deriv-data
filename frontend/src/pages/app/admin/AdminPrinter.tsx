@@ -495,9 +495,14 @@ const AdminPrinter = () => {
                     />
                     <span>
                       <span className="font-semibold text-white">Both legs on one window</span> — two
-                      outcomes instead of three. One leg always wins, so a round can never lose both,
-                      but the winning leg pays back slightly less than the two stakes. Min profit per
-                      leg is ignored: no window makes both legs reach it.
+                      outcomes instead of three. The winning leg pays back slightly less than the two
+                      stakes, so rounds land near even either way. Min profit per leg is ignored: no
+                      window makes both legs reach it.
+                      <br />
+                      Both legs share the same barriers, but each contract expires two minutes from
+                      its own purchase and the two are placed milliseconds apart — so a price sitting
+                      right on a barrier can still resolve differently for each, and a round can
+                      occasionally lose or win both.
                     </span>
                   </label>
                 )}
