@@ -43,7 +43,14 @@
 
 const PrinterSession = require('../Models/PrinterSession');
 const { decryptToken } = require('./printerCrypto');
-const { SYMBOLS, fetchTickHistory, fetchBalance, purchaseContract, priceContracts } = require('./printerDeriv');
+const {
+    SYMBOLS,
+    fetchTickHistory,
+    fetchBalance,
+    purchaseContract,
+    priceContracts,
+    purchaseOverSocket,
+} = require('./printerDeriv');
 
 /**
  * How often the loop looks for work.
@@ -546,18 +553,35 @@ const placeRound = async (session, symbol, barrier, hedge = null) => {
         : session.strategy === 'even'
           ? evenLegs(symbol, stake)
           : differsLegs(symbol, stake, barrier);
-    const results = await Promise.all(
-        legs.map(leg =>
-            purchaseContract({
-                token,
-                appId,
-                accountId,
-                accountType,
-                currency,
-                contractParameters: leg.params,
-            }).catch(err => ({ error: err?.message || 'Purchase failed' }))
-        )
-    );
+    /* A hedge's two legs go over one socket, written back-to-back, so they start
+       as close together as the connection allows. Sent as separate HTTPS
+       requests they carry their own setup and land far enough apart that each
+       contract expires at its own moment — which is how a one-window hedge
+       managed to lose both legs.
+
+       Falls back to REST when the socket cannot be used. That path is the one
+       every other strategy already takes, and a round placed a few milliseconds
+       apart is better than a round not placed at all. */
+    let results = null;
+    if (hedge) {
+        results = await purchaseOverSocket({ token, accountId, currency, legs }).catch(() => null);
+        if (!results) console.warn(`[Printer] ${session.loginid}: buy socket unavailable, using REST`);
+    }
+
+    if (!results) {
+        results = await Promise.all(
+            legs.map(leg =>
+                purchaseContract({
+                    token,
+                    appId,
+                    accountId,
+                    accountType,
+                    currency,
+                    contractParameters: leg.params,
+                }).catch(err => ({ error: err?.message || 'Purchase failed' }))
+            )
+        );
+    }
 
     const placed = legs.map((leg, i) => ({
         contract_type: leg.contract_type,
