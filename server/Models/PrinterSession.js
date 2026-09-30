@@ -66,6 +66,16 @@ const PrinterSessionSchema = new mongoose.Schema(
          * sessions written before this keep the behaviour they had.
          */
         strategy: { type: String, enum: ['differs', 'even'], default: 'differs' },
+        /**
+         * Even only: the session has been in recovery this hour and stays there.
+         *
+         * Differs goes back to its opening trade as soon as the deficit clears.
+         * Even does not — once a loss has opened a ladder, it keeps trading
+         * recovery rounds until the hourly target is met, rather than dropping
+         * back to the base stake the moment it is square. Cleared when the hour
+         * rolls, so each hour starts on the opening trade again.
+         */
+        recoveryLatched: { type: Boolean, default: false },
         // True while a freshly opened recovery ladder still owes its first rung
         // the two-consecutive-odd-digits confirmation. Cleared once that rung is
         // placed, so every retry after it goes straight in.

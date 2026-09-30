@@ -184,6 +184,7 @@ module.exports = {
                         // A fresh start owes nothing and has no market to avoid.
                         lastSymbol: '',
                         recoveryWaitArmed: false,
+                        recoveryLatched: false,
                         hourlyProfit: 0,
                         hourRounds: 0,
                         hourDone: false,

@@ -188,6 +188,21 @@ const scanForRecovery = (ticksBySymbol, pinnedSymbol, mustWaitForTwoOdd) => {
 
 // ── Rounds ───────────────────────────────────────────────────────────────────
 
+/**
+ * Is this session placing a recovery round rather than its opening trade?
+ *
+ * A deficit means recovery for either strategy. Even carries a second reason:
+ * once a loss has put it into recovery, it stays there for the rest of the hour
+ * even after the deficit is paid off, so the hour is finished on recovery stakes
+ * instead of returning to the opening trade.
+ *
+ * One helper because two places ask — the scan in tick() and the legs in
+ * placeRound() — and they must never disagree about which kind of round this is.
+ */
+const inRecovery = session =>
+    (Number(session.deficit) || 0) > 0 ||
+    (session.strategy === 'even' && Boolean(session.recoveryLatched));
+
 const hourKeyNow = () => new Date().toISOString().slice(0, 13); // e.g. 2026-08-15T14
 
 const digitLeg = (symbol, stake, contract_type, barrier) => ({
@@ -289,7 +304,7 @@ const placeRound = async (session, symbol, barrier) => {
     // A deficit carried from earlier losing rounds turns this hour into a
     // recovery round instead of a normal Differs round.
     const deficit = Number(session.deficit) || 0;
-    const isRecovery = deficit > 0;
+    const isRecovery = inRecovery(session);
 
     const breach = wouldBreachStopLoss(session, isRecovery);
     if (breach) {
@@ -443,8 +458,15 @@ const settleOpenRounds = async session => {
         // immediately, not after another confirmation.
         if (!wasInRecovery && session.deficit > 0) session.recoveryWaitArmed = true;
 
-        // Debt cleared — the ladder resets, so the next recovery starts at the
-        // bottom rung instead of continuing from the last one.
+        /* Even stays in recovery once it has been there, for the rest of the
+           hour. Set here rather than where the deficit clears, because by then
+           the reason for latching has already gone. */
+        if (session.strategy === 'even' && session.deficit > 0) session.recoveryLatched = true;
+
+        /* Debt cleared — the ladder resets, so the next recovery starts at the
+           bottom rung instead of continuing from the last one. On Even the
+           latch is deliberately left standing: the next round is still a
+           recovery round, just back at the opening rung. */
         if (session.deficit === 0) {
             session.lastRecoveryStake = 0;
             session.recoveryWaitArmed = false;
@@ -481,6 +503,8 @@ const rollHour = async (session, hourKey) => {
         session.hourRounds = 0;
         session.hourDone = false;
         session.hourEndedReason = '';
+        // A new hour starts on the opening trade, whatever last hour ended on.
+        session.recoveryLatched = false;
         await session.save();
     }
     return !session.hourDone;
@@ -538,7 +562,7 @@ const tick = async () => {
         for (const session of candidates) {
             // Selection is per session: each carries its own last-traded market
             // to skip, and its own ladder state.
-            const isRecovery = (Number(session.deficit) || 0) > 0;
+            const isRecovery = inRecovery(session);
             /* Recovery is the same for both strategies; only the opening round
                differs. Even takes the first streaming market and buys, so it
                only ever returns null when nothing is streaming at all. */
