@@ -250,7 +250,7 @@ const hedgeLegs = (symbol, stake, betweenHalf, outsideHalf, decimals) => {
  * simply not available at the moment, so the session holds rather than buying
  * something that does not pay what was asked.
  */
-const chooseHedge = async (symbol, prices, stake, minProfitPct) => {
+const chooseHedge = async (symbol, prices, stake, minProfitPct, sameWindow = false) => {
     const scale = twoMinuteScale(prices);
     if (!scale) return null;
 
@@ -267,6 +267,31 @@ const chooseHedge = async (symbol, prices, stake, minProfitPct) => {
         candidates.push({ key: `O${half}`, contract_type: 'EXPIRYMISS', symbol, half, minutes: HEDGE_MINUTES });
     }
     const quotes = await priceContracts(candidates, stake);
+
+    /* Both legs on one window. They are then complementary, so one always wins
+       and there is no band that loses both — the window chosen is simply the one
+       whose WORSE leg pays the most, because that is the guaranteed return.
+       No target is applied: nothing reaches it, since two complementary legs
+       cannot both pay more than about 1.95x. */
+    if (sameWindow) {
+        let best = null;
+        for (const half of halves) {
+            const b = quotes[`B${half}`];
+            const o = quotes[`O${half}`];
+            if (b === undefined || o === undefined) continue;
+            const worst = Math.min(b, o);
+            if (!best || worst > best.worst) best = { half, b, o, worst };
+        }
+        if (!best) return null;
+        return {
+            symbol,
+            decimals,
+            sameWindow: true,
+            between: { half: best.half, payout: best.b },
+            outside: { half: best.half, payout: best.o },
+            guaranteed: Number((best.worst - stake * 2).toFixed(2)),
+        };
+    }
 
     // Between pays less as the window widens, Outside pays more — so the widest
     // qualifying Between and the narrowest qualifying Outside sit closest
@@ -514,9 +539,13 @@ const placeRound = async (session, symbol, barrier, hedge = null) => {
         reason: !anyFilled
             ? placed.map(l => l.error).filter(Boolean).join('; ') || 'Purchase failed'
             : hedge
-              ? `Hedge ±${hedge.between.half} / ±${hedge.outside.half} — pays ` +
-                `${hedge.between.payout.toFixed(2)} or ${hedge.outside.payout.toFixed(2)}, ` +
-                `both lose if it moves ${hedge.between.half}–${hedge.outside.half}`
+              ? hedge.sameWindow
+                  ? `Hedge ±${hedge.between.half} both legs — one always wins, ` +
+                    `pays ${hedge.between.payout.toFixed(2)} or ${hedge.outside.payout.toFixed(2)}, ` +
+                    `guaranteed ${hedge.guaranteed >= 0 ? '+' : ''}${hedge.guaranteed}`
+                  : `Hedge ±${hedge.between.half} / ±${hedge.outside.half} — pays ` +
+                    `${hedge.between.payout.toFixed(2)} or ${hedge.outside.payout.toFixed(2)}, ` +
+                    `both lose if it moves ${hedge.between.half}–${hedge.outside.half}`
               : isRecovery
                 ? `Even ${roundStake} (martingale, ${deficit.toFixed(2)} owed)`
                 : `Differs ${barrier} at ${roundStake}`,
@@ -737,7 +766,8 @@ const tick = async () => {
                     market.symbol,
                     ticks[market.symbol],
                     session.stake,
-                    Number(session.hedgeMinProfitPct) || 150
+                    Number(session.hedgeMinProfitPct) || 150,
+                    Boolean(session.hedgeSameWindow)
                 );
                 if (!chosen) continue;
 

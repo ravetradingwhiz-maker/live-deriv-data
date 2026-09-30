@@ -96,6 +96,23 @@ const PrinterSessionSchema = new mongoose.Schema(
          * must pay at least 2.5x.
          */
         hedgeMinProfitPct: { type: Number, default: 150 },
+
+        /**
+         * Hedge only: put both legs on the SAME barriers.
+         *
+         * Then the two contracts are genuinely complementary — the exit spot is
+         * either inside the window or outside it — so exactly one always wins
+         * and the band where both lose cannot exist.
+         *
+         * The cost of removing that band is that it removes the upside with it.
+         * Deriv prices the pair so the two implied probabilities sum to about
+         * 1.024, which means the winning leg always pays back slightly less than
+         * the two stakes together. This mode has one outcome, not two: a small
+         * certain loss. hedgeMinProfitPct does not apply — no barrier makes both
+         * legs pay 150%, so the round instead takes the window whose worst leg
+         * pays the most.
+         */
+        hedgeSameWindow: { type: Boolean, default: false },
         // True while a freshly opened recovery ladder still owes its first rung
         // the two-consecutive-odd-digits confirmation. Cleared once that rung is
         // placed, so every retry after it goes straight in.

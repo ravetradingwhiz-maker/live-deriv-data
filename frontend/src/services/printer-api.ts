@@ -61,6 +61,8 @@ export interface PrinterSession {
     strategy: PrinterStrategy;
     /** hedge only: the profit target each leg is priced against. */
     hedgeMinProfitPct: number;
+    /** hedge only: both legs on one window, so exactly one always wins. */
+    hedgeSameWindow: boolean;
     /** Market of the last filled round — the next one skips it. */
     lastSymbol: string;
     /** Ladder is holding until a market shows two odd digits in a row. */
@@ -109,6 +111,8 @@ export interface StartParams {
     strategy?: PrinterStrategy;
     /** hedge only: profit each leg must be quoted at, as % of stake. Defaults to 150. */
     hedgeMinProfitPct?: number;
+    /** hedge only: one window for both legs — two outcomes instead of three. */
+    hedgeSameWindow?: boolean;
 }
 
 const json = async (res: Response) => {

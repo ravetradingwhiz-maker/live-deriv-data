@@ -61,6 +61,7 @@ const AdminPrinter = () => {
   const [recoveryStartStake, setRecoveryStartStake] = useState("1");
   const [strategy, setStrategy] = useState<PrinterStrategy>("differs");
   const [hedgeMinProfit, setHedgeMinProfit] = useState("150");
+  const [hedgeSameWindow, setHedgeSameWindow] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
   const countdown = useCountdown(session?.active ? session.nextHourAt : null);
@@ -100,6 +101,7 @@ const AdminPrinter = () => {
     setRecoveryStartStake(String(session.recoveryStartStake ?? 1));
     setStrategy(session.strategy ?? "differs");
     setHedgeMinProfit(String(session.hedgeMinProfitPct ?? 150));
+    setHedgeSameWindow(Boolean(session.hedgeSameWindow));
 
     if (!session.hasToken) return;
     resolvePrinterAccounts(loginids)
@@ -167,6 +169,7 @@ const AdminPrinter = () => {
         recoveryStartStake: Number(recoveryStartStake) || 1,
         strategy,
         hedgeMinProfitPct: Number(hedgeMinProfit) || 150,
+        hedgeSameWindow,
       });
       setSession(next);
       setToken("");
@@ -482,6 +485,24 @@ const AdminPrinter = () => {
                 </label>
 
                 {strategy === "hedge" && (
+                  <label className="flex items-start gap-2 text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={hedgeSameWindow}
+                      onChange={e => setHedgeSameWindow(e.target.checked)}
+                      disabled={session?.active}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="font-semibold text-white">Both legs on one window</span> — two
+                      outcomes instead of three. One leg always wins, so a round can never lose both,
+                      but the winning leg pays back slightly less than the two stakes. Min profit per
+                      leg is ignored: no window makes both legs reach it.
+                    </span>
+                  </label>
+                )}
+
+                {strategy === "hedge" && !hedgeSameWindow && (
                   <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
                     Two legs per round on their own barriers, {`±`}2 minutes each, running
                     continuously rather than to an hourly target. A move that lands between the two
@@ -521,7 +542,7 @@ const AdminPrinter = () => {
                     onChange={setTakeProfit}
                     placeholder="off"
                   />
-                  {strategy === "hedge" && (
+                  {strategy === "hedge" && !hedgeSameWindow && (
                     <Field
                       label="Min profit per leg (%)"
                       value={hedgeMinProfit}

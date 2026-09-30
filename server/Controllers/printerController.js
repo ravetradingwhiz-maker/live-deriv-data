@@ -146,6 +146,7 @@ module.exports = {
             const STRATEGIES = ['differs', 'even', 'hedge'];
             const strategy = STRATEGIES.includes(req.body?.strategy) ? req.body.strategy : 'differs';
             const hedgeMinProfitPct = Number(req.body?.hedgeMinProfitPct) || 150;
+            const hedgeSameWindow = Boolean(req.body?.hedgeSameWindow);
 
             if (!accountId) throw createError(422, 'account_id is required');
             if (!Number.isFinite(stake) || stake < 0.35) throw createError(422, 'stake must be at least 0.35');
@@ -186,6 +187,7 @@ module.exports = {
                         recoveryStartStake,
                         strategy,
                         hedgeMinProfitPct,
+                        hedgeSameWindow,
                         lastRecoveryStake: 0,
                         // A fresh start owes nothing and has no market to avoid.
                         lastSymbol: '',
