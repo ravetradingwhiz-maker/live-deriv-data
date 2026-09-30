@@ -60,6 +60,7 @@ const AdminPrinter = () => {
   const [recoveryMultiplier, setRecoveryMultiplier] = useState("2");
   const [recoveryStartStake, setRecoveryStartStake] = useState("1");
   const [strategy, setStrategy] = useState<PrinterStrategy>("differs");
+  const [hedgeMinProfit, setHedgeMinProfit] = useState("150");
   const [showHistory, setShowHistory] = useState(false);
 
   const countdown = useCountdown(session?.active ? session.nextHourAt : null);
@@ -98,6 +99,7 @@ const AdminPrinter = () => {
     setRecoveryMultiplier(String(session.recoveryMultiplier ?? 2));
     setRecoveryStartStake(String(session.recoveryStartStake ?? 1));
     setStrategy(session.strategy ?? "differs");
+    setHedgeMinProfit(String(session.hedgeMinProfitPct ?? 150));
 
     if (!session.hasToken) return;
     resolvePrinterAccounts(loginids)
@@ -164,6 +166,7 @@ const AdminPrinter = () => {
         recoveryMultiplier: Number(recoveryMultiplier) || 2,
         recoveryStartStake: Number(recoveryStartStake) || 1,
         strategy,
+        hedgeMinProfitPct: Number(hedgeMinProfit) || 150,
       });
       setSession(next);
       setToken("");
@@ -474,12 +477,28 @@ const AdminPrinter = () => {
                   >
                     <option value="differs">Differs</option>
                     <option value="even">Even</option>
+                    <option value="hedge">Ends Between / Ends Outside</option>
                   </select>
                 </label>
 
+                {strategy === "hedge" && (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                    Two legs per round on their own barriers, {`±`}2 minutes each, running
+                    continuously rather than to an hourly target. A move that lands between the two
+                    barrier bands loses both legs — measured at roughly a quarter of rounds, costing
+                    twice the stake. Recovery, hourly target and the two-odd wait do not apply.
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field
-                    label={strategy === "even" ? "Even stake" : "Differs stake"}
+                    label={
+                      strategy === "hedge"
+                        ? "Stake per leg"
+                        : strategy === "even"
+                          ? "Even stake"
+                          : "Differs stake"
+                    }
                     value={stake}
                     onChange={setStake}
                     placeholder="1"
@@ -502,6 +521,14 @@ const AdminPrinter = () => {
                     onChange={setTakeProfit}
                     placeholder="off"
                   />
+                  {strategy === "hedge" && (
+                    <Field
+                      label="Min profit per leg (%)"
+                      value={hedgeMinProfit}
+                      onChange={setHedgeMinProfit}
+                      placeholder="150"
+                    />
+                  )}
                   <Field
                     label="Recovery start stake"
                     value={recoveryStartStake}

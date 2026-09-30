@@ -59,6 +59,8 @@ export interface PrinterSession {
     recoveryStartStake: number;
     /** Which opening trade the session makes. Recovery is the same either way. */
     strategy: PrinterStrategy;
+    /** hedge only: the profit target each leg is priced against. */
+    hedgeMinProfitPct: number;
     /** Market of the last filled round — the next one skips it. */
     lastSymbol: string;
     /** Ladder is holding until a market shows two odd digits in a row. */
@@ -82,10 +84,13 @@ export interface PrinterSession {
  *
  *   differs — scan for the rarest digit, buy Differs on it
  *   even    — buy Even immediately, no scan and nothing to wait for
+ *   hedge   — Ends Between and Ends Outside together, on their own barriers
  *
- * A loss puts either into the same recovery ladder.
+ * differs and even share the recovery ladder on a loss. hedge does not: it runs
+ * continuously rather than to an hourly target, and has three outcomes rather
+ * than two — there is a band of movement where BOTH its legs lose.
  */
-export type PrinterStrategy = 'differs' | 'even';
+export type PrinterStrategy = 'differs' | 'even' | 'hedge';
 
 export interface StartParams {
     /** Omit to reuse the token already stored server-side. */
@@ -102,6 +107,8 @@ export interface StartParams {
     recoveryMultiplier?: number;
     /** Opening trade. Fixed for the session. Defaults to 'differs'. */
     strategy?: PrinterStrategy;
+    /** hedge only: profit each leg must be quoted at, as % of stake. Defaults to 150. */
+    hedgeMinProfitPct?: number;
 }
 
 const json = async (res: Response) => {

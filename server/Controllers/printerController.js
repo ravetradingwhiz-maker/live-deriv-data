@@ -143,13 +143,18 @@ module.exports = {
             // Fixed for the life of the session: changing the opening trade
             // halfway would leave a ladder that began under one strategy being
             // paid off under the other.
-            const strategy = req.body?.strategy === 'even' ? 'even' : 'differs';
+            const STRATEGIES = ['differs', 'even', 'hedge'];
+            const strategy = STRATEGIES.includes(req.body?.strategy) ? req.body.strategy : 'differs';
+            const hedgeMinProfitPct = Number(req.body?.hedgeMinProfitPct) || 150;
 
             if (!accountId) throw createError(422, 'account_id is required');
             if (!Number.isFinite(stake) || stake < 0.35) throw createError(422, 'stake must be at least 0.35');
             if (recoveryStartStake < 0.35) throw createError(422, 'recoveryStartStake must be at least 0.35');
-            if (req.body?.strategy && !['differs', 'even'].includes(req.body.strategy)) {
-                throw createError(422, 'strategy must be differs or even');
+            if (req.body?.strategy && !STRATEGIES.includes(req.body.strategy)) {
+                throw createError(422, `strategy must be one of: ${STRATEGIES.join(', ')}`);
+            }
+            if (strategy === 'hedge' && (hedgeMinProfitPct < 1 || hedgeMinProfitPct > 500)) {
+                throw createError(422, 'hedgeMinProfitPct must be between 1 and 500');
             }
 
             const appId = getAppId();
@@ -180,6 +185,7 @@ module.exports = {
                         recoveryMultiplier,
                         recoveryStartStake,
                         strategy,
+                        hedgeMinProfitPct,
                         lastRecoveryStake: 0,
                         // A fresh start owes nothing and has no market to avoid.
                         lastSymbol: '',

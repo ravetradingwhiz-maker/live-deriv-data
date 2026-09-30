@@ -43,7 +43,7 @@
 
 const PrinterSession = require('../Models/PrinterSession');
 const { decryptToken } = require('./printerCrypto');
-const { SYMBOLS, fetchTickHistory, fetchBalance, purchaseContract } = require('./printerDeriv');
+const { SYMBOLS, fetchTickHistory, fetchBalance, purchaseContract, priceContracts } = require('./printerDeriv');
 
 const TICK_MS = 15 * 1000; // the hour is worked in rounds, so the loop runs faster
 const TICK_COUNT = 200; // only used to confirm a market is live before trading it
@@ -150,6 +150,138 @@ const scanForEven = ticksBySymbol => usableMarkets(ticksBySymbol)[0] ?? null;
 
 /** Opening round for the Even strategy: one Even contract at the base stake. */
 const evenLegs = (symbol, stake) => [digitLeg(symbol, stake, 'DIGITEVEN')];
+
+/* ── Hedge: Ends Between against Ends Outside ─────────────────────────────────
+ *
+ * Two contracts on the same market, each on its OWN barriers, each quoted to
+ * pay at least the session's target. That is what makes both legs profitable
+ * to look at — and it is also why they are not complementary.
+ *
+ * The Between window sits inside the Outside window, so there are three
+ * outcomes, not two:
+ *
+ *     exit inside the narrow window   -> Between pays, Outside loses
+ *     exit outside the wide window    -> Outside pays, Between loses
+ *     exit between the two windows    -> BOTH lose, the whole round is gone
+ *
+ * Measured on real ticks, that third band is where roughly a quarter of
+ * two-minute moves land, and it costs twice the stake when it does. The
+ * strategy is offered because it was asked for; the arithmetic is recorded here
+ * because nothing in the round itself reveals it.
+ *
+ * Barriers are chosen to make that band as narrow as the target allows: the
+ * WIDEST Between and the NARROWEST Outside that both still meet it.
+ */
+
+/** Two minutes is Deriv's floor for these contracts, and the shortest gap. */
+const HEDGE_MINUTES = 2;
+
+/**
+ * Candidate barrier half-widths, as multiples of what the market typically
+ * moves in two minutes.
+ *
+ * Not fixed prices: these symbols sit at wildly different levels and move by
+ * wildly different amounts, so one absolute ladder would be far too wide on one
+ * market and far too narrow on the next. Scaling by the market's own movement
+ * makes the same ladder meaningful everywhere.
+ *
+ * Closely spaced on purpose. The gap between the chosen pair IS the band where
+ * both legs lose, so a coarse ladder does real damage — the first version
+ * stepped by a third each time and left a band covering a third of all
+ * outcomes. Twenty rungs is forty quotes a round, which prices in about two
+ * seconds against a two-minute contract.
+ */
+const HEDGE_SPANS = [
+    0.2, 0.25, 0.3, 0.35, 0.42, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.15, 1.3, 1.5, 1.7, 1.95, 2.2, 2.5, 2.9, 3.4,
+];
+
+/** The printer trades only 1-second indices, so two minutes is 120 ticks. */
+const HEDGE_TICKS = 120;
+
+/**
+ * How far this market typically travels in a two-minute contract.
+ *
+ * Taken from the standard deviation of one-tick moves scaled by the square root
+ * of the number of ticks — the usual random-walk scaling, and these indices are
+ * random walks by construction.
+ */
+const twoMinuteScale = prices => {
+    if (!Array.isArray(prices) || prices.length < 30) return 0;
+    let sum = 0;
+    for (let i = 1; i < prices.length; i++) sum += (prices[i] - prices[i - 1]) ** 2;
+    const tickSd = Math.sqrt(sum / (prices.length - 1));
+    return tickSd * Math.sqrt(HEDGE_TICKS);
+};
+
+/** A two-minute contract cannot be read off the balance after twelve seconds. */
+const HEDGE_SETTLE_MS = HEDGE_MINUTES * 60 * 1000 + 20 * 1000;
+
+/**
+ * `decimals` is the market's own pip width, and it is not optional: Deriv
+ * rejects a barrier carrying more decimal places than the symbol quotes, and
+ * the limit differs between them — 1HZ10V takes two, R_10 takes three. A
+ * barrier formatted to a fixed width prices fine on one market and is refused
+ * outright on the next.
+ */
+const hedgeLegs = (symbol, stake, betweenHalf, outsideHalf, decimals) => {
+    const leg = (contract_type, half) => {
+        const offset = half.toFixed(decimals);
+        return {
+            contract_type,
+            barrier: `+${offset}`,
+            params: {
+                amount: Number(stake.toFixed(2)),
+                basis: 'stake',
+                contract_type,
+                duration: HEDGE_MINUTES,
+                duration_unit: 'm',
+                underlying_symbol: symbol,
+                barrier: `+${offset}`,
+                barrier2: `-${offset}`,
+            },
+        };
+    };
+    return [leg('EXPIRYRANGE', betweenHalf), leg('EXPIRYMISS', outsideHalf)];
+};
+
+/**
+ * Price every candidate on one market and pick the pair with the narrowest dead
+ * band that still meets the target. Null when no pair qualifies — the target is
+ * simply not available at the moment, so the session holds rather than buying
+ * something that does not pay what was asked.
+ */
+const chooseHedge = async (symbol, prices, stake, minProfitPct) => {
+    const scale = twoMinuteScale(prices);
+    if (!scale) return null;
+
+    const need = stake * (1 + minProfitPct / 100);
+    // Rounded to the market's own quoting precision — see hedgeLegs. Duplicates
+    // are dropped, since a coarse market can collapse several spans onto one.
+    const decimals = pipSizeOf(prices);
+    const halves = [
+        ...new Set(HEDGE_SPANS.map(span => Number((scale * span).toFixed(decimals))).filter(h => h > 0)),
+    ];
+    const candidates = [];
+    for (const half of halves) {
+        candidates.push({ key: `B${half}`, contract_type: 'EXPIRYRANGE', symbol, half, minutes: HEDGE_MINUTES });
+        candidates.push({ key: `O${half}`, contract_type: 'EXPIRYMISS', symbol, half, minutes: HEDGE_MINUTES });
+    }
+    const quotes = await priceContracts(candidates, stake);
+
+    // Between pays less as the window widens, Outside pays more — so the widest
+    // qualifying Between and the narrowest qualifying Outside sit closest
+    // together, which is the smallest dead band the target permits.
+    let between = null;
+    let outside = null;
+    for (const half of halves) {
+        const b = quotes[`B${half}`];
+        const o = quotes[`O${half}`];
+        if (b !== undefined && b >= need) between = { half, payout: b };
+        if (o !== undefined && o >= need && !outside) outside = { half, payout: o };
+    }
+    if (!between || !outside || between.half >= outside.half) return null;
+    return { symbol, between, outside, decimals };
+};
 
 /** Are the two most recent digits both odd? History is oldest first. */
 const endsWithTwoOdd = digits =>
@@ -270,6 +402,9 @@ const recoveryStartOf = session => {
  * only 0.64 x stake was ever at risk. Differs has no such floor.
  */
 const projectedWorstCaseLoss = (session, isRecovery) => {
+    // A hedge buys two legs and the dead band loses both, so the exposure is
+    // twice the stake — not once, as every other round here.
+    if (session.strategy === 'hedge') return Number((session.stake * 2).toFixed(2));
     if (isRecovery) {
         const last = Number(session.lastRecoveryStake) || 0;
         const multiplier = Number(session.recoveryMultiplier) || 2;
@@ -300,7 +435,7 @@ const wouldBreachStopLoss = (session, isRecovery) => {
  * `barrier` is the digit the scan chose for this market; recovery rounds are
  * Even and ignore it.
  */
-const placeRound = async (session, symbol, barrier) => {
+const placeRound = async (session, symbol, barrier, hedge = null) => {
     // A deficit carried from earlier losing rounds turns this hour into a
     // recovery round instead of a normal Differs round.
     const deficit = Number(session.deficit) || 0;
@@ -327,7 +462,9 @@ const placeRound = async (session, symbol, barrier) => {
     // A round is a single contract either way now, but the shape is kept so the
     // per-call catch still turns a network failure into a recorded failed round
     // rather than an exception that leaves the in-flight flag set.
-    const legs = isRecovery
+    const legs = hedge
+        ? hedgeLegs(symbol, stake, hedge.between.half, hedge.outside.half, hedge.decimals)
+        : isRecovery
         ? recoveryLegs(
               symbol,
               recoveryStartOf(session),
@@ -367,16 +504,22 @@ const placeRound = async (session, symbol, barrier) => {
         hourKey: session.lastHourKey,
         symbol,
         stake: roundStake,
-        mode: isRecovery ? 'recovery' : 'differs',
+        mode: hedge ? 'hedge' : isRecovery ? 'recovery' : 'differs',
+        // Two minutes for a hedge, the usual few seconds for a digit round.
+        settleAfterMs: hedge ? HEDGE_SETTLE_MS : SETTLE_AFTER_MS,
         legs: placed,
         balanceBefore: balanceBefore ?? 0,
         profit: anyFilled ? null : 0,
         status: anyFilled ? 'open' : 'failed',
         reason: !anyFilled
             ? placed.map(l => l.error).filter(Boolean).join('; ') || 'Purchase failed'
-            : isRecovery
-              ? `Even ${roundStake} (martingale, ${deficit.toFixed(2)} owed)`
-              : `Differs ${barrier} at ${roundStake}`,
+            : hedge
+              ? `Hedge ±${hedge.between.half} / ±${hedge.outside.half} — pays ` +
+                `${hedge.between.payout.toFixed(2)} or ${hedge.outside.payout.toFixed(2)}, ` +
+                `both lose if it moves ${hedge.between.half}–${hedge.outside.half}`
+              : isRecovery
+                ? `Even ${roundStake} (martingale, ${deficit.toFixed(2)} owed)`
+                : `Differs ${barrier} at ${roundStake}`,
         placedAt: new Date(),
         settledAt: anyFilled ? null : new Date(),
     };
@@ -415,7 +558,10 @@ const placeRound = async (session, symbol, barrier) => {
  */
 const settleOpenRounds = async session => {
     const pending = session.trades.filter(
-        t => t.status === 'open' && Date.now() - new Date(t.placedAt).getTime() >= SETTLE_AFTER_MS
+        t =>
+            t.status === 'open' &&
+            // Rounds written before hedging existed carry no wait of their own.
+            Date.now() - new Date(t.placedAt).getTime() >= (Number(t.settleAfterMs) || SETTLE_AFTER_MS)
     );
     if (!pending.length) return false;
 
@@ -448,6 +594,11 @@ const settleOpenRounds = async session => {
 
         // A losing round adds to the deficit; a winning one pays it down. While
         // the deficit is above zero the next round is a martingaled Even.
+        /* The deficit ladder belongs to the digit strategies. A hedge has its own
+           shape — two legs, three outcomes — and martingaling Even off the back
+           of one would mix two unrelated systems. */
+        if (session.strategy === 'hedge') continue;
+
         const wasInRecovery = (Number(session.deficit) || 0) > 0;
         const deficit = (Number(session.deficit) || 0) - profit;
         session.deficit = Math.max(0, Number(deficit.toFixed(2)));
@@ -548,8 +699,22 @@ const tick = async () => {
         const candidates = [];
         for (const session of sessions) {
             if (!session.active) continue;
-            if (!(await rollHour(session, hourKey))) continue; // hour already finished
-            if (await checkHourFinished(session)) continue; // just finished it
+
+            /* Hedge runs continuously: one round settles, the next opens. The
+               hourly target is what makes the digit strategies stop and idle
+               until the clock turns over, and this one is not meant to. The
+               hour is still rolled so the tally on screen keeps moving, but
+               neither the target nor hourDone gates a round.
+
+               The session's own brakes still apply — take profit and stop loss
+               are checked on every settle, and they are what ends this one. */
+            if (session.strategy === 'hedge') {
+                await rollHour(session, hourKey);
+            } else {
+                if (!(await rollHour(session, hourKey))) continue; // hour already finished
+                if (await checkHourFinished(session)) continue; // just finished it
+            }
+
             if (session.roundInFlight) continue; // previous round still settling
             candidates.push(session);
         }
@@ -560,6 +725,36 @@ const tick = async () => {
         const ticks = await fetchTickHistory(SYMBOLS, TICK_COUNT);
 
         for (const session of candidates) {
+            /* Hedge picks its own market and prices its own barriers, so it is
+               routed out before the digit scans. A null pick means no barrier
+               pair paid what was asked — hold and look again next pass rather
+               than buy something that does not meet the target. */
+            if (session.strategy === 'hedge') {
+                const markets = usableMarkets(ticks);
+                if (!markets.length) continue;
+                const market = markets[0];
+                const chosen = await chooseHedge(
+                    market.symbol,
+                    ticks[market.symbol],
+                    session.stake,
+                    Number(session.hedgeMinProfitPct) || 150
+                );
+                if (!chosen) continue;
+
+                const claimedHedge = await PrinterSession.findOneAndUpdate(
+                    { _id: session._id, active: true, roundInFlight: false },
+                    { $set: { roundInFlight: true }, $inc: { hourRounds: 1 } },
+                    { new: true }
+                );
+                if (!claimedHedge) continue;
+
+                await placeRound(claimedHedge, chosen.symbol, null, chosen).catch(async err => {
+                    console.error(`[Printer] hedge round failed for ${claimedHedge.loginid}:`, err.message);
+                    await PrinterSession.updateOne({ _id: claimedHedge._id }, { $set: { roundInFlight: false } });
+                });
+                continue;
+            }
+
             // Selection is per session: each carries its own last-traded market
             // to skip, and its own ladder state.
             const isRecovery = inRecovery(session);
