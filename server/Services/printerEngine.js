@@ -45,7 +45,17 @@ const PrinterSession = require('../Models/PrinterSession');
 const { decryptToken } = require('./printerCrypto');
 const { SYMBOLS, fetchTickHistory, fetchBalance, purchaseContract, priceContracts } = require('./printerDeriv');
 
-const TICK_MS = 15 * 1000; // the hour is worked in rounds, so the loop runs faster
+/**
+ * How often the loop looks for work.
+ *
+ * This is dead time, not pacing: a round settles and then waits for the next
+ * pass before the following one is placed. At fifteen seconds that idle stretch
+ * was longer than a 1-tick round takes to settle, so a session spent more of
+ * each cycle waiting than trading. Five keeps the gap short without turning the
+ * balance check into a poll — the pass exits immediately when no session is
+ * ready, and the tick history is only fetched when one is.
+ */
+const TICK_MS = 5 * 1000;
 const TICK_COUNT = 200; // only used to confirm a market is live before trading it
 const SETTLE_AFTER_MS = 12 * 1000; // 1-tick legs settle in seconds; this is slack
 const MAX_TRADES_KEPT = 200;
@@ -223,12 +233,28 @@ const HEDGE_SETTLE_MS = HEDGE_MINUTES * 60 * 1000 + 20 * 1000;
  * barrier formatted to a fixed width prices fine on one market and is refused
  * outright on the next.
  */
-const hedgeLegs = (symbol, stake, betweenHalf, outsideHalf, decimals) => {
-    const leg = (contract_type, half) => {
-        const offset = half.toFixed(decimals);
+/**
+ * The two legs, on ABSOLUTE barrier prices rather than offsets.
+ *
+ * This is the difference between a hedge that works and one that does not. A
+ * relative barrier like `+1.34` is resolved by Deriv against the spot at the
+ * moment IT processes that request — and the two legs are two separate
+ * requests. Whatever the market did in between shifted the second leg's window
+ * away from the first, so a round meant to have one window had two, and the
+ * exit could fall outside one while inside the other. Both legs then lose,
+ * which is exactly what "one is supposed to be guaranteed" was meant to rule
+ * out. Pinning both to the same prices removes that entirely.
+ *
+ * `decimals` is the market's own pip width; Deriv rejects a barrier carrying
+ * more places than the symbol quotes, and the limit differs between them.
+ */
+const hedgeLegs = (symbol, stake, bounds, decimals) => {
+    const leg = (contract_type, { hi, lo }) => {
+        const barrier = hi.toFixed(decimals);
+        const barrier2 = lo.toFixed(decimals);
         return {
             contract_type,
-            barrier: `+${offset}`,
+            barrier: `${barrier}/${barrier2}`,
             params: {
                 amount: Number(stake.toFixed(2)),
                 basis: 'stake',
@@ -236,12 +262,12 @@ const hedgeLegs = (symbol, stake, betweenHalf, outsideHalf, decimals) => {
                 duration: HEDGE_MINUTES,
                 duration_unit: 'm',
                 underlying_symbol: symbol,
-                barrier: `+${offset}`,
-                barrier2: `-${offset}`,
+                barrier,
+                barrier2,
             },
         };
     };
-    return [leg('EXPIRYRANGE', betweenHalf), leg('EXPIRYMISS', outsideHalf)];
+    return [leg('EXPIRYRANGE', bounds.between), leg('EXPIRYMISS', bounds.outside)];
 };
 
 /**
@@ -253,6 +279,13 @@ const hedgeLegs = (symbol, stake, betweenHalf, outsideHalf, decimals) => {
 const chooseHedge = async (symbol, prices, stake, minProfitPct, sameWindow = false) => {
     const scale = twoMinuteScale(prices);
     if (!scale) return null;
+
+    /* Barriers are sent as prices, so they are anchored here, once, and both
+       legs carry the same numbers. The spot will have moved a little by the time
+       the purchase lands — that only shifts the window slightly off centre, and
+       costs nothing, where a drifting window costs the whole guarantee. */
+    const spot = Number(prices[prices.length - 1]);
+    if (!Number.isFinite(spot)) return null;
 
     const need = stake * (1 + minProfitPct / 100);
     // Rounded to the market's own quoting precision — see hedgeLegs. Duplicates
@@ -283,10 +316,14 @@ const chooseHedge = async (symbol, prices, stake, minProfitPct, sameWindow = fal
             if (!best || worst > best.worst) best = { half, b, o, worst };
         }
         if (!best) return null;
+        // One window, both legs, expressed as prices so neither can drift.
+        const window = { hi: spot + best.half, lo: spot - best.half };
         return {
             symbol,
             decimals,
+            spot,
             sameWindow: true,
+            bounds: { between: window, outside: window },
             between: { half: best.half, payout: best.b },
             outside: { half: best.half, payout: best.o },
             guaranteed: Number((best.worst - stake * 2).toFixed(2)),
@@ -305,7 +342,17 @@ const chooseHedge = async (symbol, prices, stake, minProfitPct, sameWindow = fal
         if (o !== undefined && o >= need && !outside) outside = { half, payout: o };
     }
     if (!between || !outside || between.half >= outside.half) return null;
-    return { symbol, between, outside, decimals };
+    return {
+        symbol,
+        decimals,
+        spot,
+        between,
+        outside,
+        bounds: {
+            between: { hi: spot + between.half, lo: spot - between.half },
+            outside: { hi: spot + outside.half, lo: spot - outside.half },
+        },
+    };
 };
 
 /** Are the two most recent digits both odd? History is oldest first. */
@@ -488,7 +535,7 @@ const placeRound = async (session, symbol, barrier, hedge = null) => {
     // per-call catch still turns a network failure into a recorded failed round
     // rather than an exception that leaves the in-flight flag set.
     const legs = hedge
-        ? hedgeLegs(symbol, stake, hedge.between.half, hedge.outside.half, hedge.decimals)
+        ? hedgeLegs(symbol, stake, hedge.bounds, hedge.decimals)
         : isRecovery
         ? recoveryLegs(
               symbol,

@@ -677,8 +677,16 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
                     if (l.contract_type === "DIGITODD") return `Odd @ ${t.stake}`;
                     if (l.contract_type === "DIGITDIFF")
                       return `Differs ${l.barrier} @ ${t.stake}`;
-                    // Over/Under only appear in rounds from the retired pair strategy.
-                    return `${l.contract_type === "DIGITOVER" ? "Over" : "Under"} ${l.barrier}`;
+                    if (l.contract_type === "EXPIRYRANGE") return `Ends Between ${l.barrier}`;
+                    if (l.contract_type === "EXPIRYMISS") return `Ends Outside ${l.barrier}`;
+                    if (l.contract_type === "DIGITOVER") return `Over ${l.barrier}`;
+                    // Under only appears in rounds from the retired pair strategy.
+                    if (l.contract_type === "DIGITUNDER") return `Under ${l.barrier}`;
+                    // Anything unrecognised names itself rather than being
+                    // mislabelled — the old fallback printed every non-Over
+                    // contract as "Under", so a hedge round read as two
+                    // identical legs when it was nothing of the kind.
+                    return `${l.contract_type} ${l.barrier}`;
                   })
                   .join(" + ")}
               </td>
