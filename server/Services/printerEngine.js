@@ -563,9 +563,19 @@ const placeRound = async (session, symbol, barrier, hedge = null) => {
        every other strategy already takes, and a round placed a few milliseconds
        apart is better than a round not placed at all. */
     let results = null;
-    if (hedge) {
+    /* Only a one-window hedge needs the socket. Its two legs must start together
+       or the guarantee that one of them wins does not hold. A three-outcome
+       hedge puts its legs on deliberately different windows, so a few
+       milliseconds between them changes nothing worth the extra round trip —
+       and the digit strategies are a single contract, with nothing to align. */
+    if (hedge?.sameWindow) {
         results = await purchaseOverSocket({ token, accountId, currency, legs }).catch(() => null);
-        if (!results) console.warn(`[Printer] ${session.loginid}: buy socket unavailable, using REST`);
+        if (!results) {
+            console.warn(
+                `[Printer] ${session.loginid}: buy socket unavailable, using REST — ` +
+                    'the two legs will start milliseconds apart, so a one-window round can still lose both'
+            );
+        }
     }
 
     if (!results) {

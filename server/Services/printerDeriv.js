@@ -306,7 +306,11 @@ const purchaseOverSocket = ({ token, accountId, currency, legs, timeoutMs = 2000
                 // Authorisation is the gate: without it nothing can be bought,
                 // and falling back to REST is better than failing the round.
                 if (msg.error) {
-                    console.error('[Printer] Buy socket authorize failed:', msg.error.message);
+                    // Code as well as message: which one it is decides whether
+                    // the token is the wrong kind or simply stale.
+                    console.error(
+                        `[Printer] Buy socket authorize failed [${msg.error.code}]: ${msg.error.message}`
+                    );
                     return finish(null);
                 }
                 /* Every leg written in one pass. No await between them, so they
