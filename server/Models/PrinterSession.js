@@ -25,16 +25,7 @@ const TradeSchema = new mongoose.Schema(
         // 'differs' = one Digit Differs contract, 'recovery' = one martingaled Even.
         // 'pair' is the retired Over 2 / Under 7 round, kept so rounds already on
         // file still load.
-        mode: { type: String, enum: ['differs', 'recovery', 'pair', 'hedge'], default: 'differs' },
-        /**
-         * How long to wait before reading this round's profit off the balance.
-         *
-         * Digit rounds are one tick and settle in seconds; a hedge round is two
-         * minutes. Held per round rather than as one constant, so a round that
-         * was placed under one strategy still settles correctly if the session
-         * is later restarted under another.
-         */
-        settleAfterMs: { type: Number, default: null },
+        mode: { type: String, enum: ['differs', 'recovery', 'pair'], default: 'differs' },
         legs: { type: [LegSchema], default: [] },
         balanceBefore: { type: Number, default: 0 },
         profit: { type: Number, default: null },
@@ -74,7 +65,7 @@ const PrinterSessionSchema = new mongoose.Schema(
          * recovery ladder. Fixed when the session starts, and defaulted so
          * sessions written before this keep the behaviour they had.
          */
-        strategy: { type: String, enum: ['differs', 'even', 'hedge'], default: 'differs' },
+        strategy: { type: String, enum: ['differs', 'even'], default: 'differs' },
         /**
          * Even only: the session has been in recovery this hour and stays there.
          *
@@ -85,34 +76,6 @@ const PrinterSessionSchema = new mongoose.Schema(
          * rolls, so each hour starts on the opening trade again.
          */
         recoveryLatched: { type: Boolean, default: false },
-
-        /**
-         * Hedge only: the profit each leg must be quoted at before a round is
-         * placed, as a percentage of the stake.
-         *
-         * Higher is not better. Both legs are priced to their own barriers, and
-         * pushing both payouts up widens the gap between those barriers — which
-         * is the band where the exit spot loses BOTH legs. 150 means each leg
-         * must pay at least 2.5x.
-         */
-        hedgeMinProfitPct: { type: Number, default: 150 },
-
-        /**
-         * Hedge only: put both legs on the SAME barriers.
-         *
-         * Then the two contracts are genuinely complementary — the exit spot is
-         * either inside the window or outside it — so exactly one always wins
-         * and the band where both lose cannot exist.
-         *
-         * The cost of removing that band is that it removes the upside with it.
-         * Deriv prices the pair so the two implied probabilities sum to about
-         * 1.024, which means the winning leg always pays back slightly less than
-         * the two stakes together. This mode has one outcome, not two: a small
-         * certain loss. hedgeMinProfitPct does not apply — no barrier makes both
-         * legs pay 150%, so the round instead takes the window whose worst leg
-         * pays the most.
-         */
-        hedgeSameWindow: { type: Boolean, default: false },
         // True while a freshly opened recovery ladder still owes its first rung
         // the two-consecutive-odd-digits confirmation. Cleared once that rung is
         // placed, so every retry after it goes straight in.

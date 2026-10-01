@@ -60,8 +60,6 @@ const AdminPrinter = () => {
   const [recoveryMultiplier, setRecoveryMultiplier] = useState("2");
   const [recoveryStartStake, setRecoveryStartStake] = useState("1");
   const [strategy, setStrategy] = useState<PrinterStrategy>("differs");
-  const [hedgeMinProfit, setHedgeMinProfit] = useState("150");
-  const [hedgeSameWindow, setHedgeSameWindow] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
   const countdown = useCountdown(session?.active ? session.nextHourAt : null);
@@ -100,8 +98,6 @@ const AdminPrinter = () => {
     setRecoveryMultiplier(String(session.recoveryMultiplier ?? 2));
     setRecoveryStartStake(String(session.recoveryStartStake ?? 1));
     setStrategy(session.strategy ?? "differs");
-    setHedgeMinProfit(String(session.hedgeMinProfitPct ?? 150));
-    setHedgeSameWindow(Boolean(session.hedgeSameWindow));
 
     if (!session.hasToken) return;
     resolvePrinterAccounts(loginids)
@@ -168,8 +164,6 @@ const AdminPrinter = () => {
         recoveryMultiplier: Number(recoveryMultiplier) || 2,
         recoveryStartStake: Number(recoveryStartStake) || 1,
         strategy,
-        hedgeMinProfitPct: Number(hedgeMinProfit) || 150,
-        hedgeSameWindow,
       });
       setSession(next);
       setToken("");
@@ -480,51 +474,12 @@ const AdminPrinter = () => {
                   >
                     <option value="differs">Differs</option>
                     <option value="even">Even</option>
-                    <option value="hedge">Ends Between / Ends Outside</option>
                   </select>
                 </label>
 
-                {strategy === "hedge" && (
-                  <label className="flex items-start gap-2 text-xs text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={hedgeSameWindow}
-                      onChange={e => setHedgeSameWindow(e.target.checked)}
-                      disabled={session?.active}
-                      className="mt-0.5"
-                    />
-                    <span>
-                      <span className="font-semibold text-white">Both legs on one window</span> — two
-                      outcomes instead of three. The winning leg pays back slightly less than the two
-                      stakes, so rounds land near even either way. Min profit per leg is ignored: no
-                      window makes both legs reach it.
-                      <br />
-                      Both legs share the same barriers, but each contract expires two minutes from
-                      its own purchase and the two are placed milliseconds apart — so a price sitting
-                      right on a barrier can still resolve differently for each, and a round can
-                      occasionally lose or win both.
-                    </span>
-                  </label>
-                )}
-
-                {strategy === "hedge" && !hedgeSameWindow && (
-                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-                    Two legs per round on their own barriers, {`±`}2 minutes each, running
-                    continuously rather than to an hourly target. A move that lands between the two
-                    barrier bands loses both legs — measured at roughly a quarter of rounds, costing
-                    twice the stake. Recovery, hourly target and the two-odd wait do not apply.
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field
-                    label={
-                      strategy === "hedge"
-                        ? "Stake per leg"
-                        : strategy === "even"
-                          ? "Even stake"
-                          : "Differs stake"
-                    }
+                    label={strategy === "even" ? "Even stake" : "Differs stake"}
                     value={stake}
                     onChange={setStake}
                     placeholder="1"
@@ -547,14 +502,6 @@ const AdminPrinter = () => {
                     onChange={setTakeProfit}
                     placeholder="off"
                   />
-                  {strategy === "hedge" && !hedgeSameWindow && (
-                    <Field
-                      label="Min profit per leg (%)"
-                      value={hedgeMinProfit}
-                      onChange={setHedgeMinProfit}
-                      placeholder="150"
-                    />
-                  )}
                   <Field
                     label="Recovery start stake"
                     value={recoveryStartStake}
@@ -682,15 +629,12 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
                     if (l.contract_type === "DIGITODD") return `Odd @ ${t.stake}`;
                     if (l.contract_type === "DIGITDIFF")
                       return `Differs ${l.barrier} @ ${t.stake}`;
-                    if (l.contract_type === "EXPIRYRANGE") return `Ends Between ${l.barrier}`;
-                    if (l.contract_type === "EXPIRYMISS") return `Ends Outside ${l.barrier}`;
                     if (l.contract_type === "DIGITOVER") return `Over ${l.barrier}`;
-                    // Under only appears in rounds from the retired pair strategy.
+                    // Over/Under only appear in rounds from the retired pair strategy.
                     if (l.contract_type === "DIGITUNDER") return `Under ${l.barrier}`;
-                    // Anything unrecognised names itself rather than being
-                    // mislabelled — the old fallback printed every non-Over
-                    // contract as "Under", so a hedge round read as two
-                    // identical legs when it was nothing of the kind.
+                    // Anything else names itself rather than being mislabelled:
+                    // the old fallback printed every non-Over contract as
+                    // "Under", which made unrelated contracts look identical.
                     return `${l.contract_type} ${l.barrier}`;
                   })
                   .join(" + ")}
