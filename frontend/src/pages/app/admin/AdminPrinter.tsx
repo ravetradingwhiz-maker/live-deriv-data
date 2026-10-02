@@ -213,7 +213,7 @@ const AdminPrinter = () => {
       <h1 className="flex items-center gap-2 text-lg font-bold text-white">
         <Printer size={20} className="text-cyan-400" /> Printer
       </h1>
-      <p className="text-sm text-slate-400">
+      {/* <p className="text-sm text-slate-400">
         Scans the five 1-second markets each round and buys Digit Differs on
         the one whose rarest digit is rarest of all, never reusing the market it
         just traded. Nine rounds in ten win, but the win is small and a loss
@@ -223,7 +223,7 @@ const AdminPrinter = () => {
         shows two odd digits in a row and then placed immediately. If that one
         loses, the retries martingale straight through without waiting again. It
         runs on the server, so it keeps trading after you close this page.
-      </p>
+      </p> */}
 
       {error && (
         <div className="card flex items-start gap-2 border-rose-500/40 text-sm text-rose-300">
