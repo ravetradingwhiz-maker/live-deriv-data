@@ -56,7 +56,15 @@ const { SYMBOLS, fetchTickHistory, fetchBalance, purchaseContract } = require('.
  * ready, and the tick history is only fetched when one is.
  */
 const TICK_MS = 5 * 1000;
-const TICK_COUNT = 200; // only used to confirm a market is live before trading it
+const TICK_COUNT = 200; // the window the Differs barrier scan ranks digits over
+/**
+ * How much history each pass pulls.
+ *
+ * Sized by the deepest reader, which is the recovery gate's even-dominance
+ * check. Everything else slices the tail it wants out of this, so widening it
+ * here does not change what Differs ranks.
+ */
+const HISTORY_COUNT = 500;
 const SETTLE_AFTER_MS = 12 * 1000; // 1-tick legs settle in seconds; this is slack
 const MAX_TRADES_KEPT = 200;
 const MIN_STAKE = 0.35; // Deriv's floor
@@ -140,7 +148,8 @@ const usableMarkets = (ticksBySymbol, excludeSymbol) => {
 const scanForDiffers = (ticksBySymbol, excludeSymbol) => {
     const scored = usableMarkets(ticksBySymbol, excludeSymbol).map(market => ({
         ...market,
-        ...rarestDigit(market.digits),
+        // The ranking window, not the whole history the pass now carries.
+        ...rarestDigit(market.digits.slice(-TICK_COUNT)),
     }));
     if (!scored.length) return null;
 
@@ -165,6 +174,37 @@ const evenLegs = (symbol, stake) => [digitLeg(symbol, stake, 'DIGITEVEN')];
 const endsWithTwoOdd = digits =>
     digits.length >= 2 && digits[digits.length - 1] % 2 === 1 && digits[digits.length - 2] % 2 === 1;
 
+/** How many ticks the even-dominance check reads. */
+const DOMINANCE_SAMPLE = 500;
+
+/**
+ * Share of the window that must be even before a recovery round is let in.
+ *
+ * Half means a plain majority — more evens than odds — which is what
+ * "dominating" asks for. Raise it to demand a clearer lean: over a 500-tick
+ * window the even share sits within about two points of 0.50 most of the time,
+ * so 0.52 is roughly a one-in-five pass and 0.54 a rare one.
+ */
+const MIN_EVEN_SHARE = 0.5;
+
+/**
+ * Fraction of the last DOMINANCE_SAMPLE digits that are even.
+ *
+ * Reads the tail of whatever history it is given, so a market returning fewer
+ * than the full window is measured on what it has rather than being failed for
+ * it — `usableMarkets` has already guaranteed a floor of MIN_SAMPLE.
+ */
+const evenShare = digits => {
+    const window = digits.slice(-DOMINANCE_SAMPLE);
+    if (!window.length) return 0;
+    let evens = 0;
+    for (const digit of window) if (digit % 2 === 0) evens += 1;
+    return evens / window.length;
+};
+
+/** Are evens dominating the recent stream? */
+const evensDominate = digits => evenShare(digits) > MIN_EVEN_SHARE;
+
 /**
  * Market for a recovery Even: the one the losing round was placed on.
  *
@@ -173,14 +213,18 @@ const endsWithTwoOdd = digits =>
  * so a ladder walked away from the loss and could end up spread across several
  * markets before it was paid off.
  *
- * The two-odd wait is therefore read on that market and no other. The first
- * rung holds until the pinned market itself ends on two odd digits; every rung
- * after it goes straight in. Null means hold and look again next pass — either
- * the market is not streaming enough history, or the wait is not satisfied yet.
+ * The wait is therefore read on that market and no other. The first rung holds
+ * until the pinned market both ends on two odd digits and shows evens
+ * dominating its last DOMINANCE_SAMPLE ticks; every rung after it goes straight
+ * in. Null means hold and look again next pass — either the market is not
+ * streaming enough history, or the wait is not satisfied yet.
  *
  * Pinning narrows the wait from "any of ten markets shows two odds" to "this
  * one does", so a first rung can sit for noticeably longer than it used to.
- * That is the intended trade: the ladder recovers where it lost.
+ * That is the intended trade: the ladder recovers where it lost. The dominance
+ * half narrows it again — both conditions must hold on the same pass, so a
+ * first rung can now wait through two-odd endings that arrive while the wider
+ * window is odd-leaning.
  */
 const scanForRecovery = (ticksBySymbol, pinnedSymbol, mustWaitForTwoOdd) => {
     const markets = usableMarkets(ticksBySymbol);
@@ -192,7 +236,13 @@ const scanForRecovery = (ticksBySymbol, pinnedSymbol, mustWaitForTwoOdd) => {
     const market = pinnedSymbol ? markets.find(m => m.symbol === pinnedSymbol) : markets[0];
     if (!market) return null;
 
-    if (mustWaitForTwoOdd && !endsWithTwoOdd(market.digits)) return null;
+    /* Both halves of the wait, on the pinned market: the two-odd ending that
+       was already here, and the wider read that evens are ahead over the last
+       few hundred ticks. */
+    if (mustWaitForTwoOdd) {
+        if (!endsWithTwoOdd(market.digits)) return null;
+        if (!evensDominate(market.digits)) return null;
+    }
     return market;
 };
 
@@ -568,7 +618,7 @@ const tick = async () => {
 
         // One fetch feeds every session's scan. The digit history is the same
         // for all of them; only the market each may use differs.
-        const ticks = await fetchTickHistory(SYMBOLS, TICK_COUNT);
+        const ticks = await fetchTickHistory(SYMBOLS, HISTORY_COUNT);
 
         for (const session of candidates) {
             // Selection is per session: each carries its own last-traded market
@@ -629,6 +679,8 @@ module.exports = {
     digitsOf,
     rarestDigit,
     endsWithTwoOdd,
+    evenShare,
+    evensDominate,
     scanForDiffers,
     scanForRecovery,
 };
