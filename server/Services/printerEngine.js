@@ -306,8 +306,13 @@ const differsLegs = (symbol, stake, barrier = DEFAULT_DIFFERS_BARRIER) => [
 /**
  * Recovery round: one Even contract, martingaled until it lands.
  *
- *   first attempt  → recoveryStartStake (its own setting, not the base stake)
- *   each retry     → previous recovery stake x multiplier
+ *   first attempt     → recoveryStartStake (its own setting, not the base stake)
+ *   retry after a loss → previous recovery stake x multiplier
+ *   retry after a win  → previous recovery stake, unchanged (Even only)
+ *
+ * The ladder climbs only on a loss. A rung that wins stays where it is until
+ * one loses, so a session that recovers at 24 keeps trading 24 rather than
+ * doubling into 48 off the back of a win.
  *
  * The opening rung is configured rather than derived. Differs stakes are sized
  * so one win banks the hour, which makes them far larger than the recovery
@@ -322,11 +327,26 @@ const differsLegs = (symbol, stake, barrier = DEFAULT_DIFFERS_BARRIER) => [
  * Uncapped by design — the ladder keeps escalating until a round wins or the
  * session stop-loss stops it.
  */
-const recoveryLegs = (symbol, startStake, lastRecoveryStake = 0, multiplier = 2) => {
-    const next = lastRecoveryStake > 0 ? lastRecoveryStake * multiplier : startStake;
+const recoveryLegs = (symbol, startStake, lastRecoveryStake = 0, multiplier = 2, holdStake = false) => {
+    const next =
+        lastRecoveryStake > 0
+            ? holdStake
+                ? lastRecoveryStake
+                : lastRecoveryStake * multiplier
+            : startStake;
     const stake = Math.max(MIN_STAKE, Number(next.toFixed(2)));
     return [digitLeg(symbol, stake, 'DIGITEVEN')];
 };
+
+/**
+ * Does the next recovery round hold its stake rather than climb?
+ *
+ * Even only, and only when the round before it won. One helper because the
+ * stake and the balance check both ask, and they must never disagree about how
+ * big the next round is.
+ */
+const holdsRecoveryStake = session =>
+    session.strategy === 'even' && Boolean(session.lastRecoveryWon);
 
 /** The configured opening rung, falling back to the old default. */
 const recoveryStartOf = session => {
@@ -345,7 +365,8 @@ const projectedWorstCaseLoss = (session, isRecovery) => {
     if (isRecovery) {
         const last = Number(session.lastRecoveryStake) || 0;
         const multiplier = Number(session.recoveryMultiplier) || 2;
-        const next = last > 0 ? last * multiplier : recoveryStartOf(session);
+        const climbed = holdsRecoveryStake(session) ? last : last * multiplier;
+        const next = last > 0 ? climbed : recoveryStartOf(session);
         return Math.max(MIN_STAKE, Number(next.toFixed(2)));
     }
     return Number(session.stake.toFixed(2));
@@ -404,7 +425,8 @@ const placeRound = async (session, symbol, barrier) => {
               symbol,
               recoveryStartOf(session),
               Number(session.lastRecoveryStake) || 0,
-              Number(session.recoveryMultiplier) || 2
+              Number(session.recoveryMultiplier) || 2,
+              holdsRecoveryStake(session)
           )
         : session.strategy === 'even'
           ? evenLegs(symbol, stake)
@@ -518,6 +540,13 @@ const settleOpenRounds = async session => {
             session.hourlyProfit = Number((session.hourlyProfit + profit).toFixed(2));
         }
 
+        /* How this recovery round ended decides the next one's stake: a win
+           holds the rung, a loss climbs from it. Read from the trade rather
+           than the deficit, which cannot answer it — a winning rung usually
+           leaves a remainder owed, so a standing deficit says nothing about
+           whether the round that just settled won. */
+        if (trade.mode === 'recovery') session.lastRecoveryWon = profit >= 0;
+
         // A losing round adds to the deficit; a winning one pays it down. While
         // the deficit is above zero the next round is a martingaled Even.
         const wasInRecovery = (Number(session.deficit) || 0) > 0;
@@ -535,12 +564,13 @@ const settleOpenRounds = async session => {
            the reason for latching has already gone. */
         if (session.strategy === 'even' && session.deficit > 0) session.recoveryLatched = true;
 
-        /* Debt cleared — the ladder resets, so the next recovery starts at the
-           bottom rung instead of continuing from the last one. On Even the
-           latch is deliberately left standing: the next round is still a
-           recovery round, just back at the opening rung. */
+        /* Debt cleared. Differs resets, so its next ladder opens at the bottom
+           rung. Even keeps the rung it is on: the latch means it is still
+           trading recovery rounds for the rest of the hour, and those carry on
+           at the stake that won rather than dropping back to the opening one.
+           The hour roll is what clears it — see rollHour. */
         if (session.deficit === 0) {
-            session.lastRecoveryStake = 0;
+            if (session.strategy !== 'even') session.lastRecoveryStake = 0;
             session.recoveryWaitArmed = false;
         }
     }
@@ -575,8 +605,12 @@ const rollHour = async (session, hourKey) => {
         session.hourRounds = 0;
         session.hourDone = false;
         session.hourEndedReason = '';
-        // A new hour starts on the opening trade, whatever last hour ended on.
+        // A new hour starts on the opening trade, whatever last hour ended on —
+        // at the configured stake, and with the ladder back at its opening rung
+        // rather than wherever Even was holding when the hour ran out.
         session.recoveryLatched = false;
+        session.lastRecoveryStake = 0;
+        session.lastRecoveryWon = false;
         await session.save();
     }
     return !session.hourDone;

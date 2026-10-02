@@ -111,6 +111,16 @@ const PrinterSessionSchema = new mongoose.Schema(
         // Uncapped — escalates until a round wins or the session stop-loss ends it.
         recoveryMultiplier: { type: Number, default: 2 },
         lastRecoveryStake: { type: Number, default: 0 },
+        /**
+         * Did the last recovery round win?
+         *
+         * On Even the ladder only climbs after a loss: a rung that wins keeps
+         * its stake for the next round instead of doubling again. The deficit
+         * cannot stand in for this, because a winning rung usually leaves a
+         * remainder owed — at a 1.94x payout a win returns less than the stake
+         * below it, so one win rarely clears a ladder outright.
+         */
+        lastRecoveryWon: { type: Boolean, default: false },
         stoppedReason: { type: String, default: '' },
         stats: {
             trades: { type: Number, default: 0 },
