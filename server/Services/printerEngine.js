@@ -157,23 +157,6 @@ const scanForDiffers = (ticksBySymbol, excludeSymbol) => {
     return scored[0];
 };
 
-/**
- * Market for an opening Even round.
- *
- * No scan and no confirmation — the point of this strategy is that it trades
- * immediately. It also does not rotate: `usableMarkets` is asked to exclude
- * nothing, and the list is in a fixed order, so a session stays on one market
- * instead of moving between them the way Differs does.
- */
-const scanForEven = ticksBySymbol => usableMarkets(ticksBySymbol)[0] ?? null;
-
-/** Opening round for the Even strategy: one Even contract at the base stake. */
-const evenLegs = (symbol, stake) => [digitLeg(symbol, stake, 'DIGITEVEN')];
-
-/** Are the two most recent digits both odd? History is oldest first. */
-const endsWithTwoOdd = digits =>
-    digits.length >= 2 && digits[digits.length - 1] % 2 === 1 && digits[digits.length - 2] % 2 === 1;
-
 /** How many ticks the even-dominance check reads. */
 const DOMINANCE_SAMPLE = 500;
 
@@ -204,6 +187,35 @@ const evenShare = digits => {
 
 /** Are evens dominating the recent stream? */
 const evensDominate = digits => evenShare(digits) > MIN_EVEN_SHARE;
+
+/**
+ * Market for an opening Even round.
+ *
+ * The market does not rotate: `usableMarkets` is asked to exclude nothing and
+ * the list is in a fixed order, so a session stays on one market instead of
+ * moving between them the way Differs does.
+ *
+ * That market must show evens leading its last DOMINANCE_SAMPLE ticks before a
+ * round opens — the same read the recovery gate uses, so both ends of the
+ * strategy agree about what counts as an even-leaning stream. Null means hold
+ * and look again next pass.
+ *
+ * Note this holds rather than rotates: because the market is fixed, an opening
+ * round waits out an odd-leaning stretch on that market instead of stepping to
+ * one already leaning even.
+ */
+const scanForEven = ticksBySymbol => {
+    const market = usableMarkets(ticksBySymbol)[0] ?? null;
+    if (!market) return null;
+    return evensDominate(market.digits) ? market : null;
+};
+
+/** Opening round for the Even strategy: one Even contract at the base stake. */
+const evenLegs = (symbol, stake) => [digitLeg(symbol, stake, 'DIGITEVEN')];
+
+/** Are the two most recent digits both odd? History is oldest first. */
+const endsWithTwoOdd = digits =>
+    digits.length >= 2 && digits[digits.length - 1] % 2 === 1 && digits[digits.length - 2] % 2 === 1;
 
 /**
  * Market for a recovery Even: the one the losing round was placed on.
@@ -681,6 +693,7 @@ module.exports = {
     endsWithTwoOdd,
     evenShare,
     evensDominate,
+    scanForEven,
     scanForDiffers,
     scanForRecovery,
 };
