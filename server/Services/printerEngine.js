@@ -341,12 +341,14 @@ const recoveryLegs = (symbol, startStake, lastRecoveryStake = 0, multiplier = 2,
 /**
  * Does the next recovery round hold its stake rather than climb?
  *
- * Even only, and only when the round before it won. One helper because the
- * stake and the balance check both ask, and they must never disagree about how
- * big the next round is.
+ * Whenever the round before it won, on either strategy — the ladder is shared,
+ * so it climbs on losses and holds on wins the same way whichever opening round
+ * put the session into it.
+ *
+ * One helper because the stake and the balance check both ask, and they must
+ * never disagree about how big the next round is.
  */
-const holdsRecoveryStake = session =>
-    session.strategy === 'even' && Boolean(session.lastRecoveryWon);
+const holdsRecoveryStake = session => Boolean(session.lastRecoveryWon);
 
 /** The configured opening rung, falling back to the old default. */
 const recoveryStartOf = session => {
@@ -564,11 +566,15 @@ const settleOpenRounds = async session => {
            the reason for latching has already gone. */
         if (session.strategy === 'even' && session.deficit > 0) session.recoveryLatched = true;
 
-        /* Debt cleared. Differs resets, so its next ladder opens at the bottom
-           rung. Even keeps the rung it is on: the latch means it is still
-           trading recovery rounds for the rest of the hour, and those carry on
-           at the stake that won rather than dropping back to the opening one.
-           The hour roll is what clears it — see rollHour. */
+        /* Debt cleared. Differs leaves recovery here and goes back to its
+           opening round, so there is no next rung to hold and its ladder
+           resets — the one after it opens at recoveryStartStake. Even is
+           latched and keeps trading recovery rounds for the rest of the hour,
+           so it holds the rung that won rather than dropping back to the
+           opening one; the hour roll is what clears that — see rollHour.
+
+           Holding a winning rung *within* a ladder is shared by both; this is
+           only about what happens once the debt is gone. */
         if (session.deficit === 0) {
             if (session.strategy !== 'even') session.lastRecoveryStake = 0;
             session.recoveryWaitArmed = false;
