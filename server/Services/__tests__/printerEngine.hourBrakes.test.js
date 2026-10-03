@@ -1,12 +1,13 @@
 /**
- * The two Even brakes that end an hour early.
+ * The two brakes that end an hour early.
  *
  *   Green exit — a recovery round that wins while the session's net P/L is in
  *                profit stops the hour there, whatever is still owed.
  *   Last rung  — a loss at the ladder's cap stops the hour instead of staking
  *                the rung above it.
  *
- * Both end the hour, not the session, and both leave the deficit standing.
+ * Both end the hour, not the session, and both leave the deficit standing. The
+ * recovery ladder is shared, so both strategies carry them.
  *
  * Plain Node, no framework and no network: Deriv's balance call is stubbed, so
  * a round's profit is whatever the stubbed balance says it is. Run with
@@ -163,15 +164,23 @@ async function aLossAtTheLastRungStopsTheHour() {
     ok('last rung: the deficit is carried into the next hour', s.deficit > 0, `deficit ${s.deficit}`);
 }
 
-/** Differs shares the ladder but not these brakes. */
-async function differsIsUnaffected() {
+/** The ladder is shared, so Differs carries both brakes too. */
+async function differsGetsTheSameBrakes() {
     const green = makeSession({ strategy: 'differs', stats: { trades: 0, wins: 0, losses: 0, profit: 250 } });
     await settleRound(green, { stake: 12, won: true });
-    ok('Differs: a winning recovery while green does not end the hour', !green.hourDone);
+    ok('Differs: green exit ends the hour', green.hourDone, 'hour still open');
+    ok('Differs: green exit names its reason', /net P\/L green/.test(green.hourEndedReason), green.hourEndedReason);
 
     const deep = makeSession({ strategy: 'differs', stats: { trades: 0, wins: 0, losses: 0, profit: -40 } });
     await settleRound(deep, { stake: 48, won: false });
-    ok('Differs: a loss at the cap does not end the hour', !deep.hourDone);
+    ok('Differs: a loss at the cap ends the hour', deep.hourDone, 'hour still open');
+    ok('Differs: the cap reason names it', /last rung/.test(deep.hourEndedReason), deep.hourEndedReason);
+
+    // An opening Differs round is not a ladder rung, so neither brake reads it.
+    const opening = makeSession({ strategy: 'differs', stats: { trades: 0, wins: 0, losses: 0, profit: 250 } });
+    await settleRound(opening, { stake: 48, won: false, mode: 'differs' });
+    ok('Differs: an opening round at the cap stake does not end the hour', !opening.hourDone,
+        opening.hourEndedReason);
 }
 
 /** A round settling after the roll must not kill the hour that followed it. */
@@ -193,7 +202,7 @@ async function aLateSettlementCannotEndTheNewHour() {
     await greenExitIgnoresAnOutstandingDeficit();
     await aWinningRecoveryWhileRedKeepsGoing();
     await aLossAtTheLastRungStopsTheHour();
-    await differsIsUnaffected();
+    await differsGetsTheSameBrakes();
     await aLateSettlementCannotEndTheNewHour();
 
     console.log(failures ? `\n${failures} failing` : '\nall passing');

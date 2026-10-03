@@ -568,8 +568,9 @@ const settleOpenRounds = async session => {
            whether the round that just settled won. */
         if (trade.mode === 'recovery') session.lastRecoveryWon = profit >= 0;
 
-        /* Two brakes on the Even ladder, both ending the hour rather than the
-           session, and both read off the round that just settled.
+        /* Two brakes on the recovery ladder, both ending the hour rather than
+           the session, and both read off the round that just settled. The
+           ladder is shared, so both strategies carry them.
 
            Green exit: a recovery round that wins while the session's net P/L is
            in profit stops the hour there. The deficit is deliberately not part
@@ -582,7 +583,6 @@ const settleOpenRounds = async session => {
            Only for a round belonging to this hour: one settling after the roll
            has no business ending the hour that followed it. */
         if (
-            session.strategy === 'even' &&
             trade.mode === 'recovery' &&
             trade.hourKey === session.lastHourKey &&
             !hourStopReason
