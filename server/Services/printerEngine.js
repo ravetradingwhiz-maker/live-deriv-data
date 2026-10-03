@@ -350,6 +350,21 @@ const recoveryLegs = (symbol, startStake, lastRecoveryStake = 0, multiplier = 2,
  */
 const holdsRecoveryStake = session => Boolean(session.lastRecoveryWon);
 
+/**
+ * How many rungs the Even ladder may climb before the hour is given up.
+ *
+ * Four, counting the opening rung: with a start of 6 and a multiplier of 2 that
+ * is 6, 12, 24, 48, and a loss at 48 ends the hour rather than staking 96. The
+ * cap is derived rather than written down, so changing either setting moves it.
+ */
+const MAX_RECOVERY_RUNGS = 4;
+
+const recoveryCapOf = session => {
+    const multiplier = Number(session.recoveryMultiplier) || 2;
+    const cap = recoveryStartOf(session) * Math.pow(multiplier, MAX_RECOVERY_RUNGS - 1);
+    return Number(cap.toFixed(2));
+};
+
 /** The configured opening rung, falling back to the old default. */
 const recoveryStartOf = session => {
     const configured = Number(session.recoveryStartStake) || 0;
@@ -522,6 +537,10 @@ const settleOpenRounds = async session => {
     // Oldest first, so a backlog after downtime settles in order.
     pending.sort((a, b) => new Date(a.placedAt) - new Date(b.placedAt));
     let runningBalance = balance;
+    /* Why this hour stopped, if one of the Even brakes below trips. Collected in
+       the loop, where the round's own result is known, and applied once after
+       it — the hour ends the same way the target and the loss cap end it. */
+    let hourStopReason = '';
 
     for (let i = pending.length - 1; i >= 0; i--) {
         const trade = pending[i];
@@ -548,6 +567,33 @@ const settleOpenRounds = async session => {
            leaves a remainder owed, so a standing deficit says nothing about
            whether the round that just settled won. */
         if (trade.mode === 'recovery') session.lastRecoveryWon = profit >= 0;
+
+        /* Two brakes on the Even ladder, both ending the hour rather than the
+           session, and both read off the round that just settled.
+
+           Green exit: a recovery round that wins while the session's net P/L is
+           in profit stops the hour there. The deficit is deliberately not part
+           of the test — being up overall is the whole reason to walk away, and a
+           winning rung usually leaves a little still owed.
+
+           Last rung: a loss at the ladder's cap stops the hour instead of
+           staking the next rung, which is where the damage compounds.
+
+           Only for a round belonging to this hour: one settling after the roll
+           has no business ending the hour that followed it. */
+        if (
+            session.strategy === 'even' &&
+            trade.mode === 'recovery' &&
+            trade.hourKey === session.lastHourKey &&
+            !hourStopReason
+        ) {
+            const cap = recoveryCapOf(session);
+            if (profit >= 0 && session.stats.profit >= 0) {
+                hourStopReason = `Recovered with net P/L green (${session.stats.profit.toFixed(2)})`;
+            } else if (profit < 0 && Number(trade.stake) >= cap) {
+                hourStopReason = `Recovery ladder hit its last rung (${cap})`;
+            }
+        }
 
         // A losing round adds to the deficit; a winning one pays it down. While
         // the deficit is above zero the next round is a martingaled Even.
@@ -583,6 +629,16 @@ const settleOpenRounds = async session => {
 
     // The round is done, so the session is free to place the next one.
     session.roundInFlight = false;
+
+    /* The hour is over, but the session is not: hourDone keeps the claim in
+       tick() from taking another round, and rollHour clears it at the top of
+       the next hour. The deficit is left standing, so if one is still owed the
+       next hour opens on the ladder's first rung. */
+    if (hourStopReason && !session.hourDone) {
+        session.hourDone = true;
+        session.hourEndedReason = hourStopReason;
+        console.log(`[Printer] ${session.loginid} hour ${session.lastHourKey} ended — ${hourStopReason}`);
+    }
 
     // Limits are enforced here rather than in the browser — the browser is gone.
     if (session.takeProfit > 0 && session.stats.profit >= session.takeProfit) {
@@ -731,6 +787,9 @@ module.exports = {
     digitsOf,
     rarestDigit,
     endsWithTwoOdd,
+    settleOpenRounds,
+    recoveryCapOf,
+    MAX_RECOVERY_RUNGS,
     evenShare,
     evensDominate,
     scanForEven,

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "nodemon index.js",
     "dev": "nodemon index.js",
-    "serve": "node index.js"
+    "serve": "node index.js",
+    "test": "node Services/__tests__/printerEngine.hourBrakes.test.js"
   },
   "dependencies": {
     "@getbrevo/brevo": "^3.0.1",
