@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+/* Read from the one table that defines them, rather than restated here:
+   a tier added to config/tiers.js and forgotten in this enum would be
+   sellable and then refuse to save, after the money had been taken. */
+const TIER_IDS = Object.keys(require('../config/tiers').TIERS);
+
 const PaymentSchema = new mongoose.Schema(
     {
         orderId: { type: String, required: true, unique: true, index: true },
@@ -8,7 +13,7 @@ const PaymentSchema = new mongoose.Schema(
         // The receipt the customer sees on their own side — an M-Pesa code for
         // PayHero orders. What they quote when they ask about a payment.
         providerReceipt: { type: String, default: '' },
-        tier: { type: String, enum: ['alpha', 'quantum', 'apex', 'quantumsyn'], required: true },
+        tier: { type: String, enum: TIER_IDS, required: true },
         priceUSD: { type: Number, required: true },
         payCurrency: { type: String, required: true }, // e.g. btc, eth, usdttrc20
         payAddress: { type: String, default: '' },

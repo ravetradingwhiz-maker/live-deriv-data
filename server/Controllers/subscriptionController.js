@@ -7,14 +7,19 @@ module.exports = {
     check: async (req, res, next) => {
         try {
             const raw = String(req.query.loginids || '').trim();
-            if (!raw) return res.json({ active: false });
+            /* NYX EA's customers have no Deriv account, so their
+               subscriptions are keyed by the email the order was paid
+               with. Everything else still asks by loginid and is
+               unaffected: this only ever adds a second way in, and a
+               caller supplying neither gets the same answer as before. */
+            const email = String(req.query.email || '').trim().toLowerCase();
 
             const loginids = raw
                 .split(',')
                 .map(s => s.trim())
                 .filter(Boolean)
                 .slice(0, 50);
-            if (!loginids.length) return res.json({ active: false });
+            if (!loginids.length && !email) return res.json({ active: false });
 
             /* Which product is asking. Defaults to nexora so every existing
                caller keeps the behaviour it had, and quantumsyn asks for its
@@ -27,9 +32,18 @@ module.exports = {
             if (!tiers.length) return res.json({ active: false });
 
             const now = new Date();
-            const subs = await Subscription.find({
+            /* Any of the ways this caller can be known. Built as a list so
+               an empty one is impossible — `$or: []` is a Mongo error, and
+               it would be reached by anyone asking with only an email. */
+            const identifies = [];
+            if (loginids.length) {
                 // `loginids` (current array form) or legacy single `loginid`.
-                $or: [{ loginids: { $in: loginids } }, { loginid: { $in: loginids } }],
+                identifies.push({ loginids: { $in: loginids } }, { loginid: { $in: loginids } });
+            }
+            if (email) identifies.push({ email });
+
+            const subs = await Subscription.find({
+                $or: identifies,
                 tier: { $in: tiers },
                 status: 'active',
                 expiresAt: { $gt: now },

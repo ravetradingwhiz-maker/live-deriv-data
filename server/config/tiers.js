@@ -28,7 +28,32 @@ const TIERS = {
     // QuantumSyn; the id differs so it can never be confused with Nexora's
     // Quantum tier above.
     quantumsyn: { label: 'Quantum', product: 'quantumsyn', priceUSD: 60, months: 1, rank: 1, slotsLeft: 10 },
+    // NYX EA's three, sold on its own site and honoured nowhere else. A
+    // ladder in their own right: Advanced outranks Elite outranks Pro, and
+    // ranks are only ever compared inside one product, so none of them
+    // touches Nexora's or QuantumSyn's.
+    //
+    // `slotsLeft` is 0 deliberately. The seat line is shown to somebody
+    // deciding whether to spend money, and a number nobody is tracking is
+    // worse than no number — set it from the admin panel when there is a
+    // real count to honour.
+    pro: { label: 'Pro', product: 'nyx', priceUSD: 100, months: 1, rank: 1, slotsLeft: 0 },
+    elite: { label: 'Elite', product: 'nyx', priceUSD: 270, months: 3, rank: 2, slotsLeft: 0 },
+    advanced: { label: 'Advanced', product: 'nyx', priceUSD: 480, months: 6, rank: 3, slotsLeft: 0 },
 };
+
+/**
+ * Products whose customers are known by email rather than by Deriv loginid.
+ *
+ * Nexora and QuantumSyn are Deriv apps: whoever is signed in always has at
+ * least one loginid, and a subscription follows the account. NYX EA is not —
+ * its users sign up with an email and a password and have no Deriv account
+ * at all, so the email is the only thing there is to key on.
+ */
+const EMAIL_KEYED = new Set(['nyx']);
+
+/** Whether a tier belongs to a product that has no loginids to ask for. */
+const isEmailKeyed = tier => EMAIL_KEYED.has(productOf(tier));
 
 /** Which product a tier belongs to, for anything that has only the tier id. */
 const productOf = tier => (TIERS[tier] && TIERS[tier].product) || 'nexora';
@@ -75,4 +100,4 @@ const getTiers = async () => {
     }
 };
 
-module.exports = { TIERS, PAY_CURRENCY, getTiers, productOf, tiersForProduct };
+module.exports = { TIERS, PAY_CURRENCY, getTiers, productOf, tiersForProduct, EMAIL_KEYED, isEmailKeyed };

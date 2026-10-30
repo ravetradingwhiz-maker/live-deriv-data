@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { TIERS } = require('../config/tiers');
+const { TIERS, EMAIL_KEYED, productOf } = require('../config/tiers');
 
 /**
  * Every sellable tier, read from the one table that defines them.
@@ -12,14 +12,30 @@ const { TIERS } = require('../config/tiers');
  */
 const TIER_IDS = Object.keys(TIERS);
 
+/**
+ * The Deriv logins on the account.
+ *
+ * Required for every product whose customers are Deriv accounts, which is
+ * how all of this started. NYX EA's are not — they sign up with an email and
+ * have no loginid to give — so for its tiers the field is simply absent
+ * rather than a made-up value, and the email on the order is what the
+ * subscription is keyed by.
+ */
+const loginidsField = Joi.array()
+    .items(Joi.string().trim().min(1))
+    .when('tier', {
+        is: Joi.string().valid(...TIER_IDS.filter(id => EMAIL_KEYED.has(productOf(id)))),
+        then: Joi.array().default([]),
+        otherwise: Joi.array().min(1).required(),
+    });
+
 const createPaymentSchema = Joi.object({
     tier: Joi.string()
         .valid(...TIER_IDS)
         .required(),
     payCurrency: Joi.string().valid('usdt').required(),
     email: Joi.string().email().required(),
-    // Deriv login ids on the account (real + demo). At least one required.
-    loginids: Joi.array().items(Joi.string().trim().min(1)).min(1).required(),
+    loginids: loginidsField,
 });
 
 // Card (Paystack) checkout — same as above minus the crypto pay-currency.
@@ -28,7 +44,7 @@ const paystackInitSchema = Joi.object({
         .valid(...TIER_IDS)
         .required(),
     email: Joi.string().email().required(),
-    loginids: Joi.array().items(Joi.string().trim().min(1)).min(1).required(),
+    loginids: loginidsField,
 });
 
 /**
@@ -46,7 +62,7 @@ const mpesaInitSchema = Joi.object({
         .valid(...TIER_IDS)
         .required(),
     email: Joi.string().email().required(),
-    loginids: Joi.array().items(Joi.string().trim().min(1)).min(1).required(),
+    loginids: loginidsField,
     phone: Joi.string()
         .trim()
         .pattern(/^[\d+\s()-]{9,17}$/)
