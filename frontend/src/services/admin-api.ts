@@ -1,6 +1,6 @@
 /** Admin role check + management against the payments/subscription server. */
 
-import type { AnyTier, Product, Tier } from '@/services/payments-api';
+import type { AnyTier, Product } from '@/services/payments-api';
 
 // Empty by default → same-origin (/api/...), proxied to the backend by Vite.
 // Set API_URL only when the API lives on another host.
@@ -31,7 +31,10 @@ export interface AdminSubscription {
     _id: string;
     loginids: string[];
     email?: string;
-    tier: Tier;
+    /* Any product's, not just this site's: the admin screens manage every
+       subscription the server sells, and a row narrowed to Nexora's three
+       would be read back wrong for the other two. */
+    tier: AnyTier;
     startedAt: string;
     expiresAt: string;
     status: 'active' | 'expired';
@@ -50,7 +53,7 @@ export const listSubscriptions = (params: { q?: string; status?: string } = {}):
 
 export const createSubscription = (body: {
     loginids: string[];
-    tier: Tier;
+    tier: AnyTier;
     months?: number;
     email?: string;
 }): Promise<AdminSubscription> =>
@@ -64,7 +67,7 @@ export const createSubscription = (body: {
 
 export const updateSubscription = (
     id: string,
-    patch: { tier?: Tier; status?: 'active' | 'expired'; expiresAt?: string }
+    patch: { tier?: AnyTier; status?: 'active' | 'expired'; expiresAt?: string }
 ): Promise<AdminSubscription> =>
     fetch(`${API_URL}/api/admin/subscriptions/${id}`, {
         method: 'PATCH',
@@ -81,7 +84,7 @@ export const deleteSubscription = (id: string): Promise<void> =>
 export interface AdminPayment {
     _id: string;
     orderId: string;
-    tier: Tier;
+    tier: AnyTier;
     priceUSD: number;
     payCurrency: string;
     payAmount: number;

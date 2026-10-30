@@ -7,9 +7,40 @@ import {
     updateSubscription,
     type AdminSubscription,
 } from '@/services/admin-api';
-import type { Tier } from '@/services/payments-api';
+import type { AnyTier } from '@/services/payments-api';
 
-const TIERS: Tier[] = ['alpha', 'quantum', 'apex'];
+/**
+ * Every tier the server sells, not just this site's.
+ *
+ * The list used to be Nexora's three. A QuantumSyn or NYX EA row then
+ * reached a <select> with no option matching its tier, so the browser showed
+ * whatever was first — a NYX EA Elite subscription appeared as "alpha" — and
+ * saving any other change on that row would have written that back.
+ *
+ * Grouped and labelled by product because two of them are called Quantum,
+ * and "quantum" alone does not say which.
+ */
+const TIER_GROUPS: { product: string; title: string; tiers: AnyTier[] }[] = [
+    { product: 'nexora', title: 'Nexora AI', tiers: ['alpha', 'quantum', 'apex'] },
+    { product: 'quantumsyn', title: 'QuantumSyn', tiers: ['quantumsyn'] },
+    { product: 'nyx', title: 'NYX EA', tiers: ['pro', 'elite', 'advanced'] },
+];
+
+/** The options for every tier select on this page. */
+const TierOptions = () => (
+    <>
+        {TIER_GROUPS.map(g => (
+            <optgroup key={g.product} label={g.title}>
+                {g.tiers.map(t => (
+                    <option key={t} value={t}>
+                        {t}
+                    </option>
+                ))}
+            </optgroup>
+        ))}
+    </>
+);
+
 const fmtDate = (s?: string) => (s ? new Date(s).toLocaleDateString() : '—');
 const toDateInput = (s?: string) => (s ? new Date(s).toISOString().slice(0, 10) : '');
 
@@ -37,7 +68,7 @@ const AdminSubscriptions = () => {
     // Create form (in a modal)
     const [addOpen, setAddOpen] = useState(false);
     const [newLoginid, setNewLoginid] = useState('');
-    const [newTier, setNewTier] = useState<Tier>('alpha');
+    const [newTier, setNewTier] = useState<AnyTier>('alpha');
     const [newMonths, setNewMonths] = useState<number | ''>('');
     const [newEmail, setNewEmail] = useState('');
 
@@ -172,14 +203,10 @@ const AdminSubscriptions = () => {
                             </div>
                             <select
                                 value={r.tier}
-                                onChange={e => patch(r._id, { tier: e.target.value as Tier })}
+                                onChange={e => patch(r._id, { tier: e.target.value as AnyTier })}
                                 className='rounded-lg border border-line bg-ink-800 px-2 py-1.5 text-xs text-white outline-none'
                             >
-                                {TIERS.map(t => (
-                                    <option key={t} value={t}>
-                                        {t}
-                                    </option>
-                                ))}
+                                <TierOptions />
                             </select>
                             {/* Disabled once the date has passed: picking
                                 "active" could not revive the row on its own,
@@ -250,14 +277,10 @@ const AdminSubscriptions = () => {
                             />
                             <select
                                 value={newTier}
-                                onChange={e => setNewTier(e.target.value as Tier)}
+                                onChange={e => setNewTier(e.target.value as AnyTier)}
                                 className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500'
                             >
-                                {TIERS.map(t => (
-                                    <option key={t} value={t}>
-                                        {t}
-                                    </option>
-                                ))}
+                                <TierOptions />
                             </select>
                             <input
                                 type='number'
