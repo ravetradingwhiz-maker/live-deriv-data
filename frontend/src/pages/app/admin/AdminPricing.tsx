@@ -3,7 +3,7 @@ import { CheckCircle2, Loader2, Save, Tag } from 'lucide-react';
 import { getAdminPricing, setAdminPricing, type TierTable } from '@/services/admin-api';
 import type { AnyTier } from '@/services/payments-api';
 
-const ORDER: AnyTier[] = ['alpha', 'quantum', 'apex', 'quantumsyn'];
+const ORDER: AnyTier[] = ['alpha', 'quantum', 'apex', 'quantumsyn', 'pro', 'elite', 'advanced'];
 
 /**
  * Grouped by product, because two of these are called "Quantum".
@@ -18,6 +18,11 @@ const GROUPS: { product: string; title: string; note: string }[] = [
         product: 'quantumsyn',
         title: 'QuantumSyn',
         note: 'Sold on quantumsyn.pro only. Never shown on this site outside this page.',
+    },
+    {
+        product: 'nyx',
+        title: 'NYX EA',
+        note: 'Sold on the NYX EA site only. Its customers have no Deriv account — a subscription is keyed to the email the order was paid with.',
     },
 ];
 

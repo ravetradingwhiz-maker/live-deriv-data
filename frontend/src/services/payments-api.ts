@@ -11,15 +11,16 @@ export type Tier = 'alpha' | 'quantum' | 'apex';
 /**
  * Every tier the server knows, including ones sold on other sites.
  *
- * `quantumsyn` is QuantumSyn's Quantum — a different product, bought and
- * honoured over there. It is deliberately outside `Tier`, so the type system
- * keeps it out of this app's checkout and pricing cards; only the admin screens
- * that set its price ever widen to this.
+ * `quantumsyn` is QuantumSyn's Quantum, and `pro`/`elite`/`advanced` are NYX
+ * EA's ladder — different products, bought and honoured on their own sites.
+ * They are deliberately outside `Tier`, so the type system keeps them out of
+ * this app's checkout and pricing cards; only the admin screens that set
+ * their prices ever widen to this.
  */
-export type AnyTier = Tier | 'quantumsyn';
+export type AnyTier = Tier | 'quantumsyn' | 'pro' | 'elite' | 'advanced';
 
 /** Which product a tier belongs to. Ranks only compare within one. */
-export type Product = 'nexora' | 'quantumsyn';
+export type Product = 'nexora' | 'quantumsyn' | 'nyx';
 
 export interface CreatePaymentBody {
     tier: Tier;
