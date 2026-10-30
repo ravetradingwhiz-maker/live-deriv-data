@@ -37,4 +37,41 @@ const BRANDS = {
 /** Falls back to Nexora, which is whose server this was to begin with. */
 const brandFor = product => BRANDS[product] || BRANDS.nexora;
 
-module.exports = { BRANDS, brandFor };
+/**
+ * The name to give an attachment, taken from the end of its own URL.
+ *
+ * Derived rather than written down so the file is called whatever it is
+ * actually called — a bot renamed on the host would otherwise keep arriving
+ * under a stale name from an env var nobody remembered to change.
+ */
+const fileNameOf = url => {
+    try {
+        const last = new URL(url).pathname.split('/').filter(Boolean).pop();
+        return last ? decodeURIComponent(last) : '';
+    } catch {
+        return '';
+    }
+};
+
+/**
+ * The bot that rides along with a receipt, if there is one.
+ *
+ * Only NYX EA sells a file; Nexora and QuantumSyn sell access to a site and
+ * have nothing to attach. Brevo fetches the URL itself, so the file lives
+ * wherever it is hosted and never on this server.
+ *
+ * Null when it is not configured, and the receipt then goes out without it.
+ * A missing attachment is a customer who has to be sent the bot by hand; a
+ * receipt that threw instead would be a customer who paid and heard nothing.
+ */
+const botFor = product => {
+    if (product !== 'nyx') return null;
+
+    const url = (process.env.NYX_EA_URL || '').trim();
+    if (!url) return null;
+
+    const name = (process.env.NYX_EA_FILENAME || '').trim() || fileNameOf(url);
+    return name ? { url, name } : null;
+};
+
+module.exports = { BRANDS, brandFor, botFor, fileNameOf };

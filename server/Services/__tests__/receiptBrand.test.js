@@ -80,5 +80,79 @@ const odd = make('not-a-tier');
 ok('an unknown tier still builds a receipt', Boolean(odd.subject && odd.html));
 ok('and falls back to the server’s own brand', odd.brand.name === BRANDS.nexora.name, odd.brand.name);
 
+/* ── the bot that rides along ────────────────────────────────────────────── */
+
+/* Only NYX EA sells a file. Nexora and QuantumSyn sell access to a site, and
+   attaching a trading bot to their receipts would be sending customers
+   something they did not buy. */
+
+const { botFor, fileNameOf } = require(path.join(root, 'config', 'products.js'));
+
+const withEnv = (vars, fn) => {
+    const saved = { NYX_EA_URL: process.env.NYX_EA_URL, NYX_EA_FILENAME: process.env.NYX_EA_FILENAME };
+    for (const k of Object.keys(saved)) delete process.env[k];
+    Object.assign(process.env, vars);
+    try {
+        return fn();
+    } finally {
+        for (const k of Object.keys(saved)) {
+            if (saved[k] === undefined) delete process.env[k];
+            else process.env[k] = saved[k];
+        }
+    }
+};
+
+const URL_ = 'https://res.cloudinary.com/x/raw/upload/v1/NYX%20EA%20v2.ex5';
+
+ok('with nothing configured, nothing is attached',
+    withEnv({}, () => botFor('nyx')) === null);
+
+ok('a nyx receipt still builds without the bot',
+    Boolean(withEnv({}, () => make('pro').html)));
+
+ok('and says nothing about an attachment that is not there',
+    !withEnv({}, () => make('pro').html).includes('is attached'));
+
+ok('configured, nyx gets the file',
+    withEnv({ NYX_EA_URL: URL_ }, () => botFor('nyx'))?.url === URL_);
+
+ok('the name comes off the url, unescaped',
+    withEnv({ NYX_EA_URL: URL_ }, () => botFor('nyx'))?.name === 'NYX EA v2.ex5',
+    JSON.stringify(withEnv({ NYX_EA_URL: URL_ }, () => botFor('nyx'))));
+
+ok('an explicit filename wins',
+    withEnv({ NYX_EA_URL: URL_, NYX_EA_FILENAME: 'bot.ex5' }, () => botFor('nyx'))?.name === 'bot.ex5');
+
+/* The one that would be a real mistake. */
+ok('nexora never gets the bot',
+    withEnv({ NYX_EA_URL: URL_ }, () => botFor('nexora')) === null);
+ok('quantumsyn never gets the bot',
+    withEnv({ NYX_EA_URL: URL_ }, () => botFor('quantumsyn')) === null);
+ok('an unknown product never gets the bot',
+    withEnv({ NYX_EA_URL: URL_ }, () => botFor('nope')) === null);
+
+for (const tier of ['alpha', 'quantum', 'apex', 'quantumsyn']) {
+    ok(`${tier}: no attachment on the receipt`,
+        withEnv({ NYX_EA_URL: URL_ }, () => make(tier).bot) === null);
+    ok(`${tier}: and no mention of one`,
+        !withEnv({ NYX_EA_URL: URL_ }, () => make(tier).html).includes('is attached'));
+}
+
+for (const tier of ['pro', 'elite', 'advanced']) {
+    ok(`${tier}: the bot is attached`,
+        withEnv({ NYX_EA_URL: URL_ }, () => make(tier).bot)?.url === URL_);
+    ok(`${tier}: and the receipt says so by name`,
+        withEnv({ NYX_EA_URL: URL_ }, () => make(tier).html).includes('NYX EA v2.ex5'));
+}
+
+/* A URL that is not one must not take a payment's receipt down with it. */
+ok('nonsense in the env attaches nothing rather than throwing',
+    withEnv({ NYX_EA_URL: 'not a url' }, () => botFor('nyx')) === null);
+ok('and the receipt still builds',
+    Boolean(withEnv({ NYX_EA_URL: 'not a url' }, () => make('pro').subject)));
+ok('a url with no filename on the end attaches nothing',
+    withEnv({ NYX_EA_URL: 'https://example.com/' }, () => botFor('nyx')) === null);
+ok('fileNameOf survives rubbish', fileNameOf('') === '' && fileNameOf(null) === '');
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

@@ -1,6 +1,6 @@
 const brevo = require('@getbrevo/brevo');
 const { TIERS, productOf } = require('../config/tiers');
-const { brandFor } = require('../config/products');
+const { brandFor, botFor } = require('../config/products');
 
 const apiInstance = new brevo.TransactionalEmailsApi();
 apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY || '');
@@ -23,10 +23,13 @@ const fmtDate = d =>
  */
 const buildReceipt = ({ tier, expiresAt, priceUSD, payCurrency, orderId }) => {
     const label = TIERS[tier]?.label || tier;
-    const brand = brandFor(productOf(tier));
+    const product = productOf(tier);
+    const brand = brandFor(product);
+    const bot = botFor(product);
 
     return {
         brand,
+        bot,
         subject: `✅ Your ${brand.name} ${label} subscription is active`,
         html: `
     <div style="max-width:600px;margin:auto;font-family:Arial,sans-serif;background:#0b1418;color:#e2e8f0;padding:28px;border-radius:12px;border:1px solid #1e2a30;">
@@ -39,6 +42,7 @@ const buildReceipt = ({ tier, expiresAt, priceUSD, payCurrency, orderId }) => {
         <p style="margin:6px 0;"><strong>Order:</strong> ${orderId}</p>
       </div>
       <p style="color:#94a3b8;">${brand.accessLine}</p>
+      ${bot ? `<p style="color:#94a3b8;">Bot sent to email — <strong>${bot.name}</strong> is attached.</p>` : ''}
       <hr style="border:none;border-top:1px solid #1e2a30;margin:24px 0;">
       <p style="color:#64748b;font-size:12px;">© ${new Date().getFullYear()} ${brand.name}. Need help? Reply to this email.</p>
     </div>`,
@@ -51,13 +55,15 @@ const sendSubscriptionReceipt = async ({ email, tier, expiresAt, priceUSD, payCu
         console.warn('[email] BREVO_API_KEY not set — skipping receipt email');
         return;
     }
-    const { brand, subject, html } = buildReceipt({ tier, expiresAt, priceUSD, payCurrency, orderId });
+    const { brand, subject, html, bot } = buildReceipt({ tier, expiresAt, priceUSD, payCurrency, orderId });
 
     const sendSmtpEmail = new brevo.SendSmtpEmail();
     sendSmtpEmail.subject = subject;
     sendSmtpEmail.to = [{ email }];
     sendSmtpEmail.sender = { name: brand.name, email: process.env.SENDER_EMAIL };
     sendSmtpEmail.htmlContent = html;
+    /* Brevo fetches the URL itself, so nothing is read or held here. */
+    if (bot) sendSmtpEmail.attachment = [{ url: bot.url, name: bot.name }];
 
     await apiInstance.sendTransacEmail(sendSmtpEmail);
 };
