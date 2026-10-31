@@ -80,6 +80,16 @@ const odd = make('not-a-tier');
 ok('an unknown tier still builds a receipt', Boolean(odd.subject && odd.html));
 ok('and falls back to the server’s own brand', odd.brand.name === BRANDS.nexora.name, odd.brand.name);
 
+/* ── the delivery-policy notice ───────────────────────────────────────────── */
+
+/* NYX EA's receipt carries a delivery-policy notice; the site products have
+   no file to deliver, so theirs must not. */
+ok('a nyx receipt carries the delivery notice',
+    make('elite').html.includes('Product Delivery Policy') && make('elite').html.includes('choosing NYX EA BOT'));
+for (const tier of ['alpha', 'quantum', 'apex', 'quantumsyn']) {
+    ok(`${tier}: no delivery notice`, !make(tier).html.includes('Product Delivery Policy'));
+}
+
 /* ── the bot that rides along ────────────────────────────────────────────── */
 
 /* Only NYX EA sells a file. Nexora and QuantumSyn sell access to a site, and

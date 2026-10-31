@@ -31,6 +31,17 @@ const BRANDS = {
         /* Oxford blue and tan, which is what the app is built in. */
         accent: 'linear-gradient(90deg,#d2b48c,#e8d6b8)',
         accessLine: 'Your access is tied to this email address — sign in to NYX EA with it.',
+        /* The delivery-policy notice the receipt carries, below the download
+           link. NYX EA only — the other products have no file to deliver. */
+        notice: {
+            title: 'Important Notice — Product Delivery Policy',
+            body: [
+                'For security, account protection, and licensing purposes, NYX EA BOT is distributed as a standalone Expert Advisor (EA) file rather than through direct access to our online trading platform.',
+                'This ensures that each purchase can be individually licensed, activated, and managed while providing customers with a dedicated copy of the software.',
+                'Following successful payment, your EA file and installation instructions will be delivered directly to you. Please contact support.',
+                'Thank you for your understanding and for choosing NYX EA BOT.',
+            ],
+        },
     },
 };
 

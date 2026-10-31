@@ -48,6 +48,14 @@ const buildReceipt = ({ tier, expiresAt, priceUSD, payCurrency, orderId }) => {
       <a href="${bot.url}" style="display:inline-block;padding:12px 22px;border-radius:10px;background:${brand.accent};color:#0b1418;font-weight:700;text-decoration:none;">Download ${bot.name}</a>`
               : ''
       }
+      ${
+          brand.notice
+              ? `<div style="background:#0f1c22;border:1px solid #1e2a30;border-radius:10px;padding:16px;margin:20px 0;">
+        <p style="margin:0 0 8px;font-weight:700;color:#e2e8f0;">${brand.notice.title}</p>
+        ${brand.notice.body.map(line => `<p style="margin:8px 0;color:#94a3b8;font-size:13px;line-height:1.55;">${line}</p>`).join('')}
+      </div>`
+              : ''
+      }
       <hr style="border:none;border-top:1px solid #1e2a30;margin:24px 0;">
       <p style="color:#64748b;font-size:12px;">© ${new Date().getFullYear()} ${brand.name}. Need help? Reply to this email.</p>
     </div>`,
