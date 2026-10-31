@@ -42,7 +42,12 @@ const buildReceipt = ({ tier, expiresAt, priceUSD, payCurrency, orderId }) => {
         <p style="margin:6px 0;"><strong>Order:</strong> ${orderId}</p>
       </div>
       <p style="color:#94a3b8;">${brand.accessLine}</p>
-      ${bot ? `<p style="color:#94a3b8;">Bot sent to email — <strong>${bot.name}</strong> is attached.</p>` : ''}
+      ${
+          bot
+              ? `<p style="color:#94a3b8;margin:18px 0 8px;">Your bot is ready to download.</p>
+      <a href="${bot.url}" style="display:inline-block;padding:12px 22px;border-radius:10px;background:${brand.accent};color:#0b1418;font-weight:700;text-decoration:none;">Download ${bot.name}</a>`
+              : ''
+      }
       <hr style="border:none;border-top:1px solid #1e2a30;margin:24px 0;">
       <p style="color:#64748b;font-size:12px;">© ${new Date().getFullYear()} ${brand.name}. Need help? Reply to this email.</p>
     </div>`,
@@ -63,7 +68,11 @@ const sendSubscriptionReceipt = async ({ email, tier, expiresAt, priceUSD, payCu
     sendSmtpEmail.sender = { name: brand.name, email: process.env.SENDER_EMAIL };
     sendSmtpEmail.htmlContent = html;
     /* Brevo fetches the URL itself, so nothing is read or held here. */
-    if (bot) sendSmtpEmail.attachment = [{ url: bot.url, name: bot.name }];
+    /* A download link in the body, not a Brevo attachment: Brevo refuses the
+       .ex5/.mq5 formats EAs come in ("Unsupported file format"), and that 400
+       fails the whole receipt — a paid customer would get nothing. A link
+       carries any format and is not quarantined the way a binary attachment
+       can be. */
 
     await apiInstance.sendTransacEmail(sendSmtpEmail);
 };

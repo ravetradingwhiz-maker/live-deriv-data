@@ -38,11 +38,11 @@ const BRANDS = {
 const brandFor = product => BRANDS[product] || BRANDS.nexora;
 
 /**
- * The name to give an attachment, taken from the end of its own URL.
+ * The name to show on the download link, taken from the end of its own URL.
  *
- * Derived rather than written down so the file is called whatever it is
- * actually called — a bot renamed on the host would otherwise keep arriving
- * under a stale name from an env var nobody remembered to change.
+ * Derived rather than written down so the link names the file by whatever it
+ * is actually called — a bot renamed on the host would otherwise show a stale
+ * name from an env var nobody remembered to change.
  */
 const fileNameOf = url => {
     try {
@@ -54,14 +54,17 @@ const fileNameOf = url => {
 };
 
 /**
- * The bot that rides along with a receipt, if there is one.
+ * The bot a receipt links to, if there is one.
  *
  * Only NYX EA sells a file; Nexora and QuantumSyn sell access to a site and
- * have nothing to attach. Brevo fetches the URL itself, so the file lives
- * wherever it is hosted and never on this server.
+ * have nothing to offer. The receipt carries a download link rather than an
+ * attachment: Brevo refuses the .ex5/.mq5 formats EAs come in, and that
+ * refusal fails the whole send, so an attached bot would mean a paid customer
+ * got no receipt at all. A link carries any format and the file stays wherever
+ * it is hosted.
  *
- * Null when it is not configured, and the receipt then goes out without it.
- * A missing attachment is a customer who has to be sent the bot by hand; a
+ * Null when it is not configured, and the receipt then goes out without the
+ * link. A missing file is a customer who has to be sent the bot by hand; a
  * receipt that threw instead would be a customer who paid and heard nothing.
  */
 const botFor = product => {

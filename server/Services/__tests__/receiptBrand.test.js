@@ -104,14 +104,14 @@ const withEnv = (vars, fn) => {
 
 const URL_ = 'https://res.cloudinary.com/x/raw/upload/v1/NYX%20EA%20v2.ex5';
 
-ok('with nothing configured, nothing is attached',
+ok('with nothing configured, nothing is linked',
     withEnv({}, () => botFor('nyx')) === null);
 
 ok('a nyx receipt still builds without the bot',
     Boolean(withEnv({}, () => make('pro').html)));
 
-ok('and says nothing about an attachment that is not there',
-    !withEnv({}, () => make('pro').html).includes('is attached'));
+ok('and shows no download link',
+    !withEnv({}, () => make('pro').html).includes('Download '));
 
 ok('configured, nyx gets the file',
     withEnv({ NYX_EA_URL: URL_ }, () => botFor('nyx'))?.url === URL_);
@@ -132,25 +132,25 @@ ok('an unknown product never gets the bot',
     withEnv({ NYX_EA_URL: URL_ }, () => botFor('nope')) === null);
 
 for (const tier of ['alpha', 'quantum', 'apex', 'quantumsyn']) {
-    ok(`${tier}: no attachment on the receipt`,
+    ok(`${tier}: no bot on the receipt`,
         withEnv({ NYX_EA_URL: URL_ }, () => make(tier).bot) === null);
-    ok(`${tier}: and no mention of one`,
-        !withEnv({ NYX_EA_URL: URL_ }, () => make(tier).html).includes('is attached'));
+    ok(`${tier}: and no download link`,
+        !withEnv({ NYX_EA_URL: URL_ }, () => make(tier).html).includes('Download '));
 }
 
 for (const tier of ['pro', 'elite', 'advanced']) {
-    ok(`${tier}: the bot is attached`,
+    ok(`${tier}: the bot is linked`,
         withEnv({ NYX_EA_URL: URL_ }, () => make(tier).bot)?.url === URL_);
-    ok(`${tier}: and the receipt says so by name`,
-        withEnv({ NYX_EA_URL: URL_ }, () => make(tier).html).includes('NYX EA v2.ex5'));
+    ok(`${tier}: the receipt links it by name`,
+        withEnv({ NYX_EA_URL: URL_ }, () => make(tier).html).includes('Download NYX EA v2.ex5'));
 }
 
 /* A URL that is not one must not take a payment's receipt down with it. */
-ok('nonsense in the env attaches nothing rather than throwing',
+ok('nonsense in the env links nothing rather than throwing',
     withEnv({ NYX_EA_URL: 'not a url' }, () => botFor('nyx')) === null);
 ok('and the receipt still builds',
     Boolean(withEnv({ NYX_EA_URL: 'not a url' }, () => make('pro').subject)));
-ok('a url with no filename on the end attaches nothing',
+ok('a url with no filename on the end links nothing',
     withEnv({ NYX_EA_URL: 'https://example.com/' }, () => botFor('nyx')) === null);
 ok('fileNameOf survives rubbish', fileNameOf('') === '' && fileNameOf(null) === '');
 
