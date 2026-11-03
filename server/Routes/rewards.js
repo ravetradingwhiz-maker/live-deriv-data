@@ -9,5 +9,6 @@ const router = express.Router();
 const checkLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
 router.post('/growth/check', checkLimiter, rewardController.check);
+router.post('/growth/claim', checkLimiter, rewardController.claim);
 
 module.exports = router;

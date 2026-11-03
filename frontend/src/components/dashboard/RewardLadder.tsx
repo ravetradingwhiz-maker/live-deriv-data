@@ -1,18 +1,21 @@
-import { Gift } from 'lucide-react';
+import { Gift, Loader2 } from 'lucide-react';
 
 interface RewardLadderProps {
     /** All-time realised profit, as the server read it. */
     profit: number;
     /** What the next grant costs. Doubles after each one. */
     threshold: number;
-    granted: boolean;
+    claimable: boolean;
+    claiming: boolean;
+    error: string | null;
+    onClaim: () => void;
 }
 
 const fmt = (value: number): string =>
     value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-/** Progress toward the next growth reward. */
-const RewardLadder = ({ profit, threshold, granted }: RewardLadderProps) => {
+/** Progress toward the next growth reward, and the claim once the bar is full. */
+const RewardLadder = ({ profit, threshold, claimable, claiming, error, onClaim }: RewardLadderProps) => {
     const pct = threshold > 0 ? Math.max(0, Math.min(1, profit / threshold)) : 0;
 
     return (
@@ -28,12 +31,26 @@ const RewardLadder = ({ profit, threshold, granted }: RewardLadderProps) => {
 
             <div className='mt-2.5 h-2 overflow-hidden rounded-full bg-ink-600'>
                 <div
-                    className='h-full rounded-full bg-amber-400 transition-[width] duration-500'
+                    className={`h-full rounded-full transition-[width] duration-500 ${
+                        claimable ? 'bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.8)]' : 'bg-amber-400'
+                    }`}
                     style={{ width: `${pct * 100}%` }}
                 />
             </div>
 
-            {granted && <p className='mt-2 text-xs font-semibold text-emerald-400'>3 days Alpha unlocked</p>}
+            {claimable && (
+                <button
+                    type='button'
+                    onClick={onClaim}
+                    disabled={claiming}
+                    className='mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-[#1a1205] transition-colors hover:bg-amber-300 disabled:opacity-60'
+                >
+                    {claiming && <Loader2 size={14} className='animate-spin' />}
+                    Claim
+                </button>
+            )}
+
+            {error && <p className='mt-2 text-xs text-rose-400'>{error}</p>}
         </div>
     );
 };
