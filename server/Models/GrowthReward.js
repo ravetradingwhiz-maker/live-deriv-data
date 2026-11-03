@@ -17,7 +17,13 @@ const GrowthRewardSchema = new mongoose.Schema(
            never from the account's whole history: the challenge asks them to
            trade to a target, and lifetime history would clear several rungs of
            the ladder before they had placed a single trade for it. */
-        startedAt: { type: Date, default: Date.now },
+        /* Deliberately no default. A default here is evaluated on every
+           hydration of a document that lacks the field — rows written before
+           this field existed do — so the baseline would read as "now" on each
+           call and the window would slide forward every midnight, resetting
+           the challenge nightly. Missing means missing; the controller falls
+           back to createdAt and writes it back once. */
+        startedAt: { type: Date },
         threshold: { type: Number, default: 500 },
         grantsClaimed: { type: Number, default: 0 },
         lastGrantedAt: { type: Date, default: null },

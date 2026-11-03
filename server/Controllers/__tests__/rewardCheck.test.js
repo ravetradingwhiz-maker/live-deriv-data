@@ -28,6 +28,7 @@ const LADDER = {
 
 let capturedSince = null;
 let createdSubscription = null;
+let backfilled = null;
 
 // Mirrors the driver's includeResultMetadata shape, so the controller's
 // "did this call enrol the account?" branch is exercised rather than skipped.
@@ -36,6 +37,7 @@ stub('Models/GrowthReward', {
         value: { ...LADDER },
         lastErrorObject: { updatedExisting: true },
     }),
+    updateOne: async (_q, update) => (backfilled = update.$set.startedAt),
 });
 stub('Models/Subscription', {
     create: async doc => {
@@ -129,6 +131,41 @@ const run = async handler => {
     assert.ok(createdSubscription, 'claim() writes the subscription');
     assert.strictEqual(createdSubscription.tier, 'alpha');
     assert.strictEqual(createdSubscription.paymentId, 'reward:growth:1');
+
+    // ── a row written before startedAt existed ───────────────────────────────
+    // Its enrolment time is createdAt. Reading it as "now" would slide the
+    // window forward every midnight and reset the challenge nightly.
+    capturedSince = null;
+    backfilled = null;
+    stub('Models/GrowthReward', {
+        findOneAndUpdate: async () => ({
+            value: {
+                _id: 'ladder-legacy',
+                loginids: LADDER.loginids,
+                createdAt: new Date('2026-10-28T09:12:00.000Z'),
+                threshold: 500,
+                grantsClaimed: 0,
+            },
+            lastErrorObject: { updatedExisting: true },
+        }),
+        updateOne: async (_q, update) => (backfilled = update.$set.startedAt),
+    });
+    delete require.cache[require.resolve(path.join(ROOT, 'Controllers/rewardController'))];
+    const legacy = require(path.join(ROOT, 'Controllers/rewardController'));
+
+    const legacyChecked = await run(legacy.check);
+    assert.strictEqual(legacyChecked.failure, null);
+    assert.strictEqual(
+        new Date(capturedSince * 1000).toISOString(),
+        '2026-10-28T00:00:00.000Z',
+        'a row with no startedAt is windowed from createdAt, not from now'
+    );
+    assert.ok(backfilled, 'the missing startedAt is written back');
+    assert.strictEqual(
+        new Date(backfilled).toISOString(),
+        '2026-10-28T00:00:00.000Z',
+        'the backfilled value is the start of the enrolment day'
+    );
 
     console.log('rewardCheck: all assertions passed');
 })().catch(err => {

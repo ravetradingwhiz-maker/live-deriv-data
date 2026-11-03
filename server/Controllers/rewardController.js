@@ -50,13 +50,19 @@ const readProfitAndLadder = async body => {
        than inferred from a startedAt that appears to move. */
     const enrolledNow = !(upserted.lastErrorObject && upserted.lastErrorObject.updatedExisting);
 
+    /* Rows written before startedAt existed do not carry one. Their enrolment
+       time is createdAt, which `timestamps: true` has always persisted, so it
+       is backfilled once rather than left to be re-guessed on every call. */
+    if (!ladder.startedAt) {
+        const base = startOfUtcDay(ladder.createdAt || new Date());
+        await GrowthReward.updateOne({ _id: ladder._id }, { $set: { startedAt: base } });
+        ladder.startedAt = base;
+    }
+
     /* The window opens at the START OF THE DAY the account enrolled, not the
        instant it first called in. "From today" has to mean the whole day, or
        someone who traded this morning and opened the dashboard this afternoon
-       is told they have made nothing.
-
-       Normalised on read rather than trusting the stored value, so rows
-       written before this was fixed are covered without a migration. */
+       is told they have made nothing. */
     const since = Math.floor(startOfUtcDay(ladder.startedAt).getTime() / 1000);
 
     let summary;
