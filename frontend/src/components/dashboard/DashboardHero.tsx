@@ -68,12 +68,22 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                             type='button'
                             onClick={() => setEditingNickname(true)}
                             title='Change your nickname'
-                            className={`group mt-1.5 inline-flex items-center gap-2 text-2xl font-extrabold leading-tight text-cyan-400 transition-colors hover:text-cyan-300 sm:text-3xl ${
-                                nickname ? '' : 'font-mono text-xl sm:text-2xl'
-                            }`}
+                            className='group mt-1.5 inline-flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 md:justify-start'
                         >
-                            {displayName}
-                            <Pencil size={16} className='shrink-0 opacity-0 transition-opacity group-hover:opacity-100' />
+                            <span
+                                className={`text-2xl font-extrabold leading-tight text-cyan-400 transition-colors group-hover:text-cyan-300 sm:text-3xl ${
+                                    nickname ? '' : 'font-mono text-xl sm:text-2xl'
+                                }`}
+                            >
+                                {displayName}
+                            </span>
+                            {/* Always visible, not hover-only: on a phone there
+                                is no hover, so an affordance that waits for one
+                                is an affordance nobody finds. */}
+                            <span className='inline-flex shrink-0 items-center gap-1 rounded-full border border-line bg-ink-800 px-2 py-0.5 text-xs font-semibold text-slate-400 transition-colors group-hover:border-cyan-700 group-hover:text-cyan-300'>
+                                <Pencil size={12} />
+                                Edit
+                            </span>
                         </button>
                     )}
                     <Link

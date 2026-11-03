@@ -84,7 +84,6 @@ const Callback = () => {
                 <>
                     <Atom color={['#32cd32', '#327fcd', '#cd32cd', '#cd8032']} />
                     <p className='mt-6 text-lg font-medium text-slate-200'>{message}</p>
-                    <p className='mt-1 text-sm text-slate-500'>Securely connecting to your Deriv account.</p>
                 </>
             ) : (
                 <div className='card max-w-md'>
