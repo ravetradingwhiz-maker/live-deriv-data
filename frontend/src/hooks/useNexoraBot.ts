@@ -104,6 +104,10 @@ export interface NexoraSignal {
     passes: boolean;
     /** Normalised edge in [0,1] so families can be ranked against each other. */
     strength: number;
+    /** The confidence this strategy needs before it will trade, when it has a
+     *  fixed one. Shown while scanning so a long wait is legible rather than
+     *  looking like a stall. */
+    need?: number;
     /** Digit barrier for digit contracts (matches/differs, over/under) or the selected tick (TICKHIGH). */
     barrier?: number;
     /** Contract duration in ticks. Falls back to the family default when omitted. */
@@ -524,6 +528,7 @@ const over2Under7Signal = (quotes: number[], decimals: number, risk: RiskLevel):
         label: 'Over 2 + Under 7',
         predictionText: `Next digit in 3-6 (${(pMiddle * 100).toFixed(0)}% recently)`,
         conf: pMiddle,
+        need,
         passes: pMiddle >= need,
         strength: Math.max(0, (pMiddle - 0.4) / 0.6),
         duration: 1,
