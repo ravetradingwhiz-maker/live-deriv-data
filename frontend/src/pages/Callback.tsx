@@ -33,8 +33,8 @@ const Callback = () => {
             clearAdminExitSuppression();
             refreshAuthState();
             // A page may stash where to land after login (e.g. the hero's
-            // "Access Nexora AI" → Free bot). Default to manual trading.
-            const dest = sessionStorage.getItem('post_login_redirect') || '/app/manual';
+            // "Access Nexora AI" → Free bot). Default to the dashboard.
+            const dest = sessionStorage.getItem('post_login_redirect') || '/app/dashboard';
             sessionStorage.removeItem('post_login_redirect');
             navigate(dest, { replace: true });
         };

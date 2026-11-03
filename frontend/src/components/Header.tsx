@@ -41,7 +41,7 @@ const Header = () => {
                             <ThemeToggle />
                             {isAuthenticated ? (
                                 <>
-                                    <Link to='/app/manual' className='btn-ghost'>
+                                    <Link to='/app/dashboard' className='btn-ghost'>
                                         <LayoutDashboard size={18} />
                                         Open app
                                     </Link>
@@ -114,7 +114,7 @@ const Header = () => {
                                 className='btn-ghost'
                                 onClick={() => {
                                     setMenuOpen(false);
-                                    navigate('/app/manual');
+                                    navigate('/app/dashboard');
                                 }}
                             >
                                 <LayoutDashboard size={18} />

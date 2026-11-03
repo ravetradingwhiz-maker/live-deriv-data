@@ -101,7 +101,7 @@ const AdminMenu = () => {
 
                         <div className='mt-auto border-t border-line p-3'>
                             <NavLink
-                                to='/app/manual'
+                                to='/app/dashboard'
                                 onClick={() => setOpen(false)}
                                 className='block rounded-xl px-3 py-3 text-sm font-medium text-slate-400 transition-colors hover:bg-ink-800 hover:text-white'
                             >

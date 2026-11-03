@@ -60,7 +60,7 @@ interface Plan {
     slotsLeft?: number;
     account: string;
     cta: string;
-    /** Where the CTA navigates (when authenticated). Defaults to manual trading. */
+    /** Where the CTA navigates (when authenticated). Defaults to the dashboard. */
     to?: string;
     /** Subscription tier this plan grants (premium plans only). */
     tier?: Tier;
@@ -228,7 +228,7 @@ const PricingPlans = () => {
             .finally(() => setLoaded(true));
     }, []);
 
-    const handleStart = (to = '/app/manual') => {
+    const handleStart = (to = '/app/dashboard') => {
         if (isAuthenticated) {
             navigate(to);
             return;

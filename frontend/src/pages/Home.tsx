@@ -123,7 +123,7 @@ const Home = () => {
     const navigate = useNavigate();
 
     // Mirrors quantumsyn's handleLogin: redirect straight to the OAuth URL.
-    const primaryCta = () => (isAuthenticated ? navigate('/dashboard') : loginOAuth2());
+    const primaryCta = () => (isAuthenticated ? navigate('/app/dashboard') : loginOAuth2());
 
     return (
         <div className='min-h-screen bg-ink-900'>
