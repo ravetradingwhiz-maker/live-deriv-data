@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { PartyPopper, ShieldAlert, X } from 'lucide-react';
+import speak from '@/utils/speak';
 import type { SessionResult } from '@/hooks/useNexoraBot';
 
 const fmt = (value: number, currency: string): string =>
@@ -20,6 +22,15 @@ interface Props {
  */
 const BotResultModal = ({ result, onClose }: Props) => {
     const isTarget = result.reason === 'target';
+
+    /* Said once as the modal opens. This is not inside a user gesture, so a
+       browser that has had none this session will refuse it — the scan speaks
+       on the Run press, which is what earns the permission by the time a
+       session can end. */
+    useEffect(
+        () => speak(isTarget ? 'Profit target hit, profit secured' : "Max loss hit, I'm really sorry"),
+        [isTarget]
+    );
 
     return createPortal(
         <div
