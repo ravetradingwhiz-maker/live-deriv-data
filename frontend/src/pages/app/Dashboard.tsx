@@ -2,7 +2,6 @@ import { useAuth } from '@/context/AuthContext';
 import useAccountGrowth from '@/hooks/useAccountGrowth';
 import DashboardHero from '@/components/dashboard/DashboardHero';
 import GrowthCard from '@/components/dashboard/GrowthCard';
-import RewardProgress from '@/components/dashboard/RewardProgress';
 
 /**
  * Dashboard — the authenticated app's landing tab.
@@ -18,7 +17,7 @@ const Dashboard = () => {
 
     return (
         <div className='space-y-6'>
-            <DashboardHero />
+            <DashboardHero monthProfit={month.profit} />
 
             {error && (
                 <p className='rounded-xl border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-300'>
@@ -47,8 +46,6 @@ const Dashboard = () => {
                     loading={loading}
                 />
             </div>
-
-            <RewardProgress monthProfit={month.profit} />
         </div>
     );
 };

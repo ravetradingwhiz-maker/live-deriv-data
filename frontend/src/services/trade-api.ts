@@ -229,6 +229,19 @@ export interface ProfitTableRow {
     transaction_id: number;
 }
 
+export interface AccountSettings {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+}
+
+/** The signed-in user's Deriv profile, for greeting them by name. */
+export const getSettings = async (): Promise<AccountSettings> => {
+    const res = await tradeWS.send({ get_settings: 1 });
+    if (res.error) throw new Error(res.error.message);
+    return (res.get_settings ?? {}) as AccountSettings;
+};
+
 const PROFIT_PAGE_SIZE = 500;
 /** Bounds a pathological history; a month of trades cannot approach this. */
 const PROFIT_MAX_PAGES = 20;
