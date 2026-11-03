@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { Pencil } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import useAccountName from '@/hooks/useAccountName';
 import useGrowthReward, { DEFAULT_THRESHOLD } from '@/hooks/useGrowthReward';
 import RewardLadder from '@/components/dashboard/RewardLadder';
 import RewardClaimedModal from '@/components/dashboard/RewardClaimedModal';
 import SpeechBubble from '@/components/dashboard/SpeechBubble';
+import NicknameModal from '@/components/dashboard/NicknameModal';
+import useNickname from '@/hooks/useNickname';
 
 interface DashboardHeroProps {
     /** Month profit, watched so a closing trade re-checks the ladder. */
@@ -26,8 +30,16 @@ const fmt = (value: number): string =>
  */
 const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
     const { activeLoginId } = useAuth();
-    const name = useAccountName();
+    // The Deriv first name is no longer shown directly — it seeds the nickname
+    // prompt, so the suggestion is already theirs when the modal opens.
+    const derivName = useAccountName();
+    const { nickname, shouldPrompt, save: saveNickname, skip: skipNickname } = useNickname(activeLoginId);
+    const [editingNickname, setEditingNickname] = useState(false);
     const { status, grant, claiming, claimError, claim, dismissGrant } = useGrowthReward(monthProfit);
+
+    // What the user is called anywhere a name is shown: their own, falling back
+    // to the account number, which always exists.
+    const displayName = nickname ?? activeLoginId;
 
     // Until the server answers, the challenge names the opening target. After a
     // grant the bar doubles, so the copy must follow it rather than keep
@@ -44,14 +56,22 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                 {/* Left — greeting, account, and the way in. */}
                 <div className='col-span-2 flex flex-col items-center text-center md:col-span-1 md:row-span-2 md:items-start md:text-left'>
                     <h1 className='text-3xl font-bold leading-tight text-white sm:text-4xl'>Welcome Back!</h1>
-                    {activeLoginId && (
-                        <p className='mt-1 font-mono text-lg font-semibold text-cyan-400 sm:text-xl'>
-                            {activeLoginId}
-                        </p>
+                    {displayName && (
+                        <button
+                            type='button'
+                            onClick={() => setEditingNickname(true)}
+                            title='Change your nickname'
+                            className={`group mt-1 inline-flex items-center gap-1.5 text-lg font-semibold text-cyan-400 transition-colors hover:text-cyan-300 sm:text-xl ${
+                                nickname ? '' : 'font-mono'
+                            }`}
+                        >
+                            {displayName}
+                            <Pencil size={13} className='opacity-0 transition-opacity group-hover:opacity-100' />
+                        </button>
                     )}
                     <Link
                         to='/app/trade-pilot-free'
-                        className='mt-4 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-2.5 text-sm font-bold text-[#1a1205] shadow-[0_2px_12px_rgba(245,158,11,0.35)] transition-all hover:from-amber-200 hover:to-amber-400'
+                        className='mt-4 inline-flex items-center justify-center rounded-lg bg-gradient-to-r md:mt-10 from-amber-300 to-amber-500 px-6 py-2.5 text-sm font-bold text-[#1a1205] shadow-[0_2px_12px_rgba(245,158,11,0.35)] transition-all hover:from-amber-200 hover:to-amber-400'
                     >
                         Start Trading
                     </Link>
@@ -70,8 +90,8 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                 {/* The bubble, held level with the robot's head. */}
                 <div className='min-w-0 self-start pt-3 sm:pt-6 md:pt-8'>
                     <SpeechBubble>
-                        <p className='text-base font-bold text-bubble-fg sm:text-xl'>
-                            Hello{name ? `, ${name}` : ''}
+                        <p className='text-sm font-bold leading-snug text-bubble-fg sm:text-base'>
+                            Hello{displayName ? ` ${displayName}` : ''}, I have a challenge for YOU!
                         </p>
                     </SpeechBubble>
                 </div>
@@ -101,6 +121,19 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                     )}
                 </div>
             </div>
+
+            {(shouldPrompt || editingNickname) && (
+                <NicknameModal
+                    suggestion={derivName}
+                    loginid={activeLoginId}
+                    initial={nickname}
+                    onSave={saveNickname}
+                    onClose={() => {
+                        setEditingNickname(false);
+                        if (shouldPrompt) skipNickname();
+                    }}
+                />
+            )}
 
             {grant && <RewardClaimedModal grant={grant} onClose={dismissGrant} />}
         </section>
