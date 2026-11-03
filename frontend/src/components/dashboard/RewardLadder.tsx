@@ -14,6 +14,27 @@ interface RewardLadderProps {
 const fmt = (value: number): string =>
     value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
+/**
+ * The ladder's own placeholder, for the wait on the server's profit read.
+ *
+ * That read opens a socket to Deriv and walks a profit table, so it is the
+ * slowest thing on the dashboard — leaving the space empty until it lands made
+ * the card appear from nowhere and shove the page down.
+ */
+export const RewardLadderSkeleton = () => (
+    <div
+        className='rounded-xl border border-line bg-ink-800 p-3'
+        aria-busy='true'
+        aria-label='Reward progress loading'
+    >
+        <div className='flex items-center gap-2'>
+            <span className='h-4 w-4 shrink-0 animate-pulse rounded bg-ink-600' />
+            <span className='h-4 w-28 animate-pulse rounded bg-ink-600' />
+        </div>
+        <div className='mt-2.5 h-2 animate-pulse rounded-full bg-ink-600' />
+    </div>
+);
+
 /** Progress toward the next growth reward, and the claim once the bar is full. */
 const RewardLadder = ({ profit, threshold, claimable, claiming, error, onClaim }: RewardLadderProps) => {
     const pct = threshold > 0 ? Math.max(0, Math.min(1, profit / threshold)) : 0;

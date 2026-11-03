@@ -5,7 +5,7 @@ import { Pencil } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import useAccountName from '@/hooks/useAccountName';
 import useGrowthReward, { DEFAULT_THRESHOLD } from '@/hooks/useGrowthReward';
-import RewardLadder from '@/components/dashboard/RewardLadder';
+import RewardLadder, { RewardLadderSkeleton } from '@/components/dashboard/RewardLadder';
 import RewardClaimedModal from '@/components/dashboard/RewardClaimedModal';
 import SpeechBubble from '@/components/dashboard/SpeechBubble';
 import NicknameModal from '@/components/dashboard/NicknameModal';
@@ -108,6 +108,8 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                             <span className='text-premium font-bold'>Nexora AI premium</span> 3 days for FREE!
                         </p>
                     </div>
+
+                    {!status && <RewardLadderSkeleton />}
 
                     {status && (
                         <RewardLadder

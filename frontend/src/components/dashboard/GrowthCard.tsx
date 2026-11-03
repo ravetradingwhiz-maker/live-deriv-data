@@ -35,10 +35,16 @@ const GrowthCard = ({ title, profit, percent, trades, winRate, buckets, currency
             <p className='text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-xs'>{title}</p>
 
             {loading ? (
-                <>
-                    <span className='mt-2 block h-7 w-32 animate-pulse rounded bg-ink-600' />
-                    <span className='mt-2 block h-4 w-24 animate-pulse rounded bg-ink-600' />
-                </>
+                /* Shaped like the loaded card — same rows, same heights — so the
+                   figures land in place instead of the card jumping. */
+                <div aria-busy='true' aria-label={`${title} loading`}>
+                    <div className='mt-1.5 flex items-baseline justify-between gap-x-3'>
+                        <span className='block h-5 w-24 animate-pulse rounded bg-ink-600 sm:h-8 sm:w-32' />
+                        <span className='block h-3.5 w-9 animate-pulse rounded bg-ink-600 sm:h-4 sm:w-12' />
+                    </div>
+                    {buckets && <div className='mt-2 h-10 w-full animate-pulse rounded bg-ink-600' />}
+                    <div className='mt-2 h-3 w-28 animate-pulse rounded bg-ink-600 sm:h-3.5' />
+                </div>
             ) : (
                 <>
                     <div className='mt-1.5 flex flex-wrap items-baseline justify-between gap-x-3'>
