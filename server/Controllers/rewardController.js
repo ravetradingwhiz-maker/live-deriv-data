@@ -2,7 +2,7 @@ const createError = require('http-errors');
 const GrowthReward = require('../Models/GrowthReward');
 const Subscription = require('../Models/Subscription');
 const { growthRewardSchema } = require('../Middlewares/validation');
-const { fetchAllTimeProfit } = require('../Services/growthProfit');
+const { fetchChallengeProfit } = require('../Services/growthProfit');
 
 /** What a grant is worth. */
 const REWARD_TIER = 'alpha';
@@ -28,17 +28,21 @@ const readProfitAndLadder = async body => {
 
     const { loginids, accessToken } = value;
 
+    /* The ladder row is created before the read, because its startedAt is the
+       window the read uses: an account joining now counts from now. */
+    let ladder = await GrowthReward.findOne({ loginids: { $in: loginids } });
+    if (!ladder) ladder = await GrowthReward.create({ loginids });
+
+    const since = Math.floor(new Date(ladder.startedAt).getTime() / 1000);
+
     let profit;
     try {
-        profit = await fetchAllTimeProfit(accessToken, loginids[0]);
+        profit = await fetchChallengeProfit(accessToken, loginids[0], since);
     } catch (e) {
         // A rejected token is the caller's problem, not a server fault — and it
         // must never result in a grant on unverified profit.
         throw createError(e.status || 502, e.message || 'Could not read your profit from Deriv');
     }
-
-    let ladder = await GrowthReward.findOne({ loginids: { $in: loginids } });
-    if (!ladder) ladder = await GrowthReward.create({ loginids });
 
     return { loginids, profit, ladder };
 };

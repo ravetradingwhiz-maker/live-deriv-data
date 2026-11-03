@@ -13,6 +13,11 @@ const mongoose = require('mongoose');
 const GrowthRewardSchema = new mongoose.Schema(
     {
         loginids: { type: [String], required: true, index: true },
+        /* When this account joined the challenge. Profit is counted from here,
+           never from the account's whole history: the challenge asks them to
+           trade to a target, and lifetime history would clear several rungs of
+           the ladder before they had placed a single trade for it. */
+        startedAt: { type: Date, default: Date.now },
         threshold: { type: Number, default: 500 },
         grantsClaimed: { type: Number, default: 0 },
         lastGrantedAt: { type: Date, default: null },

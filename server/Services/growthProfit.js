@@ -16,6 +16,14 @@ const DERIV_REST = 'https://api.derivws.com';
 /** Deriv-App-ID header value. Reuses the markup app id already in the server env. */
 const getAppId = () => process.env.MARKUP_APP_ID || process.env.CLIENT_ID || '';
 
+/**
+ * The app id trades must carry to count toward the challenge.
+ *
+ * This has to be the id this site's frontend places trades under, which is not
+ * necessarily the markup id — set DERIV_TRADING_APP_ID when they differ.
+ */
+const getTradingAppId = () => process.env.DERIV_TRADING_APP_ID || getAppId();
+
 const PAGE_SIZE = 500;
 /** Bounds a pathological history rather than walking it forever. */
 const MAX_PAGES = 20;
@@ -31,6 +39,22 @@ const round2 = n => Math.round(n * 100) / 100;
  * one place the subtraction happens. Rounded to cents because a threshold
  * comparison on a float that drifted is a reward granted or withheld wrongly.
  */
+/**
+ * Keeps only the contracts bought through this site.
+ *
+ * `profit_table` returns the account's trades whoever placed them — DTrader,
+ * another of our sites, any third-party app on the same Deriv login. The
+ * challenge is about trading here, so everything else is dropped.
+ *
+ * With no app id configured nothing matches, which stalls the challenge at
+ * zero rather than paying out on trades placed somewhere else.
+ */
+const filterToApp = (rows, appId) => {
+    const wanted = String(appId || '');
+    if (!wanted) return [];
+    return (rows || []).filter(row => String(row && row.app_id) === wanted);
+};
+
 const sumProfit = rows =>
     round2(
         (rows || []).reduce((total, row) => {
@@ -68,12 +92,15 @@ const fetchOtpSocketUrl = async (accessToken, loginid) => {
 };
 
 /**
- * Every settled contract on the account, summed.
+ * What the account has made here since it joined the challenge.
+ *
+ * Windowed at the source with `date_from` and filtered to this app's trades,
+ * so neither the account's past nor its trading elsewhere counts.
  *
  * Walks ascending so a trade settling mid-walk cannot shift a later row into a
  * page already read.
  */
-const fetchAllTimeProfit = (accessToken, loginid) =>
+const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
     new Promise((resolve, reject) => {
         if (typeof WebSocket === 'undefined') {
             const err = new Error('Global WebSocket unavailable — Node 22+ is required to read profit');
@@ -107,9 +134,9 @@ const fetchAllTimeProfit = (accessToken, loginid) =>
             }, OVERALL_TIMEOUT_MS);
 
             const requestPage = () => {
-                socket.send(
-                    JSON.stringify({ profit_table: 1, description: 1, sort: 'ASC', limit: PAGE_SIZE, offset })
-                );
+                const req = { profit_table: 1, description: 1, sort: 'ASC', limit: PAGE_SIZE, offset };
+                if (sinceEpoch) req.date_from = sinceEpoch;
+                socket.send(JSON.stringify(req));
             };
 
             try {
@@ -141,7 +168,9 @@ const fetchAllTimeProfit = (accessToken, loginid) =>
                 if (!msg.profit_table) return;
 
                 const rows = msg.profit_table.transactions || [];
-                total += sumProfit(rows);
+                /* Paging counts every row Deriv sent, not just the ones kept —
+                   the offset addresses its table, not our filtered view. */
+                total += sumProfit(filterToApp(rows, getTradingAppId()));
                 offset += rows.length;
 
                 const pagesRead = Math.ceil(offset / PAGE_SIZE);
@@ -165,4 +194,4 @@ const fetchAllTimeProfit = (accessToken, loginid) =>
         }, reject);
     });
 
-module.exports = { sumProfit, fetchOtpSocketUrl, fetchAllTimeProfit };
+module.exports = { sumProfit, filterToApp, fetchOtpSocketUrl, fetchChallengeProfit };
