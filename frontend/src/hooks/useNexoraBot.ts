@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     buyWithParameters,
+    type BuyResult,
     getActiveSymbols,
     getProposalPayout,
     subscribeOpenContract,
@@ -769,29 +770,49 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 { contract_type: sig.contract_type, label: sig.label, barrier: sig.barrier, duration },
             ];
 
-            const bought: number[] = [];
-            for (const leg of parts) {
-                const res = await buyWithParameters({
-                    contract_type: leg.contract_type,
-                    symbol,
-                    amount: stake,
-                    duration: leg.duration ?? duration,
-                    duration_unit: 't',
-                    barrier: leg.barrier,
-                    currency: cfg.currency,
-                });
+            /* Fired together, not one after another. These are one-tick
+               contracts: waiting for the first leg's reply before sending the
+               second costs a full round trip to Deriv, and if that crosses a
+               tick boundary the legs settle against different digits — which
+               is two unrelated bets, not this strategy. */
+            const results = await Promise.all(
+                parts.map(leg =>
+                    buyWithParameters({
+                        contract_type: leg.contract_type,
+                        symbol,
+                        amount: stake,
+                        duration: leg.duration ?? duration,
+                        duration_unit: 't',
+                        barrier: leg.barrier,
+                        currency: cfg.currency,
+                    }).catch(
+                        (err): BuyResult => ({
+                            error: { code: 'BuyFailed', message: String(err?.message ?? err) },
+                        })
+                    )
+                )
+            );
 
-                if (res.error || !res.contract_id) {
-                    pushJournal({ result: 'error', text: res.error?.message ?? 'Trade rejected' });
-                    inFlightRef.current = false;
-                    stopInternal('error', res.error?.message);
-                    /* A leg already bought is live and cannot be unbought. It is
-                       left to settle on its own rather than pretending the round
-                       never happened; stopping here is what keeps a half-placed
-                       combo from being staked again. */
-                    return;
-                }
-                bought.push(res.contract_id);
+            const bought = results.filter(r => !r.error && r.contract_id).map(r => r.contract_id as number);
+            const rejected = results.filter(r => r.error || !r.contract_id);
+
+            if (!bought.length) {
+                const msg = rejected[0]?.error?.message ?? 'Trade rejected';
+                pushJournal({ result: 'error', text: msg });
+                inFlightRef.current = false;
+                stopInternal('error', msg);
+                return;
+            }
+
+            /* A partial fill still has to settle. A bought leg is live and
+               cannot be unbought, so the round counts what it got rather than
+               stopping and leaving that contract unwatched — which would drop
+               its profit out of the session's figures entirely. */
+            if (rejected.length) {
+                pushJournal({
+                    result: 'error',
+                    text: `${rejected.length} of ${parts.length} contracts rejected — settling the rest`,
+                });
             }
 
             if (sig.smart) markSmartAiPlaced(smartRef.current, sig.smart);
