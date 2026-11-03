@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { UserRound } from 'lucide-react';
+import { Loader2, UserRound } from 'lucide-react';
 import { NICKNAME_MAX } from '@/hooks/useNickname';
 
 interface Props {
     /** Pre-filled suggestion — the Deriv first name, when there is one. */
     suggestion?: string | null;
     initial?: string | null;
+    /** The save is a network call now, so the dialog has to wait on it. */
+    saving?: boolean;
+    error?: string | null;
     onSave: (value: string) => void;
     /** Called once a name has been saved. There is no other way out. */
     onDone: () => void;
@@ -19,7 +22,7 @@ interface Props {
  * Answering is required, so this has no close control, no backdrop dismissal
  * and no Escape handler: saving a name is the only way out.
  */
-const NicknameModal = ({ suggestion, initial, onSave, onDone }: Props) => {
+const NicknameModal = ({ suggestion, initial, saving, error, onSave, onDone }: Props) => {
     const [value, setValue] = useState(initial ?? suggestion ?? '');
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -32,10 +35,18 @@ const NicknameModal = ({ suggestion, initial, onSave, onDone }: Props) => {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!trimmed) return;
+        if (!trimmed || saving) return;
         onSave(trimmed);
-        onDone();
     };
+
+    /* Closes only once the save has actually landed. Closing on submit would
+       dismiss the dialog over a request that then failed, leaving the user
+       believing a name was saved that never was. */
+    const savedRef = useRef(false);
+    useEffect(() => {
+        if (saving) savedRef.current = true;
+        else if (savedRef.current && !error) onDone();
+    }, [saving, error, onDone]);
 
     return createPortal(
         <div
@@ -69,11 +80,14 @@ const NicknameModal = ({ suggestion, initial, onSave, onDone }: Props) => {
 
                     <button
                         type='submit'
-                        disabled={!trimmed}
-                        className='mt-1 w-full rounded-lg bg-cyan-500 px-6 py-2.5 font-bold text-[#04121a] transition-colors hover:bg-cyan-400 disabled:opacity-50'
+                        disabled={!trimmed || saving}
+                        className='mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-6 py-2.5 font-bold text-[#04121a] transition-colors hover:bg-cyan-400 disabled:opacity-50'
                     >
+                        {saving && <Loader2 size={15} className='animate-spin' />}
                         Save
                     </button>
+
+                    {error && <p className='text-xs text-rose-400'>{error}</p>}
                 </div>
             </form>
         </div>,

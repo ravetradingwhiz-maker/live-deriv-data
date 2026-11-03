@@ -42,6 +42,7 @@ app.get('/', (req, res) => res.send('Nexora payments API is running'));
 app.use('/api/payments', require('./Routes/payments'));
 app.use('/api/subscription', require('./Routes/subscription'));
 app.use('/api/rewards', require('./Routes/rewards'));
+app.use('/api/profile', require('./Routes/profile'));
 app.use('/api/admin', require('./Routes/admin'));
 app.use('/api/printer', require('./Routes/printer'));
 

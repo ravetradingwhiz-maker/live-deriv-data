@@ -82,4 +82,22 @@ const growthRewardSchema = Joi.object({
     accessToken: Joi.string().trim().min(1).required(),
 });
 
-module.exports = { createPaymentSchema, paystackInitSchema, mpesaInitSchema, growthRewardSchema };
+/**
+ * Setting a nickname.
+ *
+ * The token is what proves the caller owns the account being renamed; Deriv
+ * loginids are guessable, so the loginid alone proves nothing.
+ */
+const nicknameSchema = Joi.object({
+    loginids: Joi.array().items(Joi.string().trim().min(1)).min(1).max(50).required(),
+    accessToken: Joi.string().trim().min(1).required(),
+    nickname: Joi.string().trim().min(1).max(20).required(),
+});
+
+module.exports = {
+    createPaymentSchema,
+    paystackInitSchema,
+    mpesaInitSchema,
+    growthRewardSchema,
+    nicknameSchema,
+};

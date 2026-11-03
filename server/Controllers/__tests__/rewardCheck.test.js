@@ -88,8 +88,6 @@ const run = async handler => {
     assert.strictEqual(checked.payload.profit, 620.5);
     assert.strictEqual(checked.payload.threshold, 500);
     assert.strictEqual(checked.payload.claimable, true, '620.50 clears a 500 target');
-    assert.ok(checked.payload.debug, 'the breakdown is returned for diagnosing a zero');
-
     // An account already enrolled must not be enrolled again, or the ladder
     // resets on every call and the reward can be claimed without limit.
     assert.strictEqual(

@@ -189,16 +189,10 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
                 finish(err);
             }, OVERALL_TIMEOUT_MS);
 
-            /* Set once the windowed walk has come back empty. The same socket
-               then asks again with no date_from, purely to find out why: an
-               account with no history at all is a different fault from one
-               whose trades fall outside the window, and the rows also reveal
-               the app_id Deriv really stamps on a buy. */
-            let probing = false;
 
             const requestPage = () => {
                 const req = { statement: 1, description: 1, limit: PAGE_SIZE, offset };
-                if (sinceEpoch && !probing) req.date_from = sinceEpoch;
+                if (sinceEpoch) req.date_from = sinceEpoch;
                 socket.send(JSON.stringify(req));
             };
 
@@ -239,39 +233,12 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
 
                 const page = msg.statement.transactions || [];
 
-                if (probing) {
-                    const appIds = new Set();
-                    let newest = null;
-                    for (const r of page) {
-                        if (r && r.action_type === 'buy') appIds.add(String(r.app_id));
-                        const t = Number(r && r.transaction_time) || 0;
-                        if (t && (!newest || t > newest)) newest = t;
-                    }
-                    const summary = summariseStatement(rows, getTradingAppId());
-                    summary.dateFrom = sinceEpoch || null;
-                    summary.probe = {
-                        ran: true,
-                        rowsWithoutWindow: page.length,
-                        appIdsSeen: [...appIds],
-                        newestTxTime: newest,
-                        newestTxISO: newest ? new Date(newest * 1000).toISOString() : null,
-                    };
-                    return finish(null, summary);
-                }
-
                 rows.push(...page);
                 offset += page.length;
 
                 const pagesRead = Math.ceil(offset / PAGE_SIZE);
                 if (page.length < PAGE_SIZE || pagesRead >= MAX_PAGES) {
-                    if (rows.length === 0 && sinceEpoch) {
-                        probing = true;
-                        offset = 0;
-                        return requestPage();
-                    }
-                    const summary = summariseStatement(rows, getTradingAppId());
-                    summary.dateFrom = sinceEpoch || null;
-                    return finish(null, summary);
+                    return finish(null, summariseStatement(rows, getTradingAppId()));
                 }
                 requestPage();
             });

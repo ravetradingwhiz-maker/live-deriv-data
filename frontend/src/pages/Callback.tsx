@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { clearAdminExitSuppression } from '@/context/AdminContext';
 import { OAuthTokenExchangeService } from '@/services/oauth-token-exchange.service';
 import { parseLoginInfoFromUrl, processLegacyLoginInfo } from '@/utils/auth-utils';
-import Spinner from '@/components/Spinner';
+import { Atom } from 'react-loading-indicators';
 
 type Status = 'processing' | 'error';
 
@@ -21,7 +21,7 @@ const Callback = () => {
     const { refreshAuthState } = useAuth();
     const navigate = useNavigate();
     const [status, setStatus] = useState<Status>('processing');
-    const [message, setMessage] = useState('Completing your login…');
+    const [message, setMessage] = useState('Loading Nexora AI');
     const handled = useRef(false);
 
     useEffect(() => {
@@ -82,7 +82,7 @@ const Callback = () => {
         <div className='flex min-h-screen flex-col items-center justify-center bg-ink-900 px-6 text-center'>
             {status === 'processing' ? (
                 <>
-                    <Spinner />
+                    <Atom color={['#32cd32', '#327fcd', '#cd32cd', '#cd8032']} />
                     <p className='mt-6 text-lg font-medium text-slate-200'>{message}</p>
                     <p className='mt-1 text-sm text-slate-500'>Securely connecting to your Deriv account.</p>
                 </>

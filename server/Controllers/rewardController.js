@@ -44,11 +44,6 @@ const readProfitAndLadder = async body => {
         { new: true, upsert: true, setDefaultsOnInsert: true, includeResultMetadata: true }
     );
     const ladder = upserted.value || upserted;
-    /* Whether this call enrolled the account or found it already enrolled.
-       A row created on every call would reset the ladder every time, and the
-       reward could then be claimed without limit — so this is reported rather
-       than inferred from a startedAt that appears to move. */
-    const enrolledNow = !(upserted.lastErrorObject && upserted.lastErrorObject.updatedExisting);
 
     /* Rows written before startedAt existed do not carry one. Their enrolment
        time is createdAt, which `timestamps: true` has always persisted, so it
@@ -80,7 +75,7 @@ const readProfitAndLadder = async body => {
         throw createError(e.status || 502, e.message || 'Could not read your profit from Deriv');
     }
 
-    return { loginids, profit: summary.profit, summary, ladder, enrolledNow };
+    return { loginids, profit: summary.profit, ladder };
 };
 
 module.exports = {
@@ -96,19 +91,8 @@ module.exports = {
      */
     check: async (req, res, next) => {
         try {
-            const { loginids, profit, summary, ladder, enrolledNow } = await readProfitAndLadder(req.body);
+            const { profit, ladder } = await readProfitAndLadder(req.body);
 
-            /* A zero is ambiguous on its own. The breakdown says whether it
-               means no trades, no settled trades, or trades bought under an
-               app id this server is not looking for. */
-            console.log('[Growth] check', {
-                loginidRead: loginids[0],
-                loginidsReceived: loginids,
-                startedAt: ladder.startedAt,
-                enrolledNow,
-                ladderId: String(ladder._id),
-                ...summary,
-            });
 
             res.json({
                 profit,
@@ -116,7 +100,6 @@ module.exports = {
                 grantsClaimed: ladder.grantsClaimed,
                 claimable: shouldGrant(profit, ladder.threshold),
                 startedAt: ladder.startedAt,
-                debug: summary,
             });
         } catch (error) {
             next(error);
