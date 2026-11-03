@@ -61,12 +61,12 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                             type='button'
                             onClick={() => setEditingNickname(true)}
                             title='Change your nickname'
-                            className={`group mt-1 inline-flex items-center gap-1.5 text-lg font-semibold text-cyan-400 transition-colors hover:text-cyan-300 sm:text-xl ${
-                                nickname ? '' : 'font-mono'
+                            className={`group mt-1.5 inline-flex items-center gap-2 text-2xl font-extrabold leading-tight text-cyan-400 transition-colors hover:text-cyan-300 sm:text-3xl ${
+                                nickname ? '' : 'font-mono text-xl sm:text-2xl'
                             }`}
                         >
                             {displayName}
-                            <Pencil size={13} className='opacity-0 transition-opacity group-hover:opacity-100' />
+                            <Pencil size={16} className='shrink-0 opacity-0 transition-opacity group-hover:opacity-100' />
                         </button>
                     )}
                     <Link
@@ -90,7 +90,7 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                 {/* The bubble, held level with the robot's head. */}
                 <div className='min-w-0 self-start pt-3 sm:pt-6 md:pt-8'>
                     <SpeechBubble>
-                        <p className='text-sm font-bold leading-snug text-bubble-fg sm:text-base'>
+                        <p className='text-sm font-bold leading-snug text-bubble-fg sm:text-lg'>
                             Hello{displayName ? ` ${displayName}` : ''}, I have a challenge for YOU!
                         </p>
                     </SpeechBubble>
