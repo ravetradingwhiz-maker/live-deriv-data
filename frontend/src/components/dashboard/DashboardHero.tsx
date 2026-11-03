@@ -99,7 +99,7 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                 {/* The challenge and how far the account has got toward it. */}
                 <div className='col-span-2 flex flex-col gap-3 md:col-span-1'>
                     <div>
-                        <p className='text-xs font-semibold uppercase tracking-wider text-amber-400'>
+                        <p className='text-xs font-semibold uppercase tracking-wider text-amber-400 underline decoration-amber-400/50 underline-offset-4'>
                             Challenge just for YOU !
                         </p>
                         <p className='mt-1 text-sm leading-relaxed text-slate-300'>
