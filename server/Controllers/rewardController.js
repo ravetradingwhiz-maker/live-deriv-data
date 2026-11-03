@@ -16,6 +16,13 @@ const shouldGrant = (profit, threshold) => profit >= threshold;
 
 const daysFromNow = days => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
+/** Midnight UTC of the day `d` falls on. */
+const startOfUtcDay = (d = new Date()) => {
+    const t = new Date(d);
+    t.setUTCHours(0, 0, 0, 0);
+    return t;
+};
+
 /**
  * Validates the body and reads the account's realised profit from Deriv.
  *
@@ -28,12 +35,23 @@ const readProfitAndLadder = async body => {
 
     const { loginids, accessToken } = value;
 
-    /* The ladder row is created before the read, because its startedAt is the
-       window the read uses: an account joining now counts from now. */
-    let ladder = await GrowthReward.findOne({ loginids: { $in: loginids } });
-    if (!ladder) ladder = await GrowthReward.create({ loginids });
+    /* Upserted atomically, not read-then-create: the dashboard fires this more
+       than once per load, and two of them racing each saw no row and each made
+       one, so every call enrolled the account afresh with a later startedAt. */
+    const ladder = await GrowthReward.findOneAndUpdate(
+        { loginids: { $in: loginids } },
+        { $setOnInsert: { loginids, startedAt: startOfUtcDay() } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
 
-    const since = Math.floor(new Date(ladder.startedAt).getTime() / 1000);
+    /* The window opens at the START OF THE DAY the account enrolled, not the
+       instant it first called in. "From today" has to mean the whole day, or
+       someone who traded this morning and opened the dashboard this afternoon
+       is told they have made nothing.
+
+       Normalised on read rather than trusting the stored value, so rows
+       written before this was fixed are covered without a migration. */
+    const since = Math.floor(startOfUtcDay(ladder.startedAt).getTime() / 1000);
 
     let summary;
     try {
