@@ -229,9 +229,44 @@ export interface ProfitTableRow {
     transaction_id: number;
 }
 
-/** Fetches the closed-trades profit table (most recent first). */
-export const getProfitTable = async (limit = 50): Promise<ProfitTableRow[]> => {
-    const res = await tradeWS.send({ profit_table: 1, description: 1, limit, sort: 'DESC' });
+const PROFIT_PAGE_SIZE = 500;
+/** Bounds a pathological history; a month of trades cannot approach this. */
+const PROFIT_MAX_PAGES = 20;
+
+interface ProfitTableQuery {
+    /** Epoch seconds. Omitted, the table starts at the account's first trade. */
+    dateFrom?: number;
+    limit?: number;
+    offset?: number;
+}
+
+/**
+ * Fetches a page of the closed-trades profit table, oldest first.
+ *
+ * Ascending so paging stays stable: with the newest first, a trade settling
+ * mid-walk shifts every later row down a place and the walk reads one twice.
+ */
+export const getProfitTable = async ({
+    dateFrom,
+    limit = PROFIT_PAGE_SIZE,
+    offset = 0,
+}: ProfitTableQuery = {}): Promise<ProfitTableRow[]> => {
+    const req: Record<string, unknown> = { profit_table: 1, description: 1, sort: 'ASC', limit, offset };
+    if (dateFrom !== undefined) req.date_from = dateFrom;
+    const res = await tradeWS.send(req);
     if (res.error) throw new Error(res.error.message);
     return (res.profit_table?.transactions ?? []) as ProfitTableRow[];
+};
+
+/** Walks the profit table from `dateFrom` to the present, a page at a time. */
+export const fetchProfitSince = async (dateFrom: number): Promise<ProfitTableRow[]> => {
+    const rows: ProfitTableRow[] = [];
+
+    for (let page = 0; page < PROFIT_MAX_PAGES; page += 1) {
+        const batch = await getProfitTable({ dateFrom, limit: PROFIT_PAGE_SIZE, offset: page * PROFIT_PAGE_SIZE });
+        rows.push(...batch);
+        if (batch.length < PROFIT_PAGE_SIZE) break;
+    }
+
+    return rows;
 };
