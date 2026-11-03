@@ -29,8 +29,13 @@ const LADDER = {
 let capturedSince = null;
 let createdSubscription = null;
 
+// Mirrors the driver's includeResultMetadata shape, so the controller's
+// "did this call enrol the account?" branch is exercised rather than skipped.
 stub('Models/GrowthReward', {
-    findOneAndUpdate: async () => ({ ...LADDER }),
+    findOneAndUpdate: async () => ({
+        value: { ...LADDER },
+        lastErrorObject: { updatedExisting: true },
+    }),
 });
 stub('Models/Subscription', {
     create: async doc => {
@@ -83,6 +88,14 @@ const run = async handler => {
     assert.strictEqual(checked.payload.claimable, true, '620.50 clears a 500 target');
     assert.ok(checked.payload.debug, 'the breakdown is returned for diagnosing a zero');
 
+    // An account already enrolled must not be enrolled again, or the ladder
+    // resets on every call and the reward can be claimed without limit.
+    assert.strictEqual(
+        checked.payload.threshold,
+        500,
+        'an existing ladder row is reused, not replaced'
+    );
+
     // The window opens at midnight on the enrolment day, not at the instant the
     // row was written — 14:48 on the 3rd must read back as 00:00 on the 3rd.
     assert.strictEqual(
@@ -99,7 +112,7 @@ const run = async handler => {
     stub('Models/GrowthReward', {
         findOneAndUpdate: async (_query, update) =>
             update && update.$setOnInsert
-                ? { ...LADDER } // the upsert in readProfitAndLadder
+                ? { value: { ...LADDER }, lastErrorObject: { updatedExisting: true } }
                 : { ...LADDER, threshold: 1000, grantsClaimed: 1 }, // the ladder bump
     });
     delete require.cache[require.resolve(path.join(ROOT, 'Controllers/rewardController'))];

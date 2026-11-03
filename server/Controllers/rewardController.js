@@ -38,11 +38,17 @@ const readProfitAndLadder = async body => {
     /* Upserted atomically, not read-then-create: the dashboard fires this more
        than once per load, and two of them racing each saw no row and each made
        one, so every call enrolled the account afresh with a later startedAt. */
-    const ladder = await GrowthReward.findOneAndUpdate(
+    const upserted = await GrowthReward.findOneAndUpdate(
         { loginids: { $in: loginids } },
         { $setOnInsert: { loginids, startedAt: startOfUtcDay() } },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
+        { new: true, upsert: true, setDefaultsOnInsert: true, includeResultMetadata: true }
     );
+    const ladder = upserted.value || upserted;
+    /* Whether this call enrolled the account or found it already enrolled.
+       A row created on every call would reset the ladder every time, and the
+       reward could then be claimed without limit — so this is reported rather
+       than inferred from a startedAt that appears to move. */
+    const enrolledNow = !(upserted.lastErrorObject && upserted.lastErrorObject.updatedExisting);
 
     /* The window opens at the START OF THE DAY the account enrolled, not the
        instant it first called in. "From today" has to mean the whole day, or
@@ -68,7 +74,7 @@ const readProfitAndLadder = async body => {
         throw createError(e.status || 502, e.message || 'Could not read your profit from Deriv');
     }
 
-    return { loginids, profit: summary.profit, summary, ladder };
+    return { loginids, profit: summary.profit, summary, ladder, enrolledNow };
 };
 
 module.exports = {
@@ -84,7 +90,7 @@ module.exports = {
      */
     check: async (req, res, next) => {
         try {
-            const { loginids, profit, summary, ladder } = await readProfitAndLadder(req.body);
+            const { loginids, profit, summary, ladder, enrolledNow } = await readProfitAndLadder(req.body);
 
             /* A zero is ambiguous on its own. The breakdown says whether it
                means no trades, no settled trades, or trades bought under an
@@ -93,6 +99,8 @@ module.exports = {
                 loginidRead: loginids[0],
                 loginidsReceived: loginids,
                 startedAt: ladder.startedAt,
+                enrolledNow,
+                ladderId: String(ladder._id),
                 ...summary,
             });
 
