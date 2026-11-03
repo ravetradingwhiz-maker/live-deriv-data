@@ -31,8 +31,8 @@ const RewardProgress = ({ monthProfit }: RewardProgressProps) => {
 
     useEffect(() => {
         if (!isAuthenticated || !loginKey) return;
-        // Legacy-token sessions have no bearer for the server to verify with,
-        // so there is nothing to show rather than something unverifiable.
+        // Without a bearer the server has nothing to verify the profit with, and
+        // an unverified figure is one this card must never put on screen.
         const accessToken = OAuthTokenExchangeService.getAuthInfo()?.access_token;
         if (!accessToken) return;
 
