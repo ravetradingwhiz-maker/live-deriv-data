@@ -9,12 +9,20 @@ import { usePublishBotRun } from '@/context/BotRunContext';
 import { getActiveCurrency } from '@/services/trade-api';
 import { riskStakingLabel, useNexoraBot, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
 
-/** `recommended` greens the tile and tags it, selected or not. */
-const STRATEGIES: { id: NexoraStrategy; label: string; icon: typeof TrendingUp; recommended?: boolean }[] = [
+/** `recommended` greens the tile and tags it; `isNew` tags it cyan. */
+const STRATEGIES: {
+    id: NexoraStrategy;
+    label: string;
+    icon: typeof TrendingUp;
+    desc?: string;
+    recommended?: boolean;
+    isNew?: boolean;
+}[] = [
     { id: 'rise_fall', label: 'Rise / Fall', icon: TrendingUp },
     { id: 'even_odd', label: 'Even / Odd', icon: Hash },
     { id: 'mix', label: 'Mix Both', icon: Shuffle },
     { id: 'smart_ai', label: 'Smart AI', icon: Brain, recommended: true },
+    { id: 'over2_under7', label: 'Over 2 + Under 7', icon: Layers, desc: 'Simultaneous', isNew: true },
 ];
 
 const RISKS: { id: RiskLevel; label: string; tone: string }[] = [
@@ -24,7 +32,7 @@ const RISKS: { id: RiskLevel; label: string; tone: string }[] = [
 ];
 
 // Allow demo accounts to run the bot. false = locked to real accounts only.
-const ALLOW_DEMO_TRADING = false;
+const ALLOW_DEMO_TRADING = true;
 
 /**
  * Stands in for a market while the strategy is choosing its own, so the picker
@@ -53,7 +61,15 @@ const Segmented = <T extends string>({
     onChange,
     disabled,
 }: {
-    options: { id: T; label: string; icon?: typeof TrendingUp; desc?: string; tone?: string; recommended?: boolean }[];
+    options: {
+        id: T;
+        label: string;
+        icon?: typeof TrendingUp;
+        desc?: string;
+        tone?: string;
+        recommended?: boolean;
+        isNew?: boolean;
+    }[];
     value: T;
     onChange: (v: T) => void;
     disabled?: boolean;
@@ -77,6 +93,11 @@ const Segmented = <T extends string>({
                     {opt.recommended && (
                         <span className='absolute -top-[7px] right-[-1px] rounded-[4px_4px_0_4px] bg-emerald-500 px-1.5 py-px text-[9px] font-bold leading-[1.5] text-white'>
                             Recommended
+                        </span>
+                    )}
+                    {opt.isNew && (
+                        <span className='absolute -top-[7px] right-[-1px] rounded-[4px_4px_0_4px] bg-cyan-500 px-1.5 py-px text-[9px] font-bold leading-[1.5] text-white'>
+                            New
                         </span>
                     )}
                     {Icon && <Icon size={18} className={active ? 'text-cyan-300' : opt.tone ?? 'text-slate-400'} />}

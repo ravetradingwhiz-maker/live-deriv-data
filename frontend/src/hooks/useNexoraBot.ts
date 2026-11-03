@@ -44,7 +44,10 @@ export type NexoraFamily = 'rise_fall' | 'even_odd' | 'over_under' | 'matches_di
 /** Premium named bots, each locked to a fixed contract type. */
 export type NexoraPremiumStrategy = 'matches_printer' | 'over8_killer' | 'tickstrike_pro' | 'auto_switcher';
 /** A user-selectable strategy: a single family, a meta-strategy, or a premium bot. */
-export type NexoraStrategy = NexoraFamily | 'mix' | 'smart_ai' | NexoraPremiumStrategy;
+/** Multi-leg strategies: one decision, several contracts bought together. */
+export type NexoraCombo = 'over2_under7';
+
+export type NexoraStrategy = NexoraFamily | NexoraCombo | 'mix' | 'smart_ai' | NexoraPremiumStrategy;
 export type RiskLevel = 'low' | 'medium' | 'high';
 
 const PREMIUM_SET = new Set<NexoraStrategy>(['matches_printer', 'over8_killer', 'tickstrike_pro', 'auto_switcher']);
@@ -111,6 +114,13 @@ export interface NexoraSignal {
     stake?: number;
     /** Set on a Smart AI round, which owns its own market, stake and recovery. */
     smart?: SmartAiRound;
+    /**
+     * Several contracts bought on the same tick, for a combo strategy.
+     *
+     * Each leg is staked separately, so a two-leg round risks twice the
+     * configured stake. The round settles only once every leg has.
+     */
+    legs?: { contract_type: string; label: string; barrier?: number; duration?: number }[];
 }
 
 export interface DigitStat {
@@ -455,10 +465,12 @@ const currentSignal = (
     decimals: number,
     risk: RiskLevel,
     families: NexoraFamily[]
-): NexoraSignal | null =>
-    isPremiumStrategy(strategy)
-        ? premiumSignal(strategy, quotes, decimals, risk)
-        : selectSignal(evaluateFamilies(quotes, decimals, risk), strategy, families);
+): NexoraSignal | null => {
+    if (isPremiumStrategy(strategy)) return premiumSignal(strategy, quotes, decimals, risk);
+    // A combo is not one of the families, so it cannot be selected from them.
+    if (strategy === 'over2_under7') return over2Under7Signal(quotes, decimals, risk);
+    return selectSignal(evaluateFamilies(quotes, decimals, risk), strategy, families);
+};
 
 /** Presents a Smart AI round the way the rest of the hook expects a signal. */
 const smartSignalOf = (round: SmartAiRound): NexoraSignal => ({
@@ -483,6 +495,44 @@ const smartSignalOf = (round: SmartAiRound): NexoraSignal => ({
 });
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Over 2 + Under 7, bought on the same tick.
+ *
+ * Over 2 wins on digits 3-9; Under 7 wins on 0-6. Digits 3,4,5,6 win BOTH legs;
+ * everything else wins exactly one and loses the other. So the round only turns
+ * a profit when the middle band lands, and the gate is the observed share of
+ * 3-6 in the window.
+ */
+const over2Under7Signal = (quotes: number[], decimals: number, risk: RiskLevel): NexoraSignal => {
+    const win = quotes.map(q => lastDigitOf(q, decimals)).slice(-DIGIT_WINDOW);
+    const counts = new Array(10).fill(0);
+    for (const d of win) counts[d]++;
+    const n = win.length || 1;
+    const pMiddle = (counts[3] + counts[4] + counts[5] + counts[6]) / n;
+
+    // Uniform digits give 40%. Both legs pay roughly 1.36x, so the round breaks
+    // even near 47% — require a real cushion, scaled by risk appetite.
+    const need = { low: 0.5, medium: 0.47, high: 0.44 }[risk];
+
+    return {
+        family: 'over2_under7',
+        // The engine buys `legs`; this keeps the single-contract field honest
+        // for anything that reads it without looking for a combo.
+        contract_type: 'DIGITOVER',
+        barrier: 2,
+        label: 'Over 2 + Under 7',
+        predictionText: `Next digit in 3-6 (${(pMiddle * 100).toFixed(0)}% recently)`,
+        conf: pMiddle,
+        passes: pMiddle >= need,
+        strength: Math.max(0, (pMiddle - 0.4) / 0.6),
+        duration: 1,
+        legs: [
+            { contract_type: 'DIGITOVER', label: 'Over 2', barrier: 2, duration: 1 },
+            { contract_type: 'DIGITUNDER', label: 'Under 7', barrier: 7, duration: 1 },
+        ],
+    };
+};
 
 // Cache the symbol catalogue once (used only for pip → decimals).
 let symbolsCache: Promise<ActiveSymbol[]> | null = null;
@@ -538,7 +588,9 @@ export const useNexoraBot = (config: NexoraConfig) => {
     const mixWaitRef = useRef(0);
     const netRef = useRef(0);
     const statsRef = useRef<SessionStats>({ netProfit: 0, trades: 0, wins: 0, losses: 0 });
-    const pocSubRef = useRef<Subscription | null>(null);
+    /* An array, because a combo round has one subscription per leg. Holding
+       only the first would leak the rest when a run is stopped or unmounted. */
+    const pocSubRef = useRef<Subscription[]>([]);
     const journalIdRef = useRef(0);
 
     const pushJournal = useCallback((entry: Omit<JournalEntry, 'id'>) => {
@@ -650,73 +702,121 @@ export const useNexoraBot = (config: NexoraConfig) => {
             // ── Admin fake-trade path: simulate the outcome, no real order ──
             const adminCtx = adminRef.current;
             if (adminCtx?.active) {
-                // Send the REAL proposal first so the simulated payout matches Deriv.
-                const payout = await getProposalPayout({
-                    contract_type: sig.contract_type,
-                    symbol,
-                    amount: stake,
-                    duration,
-                    duration_unit: 't',
-                    barrier: sig.barrier,
-                    currency: cfg.currency,
-                });
-                const outcome = adminCtx.simulate(stake, sig.contract_type, sig.barrier, payout ?? undefined);
-                if (outcome.insufficient) {
-                    pushJournal({ result: 'error', text: 'Insufficient balance' });
-                    inFlightRef.current = false;
-                    stopInternal('error', 'Insufficient balance');
-                    return;
+                // Each leg is its own contract, so each is proposed, simulated
+                // and shown separately — a combo round is two positions, and
+                // the journal would lie if it showed one.
+                const parts = sig.legs ?? [
+                    {
+                        contract_type: sig.contract_type,
+                        label: sig.label,
+                        barrier: sig.barrier,
+                        duration,
+                    },
+                ];
+
+                let comboProfit = 0;
+                const placed: { contractId: number; profit: number }[] = [];
+
+                for (const leg of parts) {
+                    const legDuration = leg.duration ?? duration;
+                    // Send the REAL proposal first so the simulated payout matches Deriv.
+                    const payout = await getProposalPayout({
+                        contract_type: leg.contract_type,
+                        symbol,
+                        amount: stake,
+                        duration: legDuration,
+                        duration_unit: 't',
+                        barrier: leg.barrier,
+                        currency: cfg.currency,
+                    });
+                    const outcome = adminCtx.simulate(stake, leg.contract_type, leg.barrier, payout ?? undefined);
+                    if (outcome.insufficient) {
+                        pushJournal({ result: 'error', text: 'Insufficient balance' });
+                        inFlightRef.current = false;
+                        stopInternal('error', 'Insufficient balance');
+                        return;
+                    }
+                    comboProfit = round2(comboProfit + outcome.profit);
+                    const contractId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+                    placed.push({ contractId, profit: outcome.profit });
+                    // Show the simulated trade live in Open Positions with its fixed
+                    // value (like a real position), then settle after its duration.
+                    portfolioRef.current?.addAdminPosition({
+                        contract_id: contractId,
+                        contract_type: leg.contract_type,
+                        display_name: symbolDisplayName(symbol),
+                        underlying: symbol,
+                        buy_price: stake,
+                        bid_price: round2(Math.max(0, stake + outcome.profit)),
+                        profit: outcome.profit,
+                        currency: cfg.currency,
+                        purchase_time: Math.floor(Date.now() / 1000),
+                    });
                 }
-                // Show the simulated trade live in Open Positions with its fixed value
-                // (like a real position), then settle it after the contract duration.
+
                 if (sig.smart) markSmartAiPlaced(smartRef.current, sig.smart);
-                const contractId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-                const finalProfit = outcome.profit;
-                portfolioRef.current?.addAdminPosition({
-                    contract_id: contractId,
-                    contract_type: sig.contract_type,
-                    display_name: symbolDisplayName(symbol),
-                    underlying: symbol,
-                    buy_price: stake,
-                    bid_price: round2(Math.max(0, stake + finalProfit)),
-                    profit: finalProfit,
-                    currency: cfg.currency,
-                    purchase_time: Math.floor(Date.now() / 1000),
-                });
                 const settleMs = duration * 1000 + 400 + Math.random() * 400;
                 setTimeout(() => {
-                    portfolioRef.current?.settleAdminPosition(contractId, finalProfit);
-                    onContractSettled(finalProfit, sig);
+                    for (const p of placed) portfolioRef.current?.settleAdminPosition(p.contractId, p.profit);
+                    // One round, one settlement: the legs net off against each other.
+                    onContractSettled(comboProfit, sig);
                 }, settleMs);
                 return;
             }
 
-            const res = await buyWithParameters({
-                contract_type: sig.contract_type,
-                symbol,
-                amount: stake,
-                duration,
-                duration_unit: 't',
-                barrier: sig.barrier,
-                currency: cfg.currency,
-            });
+            const parts = sig.legs ?? [
+                { contract_type: sig.contract_type, label: sig.label, barrier: sig.barrier, duration },
+            ];
 
-            if (res.error || !res.contract_id) {
-                pushJournal({ result: 'error', text: res.error?.message ?? 'Trade rejected' });
-                inFlightRef.current = false;
-                stopInternal('error', res.error?.message);
-                return;
+            const bought: number[] = [];
+            for (const leg of parts) {
+                const res = await buyWithParameters({
+                    contract_type: leg.contract_type,
+                    symbol,
+                    amount: stake,
+                    duration: leg.duration ?? duration,
+                    duration_unit: 't',
+                    barrier: leg.barrier,
+                    currency: cfg.currency,
+                });
+
+                if (res.error || !res.contract_id) {
+                    pushJournal({ result: 'error', text: res.error?.message ?? 'Trade rejected' });
+                    inFlightRef.current = false;
+                    stopInternal('error', res.error?.message);
+                    /* A leg already bought is live and cannot be unbought. It is
+                       left to settle on its own rather than pretending the round
+                       never happened; stopping here is what keeps a half-placed
+                       combo from being staked again. */
+                    return;
+                }
+                bought.push(res.contract_id);
             }
 
             if (sig.smart) markSmartAiPlaced(smartRef.current, sig.smart);
 
-            pocSubRef.current = await subscribeOpenContract(res.contract_id, (poc: any) => {
-                if (poc?.is_sold) {
-                    pocSubRef.current?.forget();
-                    pocSubRef.current = null;
-                    onContractSettled(Number(poc.profit) || 0, sig);
-                }
-            });
+            /* The round settles only once every leg has. A combo's legs net off
+               against each other, so reporting the first one to come back would
+               hand the martingale and the max-loss guard a number that is not
+               the round's result. */
+            let pending = bought.length;
+            let comboProfit = 0;
+            const subs: Awaited<ReturnType<typeof subscribeOpenContract>>[] = [];
+
+            for (const contractId of bought) {
+                const sub = await subscribeOpenContract(contractId, (poc: any) => {
+                    if (!poc?.is_sold) return;
+                    comboProfit = round2(comboProfit + (Number(poc.profit) || 0));
+                    pending -= 1;
+                    if (pending > 0) return;
+                    for (const s of subs) s?.forget();
+                    pocSubRef.current = [];
+                    onContractSettled(comboProfit, sig);
+                });
+                subs.push(sub);
+            }
+            // Kept so an external stop can still cancel every leg's stream.
+            pocSubRef.current = subs;
         },
         [onContractSettled, pushJournal, stopInternal]
     );
@@ -734,6 +834,14 @@ export const useNexoraBot = (config: NexoraConfig) => {
             if (s?.passes) pick = s;
             if (!pick) return;
             void placeTrade(pick);
+            return;
+        }
+
+        // A combo owns its own legs and is not one of the families, so it is
+        // routed out before they are evaluated.
+        if (strat === 'over2_under7') {
+            const s = over2Under7Signal(q, decimalsRef.current, cfg.risk);
+            if (s.passes) void placeTrade(s);
             return;
         }
 
@@ -892,7 +1000,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
     useEffect(
         () => () => {
             runningRef.current = false;
-            pocSubRef.current?.forget();
+            for (const sub of pocSubRef.current) sub?.forget();
         },
         []
     );
