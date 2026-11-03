@@ -166,7 +166,7 @@ const TradePilotFree = () => {
         [strategy, risk, symbol, stake, profitTarget, maxLoss, currency]
     );
 
-    const { ticksReady, isRunning, signal, status, stats, sessionResult, clearSessionResult, start, stop } =
+    const { ticksReady, isRunning, status, stats, sessionResult, clearSessionResult, start, stop } =
         useNexoraBot(config);
 
     /* The scan runs first and the bot starts when it ends, so nothing trades
@@ -285,25 +285,6 @@ const TradePilotFree = () => {
                 )}
 
                 {showStatus && <p className={`text-center text-xs font-medium ${statusTone}`}>{status.text}</p>}
-
-                {/* While it waits, say how close it is. A strategy that only
-                    fires on a rare reading otherwise looks like it has hung. */}
-                {isRunning && status.kind === 'running' && signal && signal.need !== undefined && (
-                    <div className='mx-auto mt-2 max-w-xs'>
-                        <div className='flex items-center justify-between text-[11px] text-slate-500'>
-                            <span>{signal.label}</span>
-                            <span className='font-mono'>
-                                {(signal.conf * 100).toFixed(0)}% / need {(signal.need * 100).toFixed(0)}%
-                            </span>
-                        </div>
-                        <div className='mt-1 h-1.5 overflow-hidden rounded-full bg-ink-700'>
-                            <div
-                                className='h-full rounded-full bg-cyan-400 transition-[width] duration-300'
-                                style={{ width: `${Math.min(100, (signal.conf / signal.need) * 100)}%` }}
-                            />
-                        </div>
-                    </div>
-                )}
 
                 {/* Run */}
                 {isRunning ? (

@@ -104,10 +104,6 @@ export interface NexoraSignal {
     passes: boolean;
     /** Normalised edge in [0,1] so families can be ranked against each other. */
     strength: number;
-    /** The confidence this strategy needs before it will trade, when it has a
-     *  fixed one. Shown while scanning so a long wait is legible rather than
-     *  looking like a stall. */
-    need?: number;
     /** Digit barrier for digit contracts (matches/differs, over/under) or the selected tick (TICKHIGH). */
     barrier?: number;
     /** Contract duration in ticks. Falls back to the family default when omitted. */
@@ -472,7 +468,7 @@ const currentSignal = (
 ): NexoraSignal | null => {
     if (isPremiumStrategy(strategy)) return premiumSignal(strategy, quotes, decimals, risk);
     // A combo is not one of the families, so it cannot be selected from them.
-    if (strategy === 'over2_under7') return over2Under7Signal(quotes, decimals, risk);
+    if (strategy === 'over2_under7') return over2Under7Signal(quotes, decimals);
     return selectSignal(evaluateFamilies(quotes, decimals, risk), strategy, families);
 };
 
@@ -504,20 +500,21 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
  * Over 2 + Under 7, bought on the same tick.
  *
  * Over 2 wins on digits 3-9; Under 7 wins on 0-6. Digits 3,4,5,6 win BOTH legs;
- * everything else wins exactly one and loses the other. So the round only turns
- * a profit when the middle band lands, and the gate is the observed share of
- * 3-6 in the window.
+ * everything else wins exactly one and loses the other, so the round only turns
+ * a profit when the middle band lands.
+ *
+ * Ungated by request: it trades every tick rather than waiting for 3-6 to take
+ * an unusual share of the window. The reading is still reported so the run is
+ * readable, but it no longer decides anything. Both legs pay roughly 1.36x and
+ * the band is 40% of a uniform distribution, so a round carries a small
+ * negative edge; the profit target and max-loss guard are what bound a session.
  */
-const over2Under7Signal = (quotes: number[], decimals: number, risk: RiskLevel): NexoraSignal => {
+const over2Under7Signal = (quotes: number[], decimals: number): NexoraSignal => {
     const win = quotes.map(q => lastDigitOf(q, decimals)).slice(-DIGIT_WINDOW);
     const counts = new Array(10).fill(0);
     for (const d of win) counts[d]++;
     const n = win.length || 1;
     const pMiddle = (counts[3] + counts[4] + counts[5] + counts[6]) / n;
-
-    // Uniform digits give 40%. Both legs pay roughly 1.36x, so the round breaks
-    // even near 47% — require a real cushion, scaled by risk appetite.
-    const need = { low: 0.5, medium: 0.47, high: 0.44 }[risk];
 
     return {
         family: 'over2_under7',
@@ -528,8 +525,7 @@ const over2Under7Signal = (quotes: number[], decimals: number, risk: RiskLevel):
         label: 'Over 2 + Under 7',
         predictionText: `Next digit in 3-6 (${(pMiddle * 100).toFixed(0)}% recently)`,
         conf: pMiddle,
-        need,
-        passes: pMiddle >= need,
+        passes: true,
         strength: Math.max(0, (pMiddle - 0.4) / 0.6),
         duration: 1,
         legs: [
@@ -845,8 +841,7 @@ export const useNexoraBot = (config: NexoraConfig) => {
         // A combo owns its own legs and is not one of the families, so it is
         // routed out before they are evaluated.
         if (strat === 'over2_under7') {
-            const s = over2Under7Signal(q, decimalsRef.current, cfg.risk);
-            if (s.passes) void placeTrade(s);
+            void placeTrade(over2Under7Signal(q, decimalsRef.current));
             return;
         }
 
