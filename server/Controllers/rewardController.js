@@ -84,7 +84,7 @@ module.exports = {
      */
     check: async (req, res, next) => {
         try {
-            const { profit, summary, ladder } = await readProfitAndLadder(req.body);
+            const { loginids, profit, summary, ladder } = await readProfitAndLadder(req.body);
 
             /* A zero is ambiguous on its own. The breakdown says whether it
                means no trades, no settled trades, or trades bought under an
