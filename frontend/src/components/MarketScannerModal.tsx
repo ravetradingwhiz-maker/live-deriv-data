@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import speak from '@/utils/speak';
 import { Radar } from 'lucide-react';
 
 /**
@@ -17,7 +18,6 @@ import { Radar } from 'lucide-react';
  */
 
 /** The same source the QuantumSyn scanner uses, hotlinked as it is there. */
-const SCAN_SOUND = 'https://www.fesliyanstudios.com/play-mp3/4386';
 
 /** The log lines that make up the rain, as in signals.html. */
 const LOGS = [
@@ -67,25 +67,11 @@ const MarketScannerModal = () => {
         return () => clearInterval(timer);
     }, []);
 
-    useEffect(() => {
-        const audio = new Audio(SCAN_SOUND);
-        audio.loop = true;
-
-        /* The modal opens from the Run button, so this is already inside a user
-           gesture and should play. A browser that blocks it anyway gets one more
-           chance on the next click, rather than the scan running silently. */
-        audio.play().catch(() => {
-            const retry = () => {
-                audio.play().catch(() => {});
-            };
-            document.addEventListener('click', retry, { once: true });
-        });
-
-        return () => {
-            audio.pause();
-            audio.currentTime = 0;
-        };
-    }, []);
+    /* The modal opens from the Run button, so this is already inside a user
+       gesture, which is what mobile browsers require before they will speak.
+       Said once rather than looped: the scan is five seconds, and a line
+       repeating over it would grate where a background tone did not. */
+    useEffect(() => speak('Scanning the market'), []);
 
     return createPortal(
         <div
