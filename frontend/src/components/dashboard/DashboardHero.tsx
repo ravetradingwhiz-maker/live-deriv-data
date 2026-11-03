@@ -104,8 +104,8 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                         </p>
                         <p className='mt-1 text-sm leading-relaxed text-slate-300'>
                             Trade to a profit target of{' '}
-                            <span className='font-semibold text-white'>${fmt(threshold)}</span> to get Nexora AI
-                            premium 3 days for FREE!
+                            <span className='font-semibold text-white'>${fmt(threshold)}</span> to get{' '}
+                            <span className='text-premium font-bold'>Nexora AI premium</span> 3 days for FREE!
                         </p>
                     </div>
 
