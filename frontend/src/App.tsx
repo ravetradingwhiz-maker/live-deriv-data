@@ -9,7 +9,7 @@ import Home from '@/pages/Home';
 import Callback from '@/pages/Callback';
 import Pricing from '@/pages/Pricing';
 import AppLayout from '@/pages/app/AppLayout';
-import ManualTrading from '@/pages/app/ManualTrading';
+import Dashboard from '@/pages/app/Dashboard';
 import TradePilotFree from '@/pages/app/TradePilotFree';
 import TradePilotPremium from '@/pages/app/TradePilotPremium';
 
@@ -50,7 +50,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
             </div>
         );
     }
-    if (!admin.eligible) return <Navigate to='/app/manual' replace />;
+    if (!admin.eligible) return <Navigate to='/app/dashboard' replace />;
     return <>{children}</>;
 };
 
@@ -69,7 +69,7 @@ const AppBody = () => {
             <Route path='/' element={<Home />} />
             <Route path='/pricing' element={<Pricing />} />
 
-            {/* Authenticated app — tabbed layout. Landing tab: Manual Trading. */}
+            {/* Authenticated app — tabbed layout. Landing tab: Dashboard. */}
             <Route
                 path='/app'
                 element={
@@ -78,8 +78,8 @@ const AppBody = () => {
                     </ProtectedRoute>
                 }
             >
-                <Route index element={<Navigate to='/app/manual' replace />} />
-                <Route path='manual' element={<ManualTrading />} />
+                <Route index element={<Navigate to='/app/dashboard' replace />} />
+                <Route path='dashboard' element={<Dashboard />} />
                 <Route path='trade-pilot-free' element={<TradePilotFree />} />
                 <Route path='trade-pilot-premium' element={<TradePilotPremium />} />
 
@@ -97,7 +97,7 @@ const AppBody = () => {
             </Route>
 
             {/* Legacy path redirect */}
-            <Route path='/dashboard' element={<Navigate to='/app/manual' replace />} />
+            <Route path='/dashboard' element={<Navigate to='/app/dashboard' replace />} />
             <Route path='*' element={<Navigate to='/' replace />} />
         </Routes>
     );
