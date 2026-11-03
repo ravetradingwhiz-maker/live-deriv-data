@@ -53,6 +53,12 @@ export default {
                     500: 'rgb(var(--ink-500) / <alpha-value>)',
                 },
                 line: 'rgb(var(--line) / <alpha-value>)',
+                // Speech balloon. Inverts against the theme, so it cannot use
+                // ink/white: both of those flip the other way.
+                bubble: {
+                    DEFAULT: 'rgb(var(--bubble) / <alpha-value>)',
+                    fg: 'rgb(var(--bubble-fg) / <alpha-value>)',
+                },
                 // Primary text. `text-white` flips to dark in the light theme;
                 // for elements that must stay white/dark, use text-[#fff]/[#06141a].
                 white: 'rgb(var(--fg) / <alpha-value>)',

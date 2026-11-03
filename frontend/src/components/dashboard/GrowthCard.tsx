@@ -31,8 +31,8 @@ const GrowthCard = ({ title, profit, percent, trades, winRate, buckets, currency
     const positive = profit >= 0;
 
     return (
-        <div className='rounded-xl border border-line bg-ink-800 p-4'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-slate-500'>{title}</p>
+        <div className='rounded-xl border border-line bg-ink-800 p-3 sm:p-4'>
+            <p className='text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-xs'>{title}</p>
 
             {loading ? (
                 <>
@@ -43,20 +43,20 @@ const GrowthCard = ({ title, profit, percent, trades, winRate, buckets, currency
                 <>
                     <div className='mt-1.5 flex flex-wrap items-baseline justify-between gap-x-3'>
                         <span
-                            className={`font-mono text-xl font-bold sm:text-2xl ${
+                            className={`font-mono text-base font-bold sm:text-2xl ${
                                 positive ? 'text-emerald-400' : 'text-rose-400'
                             }`}
                         >
                             {fmtMoney(profit, currency)}
                         </span>
-                        <span className={`font-mono text-sm ${positive ? 'text-emerald-400/80' : 'text-rose-400/80'}`}>
+                        <span className={`font-mono text-xs sm:text-sm ${positive ? 'text-emerald-400/80' : 'text-rose-400/80'}`}>
                             {fmtPercent(percent)}
                         </span>
                     </div>
 
                     {buckets && <div className='mt-2'><Sparkline values={buckets} positive={positive} /></div>}
 
-                    <p className='mt-2 text-xs text-slate-400'>
+                    <p className='mt-2 text-[11px] text-slate-400 sm:text-xs'>
                         {trades} {trades === 1 ? 'trade' : 'trades'}
                         <span className='mx-1.5 text-slate-600'>·</span>
                         {winRate === null ? EM_DASH : `${Math.round(winRate * 100)}% win rate`}

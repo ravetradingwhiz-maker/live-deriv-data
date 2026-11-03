@@ -25,7 +25,7 @@ const Dashboard = () => {
                 </p>
             )}
 
-            <div className='grid gap-4 md:grid-cols-2'>
+            <div className='grid grid-cols-2 gap-3 sm:gap-4'>
                 <GrowthCard
                     title='This Month'
                     profit={month.profit}

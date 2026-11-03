@@ -5,6 +5,7 @@ import useAccountName from '@/hooks/useAccountName';
 import useGrowthReward, { DEFAULT_THRESHOLD } from '@/hooks/useGrowthReward';
 import RewardLadder from '@/components/dashboard/RewardLadder';
 import RewardClaimedModal from '@/components/dashboard/RewardClaimedModal';
+import SpeechBubble from '@/components/dashboard/SpeechBubble';
 
 interface DashboardHeroProps {
     /** Month profit, watched so a closing trade re-checks the ladder. */
@@ -35,10 +36,14 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
 
     return (
         <section className='rounded-xl border border-line bg-ink-800/50 p-4 sm:p-6'>
-            <div className='grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.15fr)] md:items-start md:gap-2'>
+            {/* The robot and its bubble sit side by side at every width, so the
+                bubble is always at the robot's head and its spike always points
+                at it. On a phone the greeting takes a row above them and the
+                challenge a row below; on desktop those become the outer columns. */}
+            <div className='grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.15fr)] md:gap-x-2'>
                 {/* Left — greeting, account, and the way in. */}
-                <div className='flex flex-col items-center text-center md:items-start md:text-left'>
-                    <h1 className='text-3xl font-bold leading-tight text-white sm:text-4xl'>Welcome Back</h1>
+                <div className='col-span-2 flex flex-col items-center text-center md:col-span-1 md:row-span-2 md:items-start md:text-left'>
+                    <h1 className='text-3xl font-bold leading-tight text-white sm:text-4xl'>Welcome Back!</h1>
                     {activeLoginId && (
                         <p className='mt-1 font-mono text-lg font-semibold text-cyan-400 sm:text-xl'>
                             {activeLoginId}
@@ -52,39 +57,35 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                     </Link>
                 </div>
 
-                {/* Middle — the robot. On a phone it sits above the bubble, so the
-                    tail points up at it; side by side, it points left at it. */}
-                <div className='flex justify-center md:-mr-2'>
+                {/* Middle — the robot. */}
+                <div className='flex justify-center md:row-span-2 md:-mr-1'>
                     <DotLottieReact
                         src='/hero.json'
                         loop
                         autoplay
-                        className='h-40 w-40 shrink-0 sm:h-48 sm:w-48'
+                        className='h-32 w-32 shrink-0 sm:h-44 sm:w-44 md:h-48 md:w-48'
                     />
                 </div>
 
-                {/* Right — what the robot has to say. */}
-                <div className='flex flex-col gap-3'>
-                    <div className='relative rounded-2xl border border-line bg-ink-800 px-4 py-3 shadow-lg shadow-black/40 md:mt-10'>
-                        <p className='text-lg font-bold text-white sm:text-xl'>
+                {/* The bubble, held level with the robot's head. */}
+                <div className='min-w-0 self-start pt-3 sm:pt-6 md:pt-8'>
+                    <SpeechBubble>
+                        <p className='text-base font-bold text-bubble-fg sm:text-xl'>
                             Hello{name ? `, ${name}` : ''}
                         </p>
-                        {/* Tail: up at the robot above it on a phone, left at its
-                            mouth once the columns sit side by side. */}
-                        <span
-                            aria-hidden
-                            className='absolute -top-[8px] left-1/2 h-0 w-0 -translate-x-1/2 border-b-[8px] border-l-[8px] border-r-[8px] border-b-line border-l-transparent border-r-transparent md:left-[-8px] md:top-5 md:translate-x-0 md:border-b-[8px] md:border-l-0 md:border-r-[8px] md:border-t-[8px] md:border-b-transparent md:border-r-line md:border-t-transparent'
-                        />
-                    </div>
+                    </SpeechBubble>
+                </div>
 
+                {/* The challenge and how far the account has got toward it. */}
+                <div className='col-span-2 flex flex-col gap-3 md:col-span-1'>
                     <div>
                         <p className='text-xs font-semibold uppercase tracking-wider text-amber-400'>
                             Challenge just for YOU !
                         </p>
                         <p className='mt-1 text-sm leading-relaxed text-slate-300'>
-                            Trade to a profit of{' '}
+                            Trade to a profit target of{' '}
                             <span className='font-semibold text-white'>${fmt(threshold)}</span> to get Nexora AI
-                            premium 3 days for free
+                            premium 3 days for FREE!
                         </p>
                     </div>
 

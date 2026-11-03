@@ -22,6 +22,11 @@
     --ink-600: 21 51 61;
     --ink-500: 29 67 79;
     --line: 23 56 66;
+    /* The speech balloon deliberately inverts against the theme, the way a
+       cartoon balloon does: white on the dark theme, ink on the light one.
+       It needs its own pair because --fg flips the other way. */
+    --bubble: 255 255 255;
+    --bubble-fg: 10 28 36;
     --fg: 255 255 255;
     --slate-200: 226 232 240;
     --slate-300: 203 213 225;
@@ -54,6 +59,8 @@
     --ink-600: 226 232 238;
     --ink-500: 210 219 226;
     --line: 210 219 228; /* borders */
+    --bubble: 10 28 36; /* balloon inverts: ink on the light theme */
+    --bubble-fg: 255 255 255;
     --fg: 15 23 42; /* primary text (slate-900) */
     --slate-200: 30 41 59; /* strongest muted */
     --slate-300: 51 65 85;
