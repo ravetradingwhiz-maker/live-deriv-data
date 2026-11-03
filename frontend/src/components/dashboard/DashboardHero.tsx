@@ -35,7 +35,8 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
     const derivName = useAccountName();
     const { nickname, shouldPrompt, save: saveNickname } = useNickname(activeLoginId);
     const [editingNickname, setEditingNickname] = useState(false);
-    const { status, grant, claiming, claimError, claim, dismissGrant } = useGrowthReward(monthProfit);
+    const { status, statusError, grant, claiming, claimError, claim, dismissGrant } =
+        useGrowthReward(monthProfit);
 
     // What the user is called anywhere a name is shown: their own, falling back
     // to the account number, which always exists.
@@ -109,7 +110,13 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
                         </p>
                     </div>
 
-                    {!status && <RewardLadderSkeleton />}
+                    {!status && !statusError && <RewardLadderSkeleton />}
+
+                    {statusError && (
+                        <p className='rounded-xl border border-rose-900/60 bg-rose-950/30 px-3 py-2 text-xs text-rose-300'>
+                            {statusError}
+                        </p>
+                    )}
 
                     {status && (
                         <RewardLadder

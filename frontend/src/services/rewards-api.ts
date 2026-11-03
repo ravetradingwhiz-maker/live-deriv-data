@@ -12,6 +12,17 @@ export interface GrowthRewardStatus {
     grantsClaimed: number;
     /** Profit has reached the target; the reward is waiting to be claimed. */
     claimable: boolean;
+    startedAt?: string;
+    /** Breakdown of the server's statement read, for diagnosing a zero. */
+    debug?: {
+        rowsSeen: number;
+        buyRows: number;
+        sellRows: number;
+        ourBuys: number;
+        matched: number;
+        appIdsSeen: string[];
+        lookingFor: string;
+    };
 }
 
 export interface GrowthRewardGrant {

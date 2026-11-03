@@ -35,16 +35,22 @@ const readProfitAndLadder = async body => {
 
     const since = Math.floor(new Date(ladder.startedAt).getTime() / 1000);
 
-    let profit;
+    let summary;
     try {
-        profit = await fetchChallengeProfit(accessToken, loginids[0], since);
+        summary = await fetchChallengeProfit(accessToken, loginids[0], since);
     } catch (e) {
         // A rejected token is the caller's problem, not a server fault — and it
         // must never result in a grant on unverified profit.
+        console.error('[Growth] Profit read failed:', {
+            loginid: loginids[0],
+            status: e.status,
+            derivCode: e.derivCode,
+            message: e.message,
+        });
         throw createError(e.status || 502, e.message || 'Could not read your profit from Deriv');
     }
 
-    return { loginids, profit, ladder };
+    return { loginids, profit: summary.profit, summary, ladder };
 };
 
 module.exports = {
@@ -60,13 +66,25 @@ module.exports = {
      */
     check: async (req, res, next) => {
         try {
-            const { profit, ladder } = await readProfitAndLadder(req.body);
+            const { profit, summary, ladder } = await readProfitAndLadder(req.body);
+
+            /* A zero is ambiguous on its own. The breakdown says whether it
+               means no trades, no settled trades, or trades bought under an
+               app id this server is not looking for. */
+            console.log('[Growth] check', {
+                loginidRead: loginids[0],
+                loginidsReceived: loginids,
+                startedAt: ladder.startedAt,
+                ...summary,
+            });
 
             res.json({
                 profit,
                 threshold: ladder.threshold,
                 grantsClaimed: ladder.grantsClaimed,
                 claimable: shouldGrant(profit, ladder.threshold),
+                startedAt: ladder.startedAt,
+                debug: summary,
             });
         } catch (error) {
             next(error);

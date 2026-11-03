@@ -58,12 +58,16 @@ const round2 = n => Math.round(n * 100) / 100;
  * With no app id configured nothing matches, which stalls the challenge at
  * zero rather than paying out on trades placed somewhere else.
  */
-const realisedProfit = (rows, appId) => {
+const summariseStatement = (rows, appId) => {
     const wanted = String(appId || '');
-    if (!wanted) return 0;
 
     const stakes = new Map();
     const proceeds = new Map();
+    // Every app id seen on a buy row, so a zero can be told apart from a
+    // mismatch without another round of guessing.
+    const appIds = new Set();
+    let buyRows = 0;
+    let sellRows = 0;
 
     for (const row of rows || []) {
         const id = row && row.contract_id;
@@ -71,22 +75,40 @@ const realisedProfit = (rows, appId) => {
         const amount = Math.abs(Number(row.amount) || 0);
 
         if (row.action_type === 'buy') {
+            buyRows += 1;
+            appIds.add(String(row.app_id));
             // Bought somewhere else — DTrader, another of our sites, any
             // third-party app on the same Deriv login. Not our challenge.
-            if (String(row.app_id) !== wanted) continue;
+            if (!wanted || String(row.app_id) !== wanted) continue;
             stakes.set(id, amount);
         } else if (row.action_type === 'sell') {
+            sellRows += 1;
             proceeds.set(id, amount);
         }
     }
 
     let total = 0;
+    let matched = 0;
     for (const [id, stake] of stakes) {
         if (!proceeds.has(id)) continue;
+        matched += 1;
         total += proceeds.get(id) - stake;
     }
-    return round2(total);
+
+    return {
+        profit: round2(total),
+        rowsSeen: (rows || []).length,
+        buyRows,
+        sellRows,
+        ourBuys: stakes.size,
+        matched,
+        appIdsSeen: [...appIds],
+        lookingFor: wanted,
+    };
 };
+
+/** Realised profit alone, for callers that do not need the breakdown. */
+const realisedProfit = (rows, appId) => summariseStatement(rows, appId).profit;
 
 /**
  * Swaps an OAuth access token for an authenticated WebSocket URL.
@@ -108,6 +130,12 @@ const fetchOtpSocketUrl = async (accessToken, loginid) => {
     const json = await r.json().catch(() => null);
     if (!r.ok || !json || !json.data || !json.data.url) {
         const msg = (json && json.errors && json.errors[0] && json.errors[0].message) || `Deriv returned ${r.status}`;
+        console.error('[Growth] Could not get an OTP socket from Deriv:', {
+            status: r.status,
+            loginid,
+            appId: String(appId),
+            errors: json && json.errors,
+        });
         const err = new Error(msg);
         err.status = r.status === 401 || r.status === 403 ? 401 : 502;
         throw err;
@@ -122,6 +150,10 @@ const fetchOtpSocketUrl = async (accessToken, loginid) => {
  * its trading elsewhere counts. Rows are read unfiltered by `action_type`
  * because both halves of a contract are needed — the buy to attribute it and
  * the sell to settle it.
+ *
+ * Resolves the whole summary, not just the figure: a zero is ambiguous on its
+ * own, and the breakdown says whether it means no trades, no settled trades,
+ * or trades under an app id we are not looking for.
  */
 const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
     new Promise((resolve, reject) => {
@@ -151,14 +183,22 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
             };
 
             const timer = setTimeout(() => {
+                console.error('[Growth] Timed out reading the statement for', loginid);
                 const err = new Error('Timed out reading the statement');
                 err.status = 504;
                 finish(err);
             }, OVERALL_TIMEOUT_MS);
 
+            /* Set once the windowed walk has come back empty. The same socket
+               then asks again with no date_from, purely to find out why: an
+               account with no history at all is a different fault from one
+               whose trades fall outside the window, and the rows also reveal
+               the app_id Deriv really stamps on a buy. */
+            let probing = false;
+
             const requestPage = () => {
                 const req = { statement: 1, description: 1, limit: PAGE_SIZE, offset };
-                if (sinceEpoch) req.date_from = sinceEpoch;
+                if (sinceEpoch && !probing) req.date_from = sinceEpoch;
                 socket.send(JSON.stringify(req));
             };
 
@@ -182,7 +222,14 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
                 }
 
                 if (msg.error) {
+                    console.error('[Growth] Deriv rejected the statement request:', {
+                        code: msg.error.code,
+                        message: msg.error.message,
+                        loginid,
+                        date_from: sinceEpoch,
+                    });
                     const err = new Error(msg.error.message || 'Deriv rejected the statement request');
+                    err.derivCode = msg.error.code || null;
                     // An expired or wrongly-scoped token reads as an auth failure.
                     err.status = /Authoriz|Token|Invalid/i.test(msg.error.code || '') ? 401 : 502;
                     return finish(err);
@@ -191,12 +238,40 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
                 if (!msg.statement) return;
 
                 const page = msg.statement.transactions || [];
+
+                if (probing) {
+                    const appIds = new Set();
+                    let newest = null;
+                    for (const r of page) {
+                        if (r && r.action_type === 'buy') appIds.add(String(r.app_id));
+                        const t = Number(r && r.transaction_time) || 0;
+                        if (t && (!newest || t > newest)) newest = t;
+                    }
+                    const summary = summariseStatement(rows, getTradingAppId());
+                    summary.dateFrom = sinceEpoch || null;
+                    summary.probe = {
+                        ran: true,
+                        rowsWithoutWindow: page.length,
+                        appIdsSeen: [...appIds],
+                        newestTxTime: newest,
+                        newestTxISO: newest ? new Date(newest * 1000).toISOString() : null,
+                    };
+                    return finish(null, summary);
+                }
+
                 rows.push(...page);
                 offset += page.length;
 
                 const pagesRead = Math.ceil(offset / PAGE_SIZE);
                 if (page.length < PAGE_SIZE || pagesRead >= MAX_PAGES) {
-                    return finish(null, realisedProfit(rows, getTradingAppId()));
+                    if (rows.length === 0 && sinceEpoch) {
+                        probing = true;
+                        offset = 0;
+                        return requestPage();
+                    }
+                    const summary = summariseStatement(rows, getTradingAppId());
+                    summary.dateFrom = sinceEpoch || null;
+                    return finish(null, summary);
                 }
                 requestPage();
             });
@@ -217,4 +292,4 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
         }, reject);
     });
 
-module.exports = { realisedProfit, fetchOtpSocketUrl, fetchChallengeProfit };
+module.exports = { realisedProfit, summariseStatement, fetchOtpSocketUrl, fetchChallengeProfit };

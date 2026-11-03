@@ -14,6 +14,8 @@ export const DEFAULT_THRESHOLD = 500;
 
 export interface GrowthReward {
     status: GrowthRewardStatus | null;
+    /** Why the read failed, if it did. */
+    statusError: string | null;
     /** The grant just made, which the success modal is shown for. */
     grant: GrowthRewardGrant | null;
     claiming: boolean;
@@ -30,16 +32,23 @@ export interface GrowthReward {
  * one a grant is paid on.
  */
 export const useGrowthReward = (monthProfit: number): GrowthReward => {
-    const { isAuthenticated, accounts } = useAuth();
+    const { isAuthenticated, accounts, activeLoginId } = useAuth();
     const subscription = useSubscription();
     const [status, setStatus] = useState<GrowthRewardStatus | null>(null);
     const [grant, setGrant] = useState<GrowthRewardGrant | null>(null);
     const [claiming, setClaiming] = useState(false);
     const [claimError, setClaimError] = useState<string | null>(null);
+    const [statusError, setStatusError] = useState<string | null>(null);
     const refreshRef = useRef(subscription.refresh);
     refreshRef.current = subscription.refresh;
 
-    const loginKey = accounts.map(a => a.loginid).join(',');
+    /* Active account FIRST. The server reads the statement of loginids[0], and
+       `accounts` comes back in Deriv's storage order — so without this it could
+       read a different account than the one being traded on and report zero. */
+    const loginKey = [
+        ...(activeLoginId ? [activeLoginId] : []),
+        ...accounts.map(a => a.loginid).filter(id => id !== activeLoginId),
+    ].join(',');
 
     // Without a bearer the server has nothing to verify the profit with, and an
     // unverified figure is one this must never put on screen.
@@ -56,9 +65,19 @@ export const useGrowthReward = (monthProfit: number): GrowthReward => {
 
         let active = true;
         checkGrowthReward(creds)
-            .then(r => active && setStatus(r))
-            .catch(() => {
-                /* The dashboard works without this; stay quiet. */
+            .then(r => {
+                if (!active) return;
+                setStatus(r);
+                setStatusError(null);
+                // Says whether a zero means no trades, no settled trades, or
+                // trades bought under an app id the server is not looking for.
+                if (r.debug) console.info('[Growth] challenge read', r.debug);
+            })
+            .catch((e: unknown) => {
+                if (!active) return;
+                // Shown rather than swallowed: a silent failure here is
+                // indistinguishable from an account that simply has not traded.
+                setStatusError(e instanceof Error ? e.message : 'Could not read your profit');
             });
 
         return () => {
@@ -94,7 +113,7 @@ export const useGrowthReward = (monthProfit: number): GrowthReward => {
 
     const dismissGrant = useCallback(() => setGrant(null), []);
 
-    return { status, grant, claiming, claimError, claim, dismissGrant };
+    return { status, statusError, grant, claiming, claimError, claim, dismissGrant };
 };
 
 export default useGrowthReward;
