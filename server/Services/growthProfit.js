@@ -19,8 +19,10 @@ const getAppId = () => process.env.MARKUP_APP_ID || process.env.CLIENT_ID || '';
 /**
  * The app id trades must carry to count toward the challenge.
  *
- * This has to be the id this site's frontend places trades under, which is not
- * necessarily the markup id — set DERIV_TRADING_APP_ID when they differ.
+ * Trades are placed over a socket opened with the OAuth2 token, so they belong
+ * to the app that issued it — the frontend's CLIENT_ID, which is the same value
+ * as MARKUP_APP_ID here. (Not the legacy APP_ID, which this flow no longer
+ * uses.) DERIV_TRADING_APP_ID overrides it should they ever diverge.
  */
 const getTradingAppId = () => process.env.DERIV_TRADING_APP_ID || getAppId();
 
