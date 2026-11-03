@@ -70,4 +70,16 @@ const mpesaInitSchema = Joi.object({
         .messages({ 'string.pattern.base': 'Enter a valid Safaricom number, e.g. 0712345678' }),
 });
 
-module.exports = { createPaymentSchema, paystackInitSchema, mpesaInitSchema };
+/**
+ * The growth-reward check.
+ *
+ * `accessToken` is the user's Deriv OAuth token, which the server uses to read
+ * their profit itself. The reward pays out real premium, so the figure can
+ * never come from the request body — only the token does.
+ */
+const growthRewardSchema = Joi.object({
+    loginids: Joi.array().items(Joi.string().trim().min(1)).min(1).max(50).required(),
+    accessToken: Joi.string().trim().min(1).required(),
+});
+
+module.exports = { createPaymentSchema, paystackInitSchema, mpesaInitSchema, growthRewardSchema };
