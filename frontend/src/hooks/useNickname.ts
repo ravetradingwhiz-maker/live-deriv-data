@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 const keyFor = (loginid: string) => `nx_nickname_${loginid}`;
-/** Per-tab, so declining once does not re-prompt on every navigation. */
-const SKIP_KEY = 'nx_nickname_skipped';
 
 export const NICKNAME_MAX = 20;
 
@@ -11,10 +9,9 @@ export interface Nickname {
     nickname: string | null;
     /** False until localStorage has been read, so nothing flashes first. */
     loaded: boolean;
-    /** No nickname yet and the prompt has not been dismissed this session. */
+    /** No nickname yet, so the prompt must be answered before going on. */
     shouldPrompt: boolean;
     save: (value: string) => void;
-    skip: () => void;
 }
 
 /**
@@ -28,7 +25,6 @@ export interface Nickname {
 export const useNickname = (loginid: string | null): Nickname => {
     const [nickname, setNickname] = useState<string | null>(null);
     const [loaded, setLoaded] = useState(false);
-    const [skipped, setSkipped] = useState(false);
 
     useEffect(() => {
         if (!loginid) {
@@ -39,10 +35,9 @@ export const useNickname = (loginid: string | null): Nickname => {
         try {
             const stored = localStorage.getItem(keyFor(loginid));
             setNickname(stored && stored.trim() ? stored : null);
-            setSkipped(sessionStorage.getItem(SKIP_KEY) === '1');
         } catch {
-            // Private browsing, or storage blocked. The greeting falls back to
-            // the loginid, which is always available.
+            // Private browsing, or storage blocked. The prompt simply comes back
+            // each session; the greeting still has the loginid to fall back on.
             setNickname(null);
         }
         setLoaded(true);
@@ -62,21 +57,11 @@ export const useNickname = (loginid: string | null): Nickname => {
         [loginid]
     );
 
-    const skip = useCallback(() => {
-        setSkipped(true);
-        try {
-            sessionStorage.setItem(SKIP_KEY, '1');
-        } catch {
-            /* Held in memory for this session instead. */
-        }
-    }, []);
-
     return {
         nickname,
         loaded,
-        shouldPrompt: loaded && !nickname && !skipped && !!loginid,
+        shouldPrompt: loaded && !nickname && !!loginid,
         save,
-        skip,
     };
 };
 

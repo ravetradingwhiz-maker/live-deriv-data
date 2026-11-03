@@ -33,7 +33,7 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
     // The Deriv first name is no longer shown directly — it seeds the nickname
     // prompt, so the suggestion is already theirs when the modal opens.
     const derivName = useAccountName();
-    const { nickname, shouldPrompt, save: saveNickname, skip: skipNickname } = useNickname(activeLoginId);
+    const { nickname, shouldPrompt, save: saveNickname } = useNickname(activeLoginId);
     const [editingNickname, setEditingNickname] = useState(false);
     const { status, grant, claiming, claimError, claim, dismissGrant } = useGrowthReward(monthProfit);
 
@@ -125,13 +125,9 @@ const DashboardHero = ({ monthProfit }: DashboardHeroProps) => {
             {(shouldPrompt || editingNickname) && (
                 <NicknameModal
                     suggestion={derivName}
-                    loginid={activeLoginId}
                     initial={nickname}
                     onSave={saveNickname}
-                    onClose={() => {
-                        setEditingNickname(false);
-                        if (shouldPrompt) skipNickname();
-                    }}
+                    onDone={() => setEditingNickname(false)}
                 />
             )}
 
