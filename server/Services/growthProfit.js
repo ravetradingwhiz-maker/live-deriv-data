@@ -1,11 +1,16 @@
 /**
- * Reads a user's realised profit from Deriv, server-side.
+ * Reads a user's realised profit on this site, server-side.
  *
  * The growth reward pays out real premium, so the figure it pays on cannot be
  * the client's word for it — a posted number would hand anyone free premium
  * for as long as they cared to keep posting. The server does its own read,
  * the same way the frontend does: swap the access token for a short-lived OTP
- * socket URL, then walk `profit_table` over it.
+ * socket URL, then walk the account's statement over it.
+ *
+ * `statement`, not `profit_table`: the challenge only counts trades placed
+ * here, and `app_id` ("ID of the application where this contract was
+ * purchased") exists on a statement transaction and not on a profit-table one.
+ * The statement is the only place Deriv says which app bought a contract.
  *
  * The token is used for this read and nothing else. It is never stored and
  * never logged.
@@ -17,7 +22,7 @@ const DERIV_REST = 'https://api.derivws.com';
 const getAppId = () => process.env.MARKUP_APP_ID || process.env.CLIENT_ID || '';
 
 /**
- * The app id trades must carry to count toward the challenge.
+ * The app id a contract must have been bought under to count.
  *
  * Trades are placed over a socket opened with the OAuth2 token, so they belong
  * to the app that issued it — the frontend's CLIENT_ID, which is the same value
@@ -35,36 +40,53 @@ const OVERALL_TIMEOUT_MS = 20_000;
 const round2 = n => Math.round(n * 100) / 100;
 
 /**
- * What a set of profit-table rows earned.
+ * Realised profit on contracts bought through this app, from statement rows.
  *
- * `profit_table` carries no profit field, only the two prices, so this is the
- * one place the subtraction happens. Rounded to cents because a threshold
- * comparison on a float that drifted is a reward granted or withheld wrongly.
- */
-/**
- * Keeps only the contracts bought through this site.
+ * A contract appears twice: a `buy` for the stake and, once it settles, a
+ * `sell` for the proceeds. Only the buy carries the app id, so that is what
+ * decides whether a contract belongs to us; the sell is then matched to it by
+ * contract id.
  *
- * `profit_table` returns the account's trades whoever placed them — DTrader,
- * another of our sites, any third-party app on the same Deriv login. The
- * challenge is about trading here, so everything else is dropped.
+ * A contract with a buy but no sell is still open. It is skipped rather than
+ * counted as a total loss, which is what makes this *realised* profit and
+ * keeps it from lurching negative every time a position is held.
+ *
+ * Amounts are taken as magnitudes: a buy debits the account and a sell credits
+ * it, and reading the sign rather than the size would make the arithmetic
+ * depend on a convention this code does not control.
  *
  * With no app id configured nothing matches, which stalls the challenge at
  * zero rather than paying out on trades placed somewhere else.
  */
-const filterToApp = (rows, appId) => {
+const realisedProfit = (rows, appId) => {
     const wanted = String(appId || '');
-    if (!wanted) return [];
-    return (rows || []).filter(row => String(row && row.app_id) === wanted);
-};
+    if (!wanted) return 0;
 
-const sumProfit = rows =>
-    round2(
-        (rows || []).reduce((total, row) => {
-            const sell = Number(row && row.sell_price) || 0;
-            const buy = Number(row && row.buy_price) || 0;
-            return total + (sell - buy);
-        }, 0)
-    );
+    const stakes = new Map();
+    const proceeds = new Map();
+
+    for (const row of rows || []) {
+        const id = row && row.contract_id;
+        if (!id) continue;
+        const amount = Math.abs(Number(row.amount) || 0);
+
+        if (row.action_type === 'buy') {
+            // Bought somewhere else — DTrader, another of our sites, any
+            // third-party app on the same Deriv login. Not our challenge.
+            if (String(row.app_id) !== wanted) continue;
+            stakes.set(id, amount);
+        } else if (row.action_type === 'sell') {
+            proceeds.set(id, amount);
+        }
+    }
+
+    let total = 0;
+    for (const [id, stake] of stakes) {
+        if (!proceeds.has(id)) continue;
+        total += proceeds.get(id) - stake;
+    }
+    return round2(total);
+};
 
 /**
  * Swaps an OAuth access token for an authenticated WebSocket URL.
@@ -96,11 +118,10 @@ const fetchOtpSocketUrl = async (accessToken, loginid) => {
 /**
  * What the account has made here since it joined the challenge.
  *
- * Windowed at the source with `date_from` and filtered to this app's trades,
- * so neither the account's past nor its trading elsewhere counts.
- *
- * Walks ascending so a trade settling mid-walk cannot shift a later row into a
- * page already read.
+ * Windowed at the source with `date_from`, so neither the account's past nor
+ * its trading elsewhere counts. Rows are read unfiltered by `action_type`
+ * because both halves of a contract are needed — the buy to attribute it and
+ * the sell to settle it.
  */
 const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
     new Promise((resolve, reject) => {
@@ -114,7 +135,7 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
             let socket;
             let settled = false;
             let offset = 0;
-            let total = 0;
+            const rows = [];
 
             const finish = (err, value) => {
                 if (settled) return;
@@ -130,13 +151,13 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
             };
 
             const timer = setTimeout(() => {
-                const err = new Error('Timed out reading the profit table');
+                const err = new Error('Timed out reading the statement');
                 err.status = 504;
                 finish(err);
             }, OVERALL_TIMEOUT_MS);
 
             const requestPage = () => {
-                const req = { profit_table: 1, description: 1, sort: 'ASC', limit: PAGE_SIZE, offset };
+                const req = { statement: 1, description: 1, limit: PAGE_SIZE, offset };
                 if (sinceEpoch) req.date_from = sinceEpoch;
                 socket.send(JSON.stringify(req));
             };
@@ -161,22 +182,22 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
                 }
 
                 if (msg.error) {
-                    const err = new Error(msg.error.message || 'Deriv rejected the profit table request');
+                    const err = new Error(msg.error.message || 'Deriv rejected the statement request');
                     // An expired or wrongly-scoped token reads as an auth failure.
                     err.status = /Authoriz|Token|Invalid/i.test(msg.error.code || '') ? 401 : 502;
                     return finish(err);
                 }
 
-                if (!msg.profit_table) return;
+                if (!msg.statement) return;
 
-                const rows = msg.profit_table.transactions || [];
-                /* Paging counts every row Deriv sent, not just the ones kept —
-                   the offset addresses its table, not our filtered view. */
-                total += sumProfit(filterToApp(rows, getTradingAppId()));
-                offset += rows.length;
+                const page = msg.statement.transactions || [];
+                rows.push(...page);
+                offset += page.length;
 
                 const pagesRead = Math.ceil(offset / PAGE_SIZE);
-                if (rows.length < PAGE_SIZE || pagesRead >= MAX_PAGES) return finish(null, round2(total));
+                if (page.length < PAGE_SIZE || pagesRead >= MAX_PAGES) {
+                    return finish(null, realisedProfit(rows, getTradingAppId()));
+                }
                 requestPage();
             });
 
@@ -186,14 +207,14 @@ const fetchChallengeProfit = (accessToken, loginid, sinceEpoch) =>
                 finish(err);
             });
 
-            // A close before any page arrived is a failure; after the walk
-            // finished, `settled` already short-circuits this.
+            // A close before the walk finished is a failure; afterwards,
+            // `settled` already short-circuits this.
             socket.addEventListener('close', () => {
-                const err = new Error('The Deriv socket closed before the profit table was read');
+                const err = new Error('The Deriv socket closed before the statement was read');
                 err.status = 502;
                 finish(err);
             });
         }, reject);
     });
 
-module.exports = { sumProfit, filterToApp, fetchOtpSocketUrl, fetchChallengeProfit };
+module.exports = { realisedProfit, fetchOtpSocketUrl, fetchChallengeProfit };
