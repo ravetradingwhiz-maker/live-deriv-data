@@ -2,6 +2,7 @@ import { useAuth } from '@/context/AuthContext';
 import useAccountGrowth from '@/hooks/useAccountGrowth';
 import DashboardHero from '@/components/dashboard/DashboardHero';
 import GrowthCard from '@/components/dashboard/GrowthCard';
+import RewardProgress from '@/components/dashboard/RewardProgress';
 
 /**
  * Dashboard — the authenticated app's landing tab.
@@ -46,6 +47,8 @@ const Dashboard = () => {
                     loading={loading}
                 />
             </div>
+
+            <RewardProgress monthProfit={month.profit} />
         </div>
     );
 };
