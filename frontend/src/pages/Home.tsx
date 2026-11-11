@@ -155,7 +155,7 @@ const Home = () => {
                             {/* Leaves the site, so it opens in its own tab. `noreferrer`
                                 alongside `noopener` because the target is a third party. */}
                             <a
-                                href='https://t.me/livederiv_dataanalysis'
+                                href='https://t.me/livederivdataanalysis_VIP'
                                 target='_blank'
                                 rel='noopener noreferrer'
                                 className='btn-ghost btn-ring px-7 py-3 text-base'
