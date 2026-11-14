@@ -192,13 +192,13 @@
 
     /* Premium gold→violet wordmark (e.g. "Nexora AI Premium"). */
     .text-premium {
-        background-image: linear-gradient(90deg, #fcd34d, #fbbf24, #c4b5fd);
+        background-image: linear-gradient(90deg, #fcd34d, #fbbf24);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
     }
     :root.light .text-premium {
-        background-image: linear-gradient(90deg, #b45309, #92400e, #6d28d9);
+        background-image: linear-gradient(90deg, #b45309, #92400e);
     }
 
     /* Logo wordmark font. Falls back to a bold sans if "Gevora" isn't loaded. */

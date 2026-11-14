@@ -74,9 +74,9 @@ const PerformanceChart = ({ buckets, target, loading }: PerformanceChartProps) =
     }
 
     return (
-        <div className='relative h-64 w-full'>
+        <div className='relative h-64 w-full min-w-0'>
             {/* Value axis. Sits in its own column so the plot starts clear of it. */}
-            <div className='absolute bottom-6 left-0 top-0 w-9'>
+            <div className='absolute bottom-6 left-0 top-0 w-10'>
                 {ticks.map(tick => (
                     <span
                         key={tick}
@@ -88,7 +88,7 @@ const PerformanceChart = ({ buckets, target, loading }: PerformanceChartProps) =
                 ))}
             </div>
 
-            <div className='absolute bottom-6 left-9 right-0 top-0'>
+            <div className='absolute bottom-6 left-10 right-0 top-0'>
                 <div className='relative h-full border-b border-l border-line'>
                     {hasData && (
                         <svg
@@ -130,9 +130,14 @@ const PerformanceChart = ({ buckets, target, loading }: PerformanceChartProps) =
                 </div>
             </div>
 
-            <div className='absolute bottom-0 left-9 right-0 flex h-6 items-center justify-between text-[10px] text-slate-500'>
-                {dayLabels.map(day => (
-                    <span key={day}>{`${month} ${day}`}</span>
+            {/* Every other date is dropped on a phone: seven of them across
+                ~320px ran into each other and pushed the row wider than the
+                card. */}
+            <div className='absolute bottom-0 left-10 right-0 flex h-6 items-center justify-between text-[10px] text-slate-500'>
+                {dayLabels.map((day, index) => (
+                    <span key={day} className={index % 2 === 1 ? 'hidden sm:inline' : ''}>
+                        {`${month} ${day}`}
+                    </span>
                 ))}
             </div>
         </div>

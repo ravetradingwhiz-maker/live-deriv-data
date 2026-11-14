@@ -68,7 +68,9 @@ const RecentActivity = ({ rows, currency, loading, limit = 5 }: RecentActivityPr
                 const profit = rowProfit(row);
                 return (
                     <li key={row.contract_id} className='flex items-center justify-between gap-3 py-3'>
-                        <div className='min-w-0'>
+                        {/* flex-1 with min-w-0 is what lets the contract name
+                            truncate instead of setting the row's width. */}
+                        <div className='min-w-0 flex-1'>
                             <p className='truncate text-sm text-slate-300'>{row.longcode}</p>
                             <p className='mt-0.5 text-[11px] text-slate-500'>{fmtWhen(Number(row.sell_time) || 0)}</p>
                         </div>

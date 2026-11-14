@@ -25,7 +25,12 @@ const SectionCard = ({ icon: Icon, tone, title, subtitle, action, children, clas
     const { fg, disc } = TONES[tone];
 
     return (
-        <section className={`rounded-xl border border-line bg-ink-800/60 p-4 sm:p-5 ${className}`}>
+        /* min-w-0 so the card may shrink below its content, overflow-hidden so
+           anything that still will not fit is clipped here rather than pushing
+           the page sideways. */
+        <section
+            className={`min-w-0 overflow-hidden rounded-xl border border-line bg-ink-800/60 p-4 sm:p-5 ${className}`}
+        >
             <header className='flex items-start justify-between gap-3'>
                 <div className='flex min-w-0 items-center gap-3'>
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${disc}`}>
@@ -39,7 +44,7 @@ const SectionCard = ({ icon: Icon, tone, title, subtitle, action, children, clas
                 {action && <div className='shrink-0'>{action}</div>}
             </header>
 
-            <div className='mt-4'>{children}</div>
+            <div className='mt-4 min-w-0'>{children}</div>
         </section>
     );
 };

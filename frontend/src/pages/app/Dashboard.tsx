@@ -49,14 +49,21 @@ const Dashboard = () => {
      * hero panel nor the progress card is drawn for one — and the server is
      * not asked about a reward it would never grant.
      *
-     * Keyed on eligibility rather than on admin mode being switched on: an
-     * admin who steps out of admin mode is still an admin, and the challenge
-     * blinking back into the page would be the wrong answer.
+     * Withheld until the check has *resolved*, not merely until it comes back
+     * positive: `eligible` starts false, so gating on it alone drew the
+     * challenge on the first paint and tore it away a moment later. Waiting
+     * costs a non-admin one render; not waiting offered an admin a reward and
+     * then took it back.
+     *
+     * Resolved status is used rather than admin mode being switched on: an
+     * admin who steps out of admin mode is still an admin. A null context
+     * would mean no AdminProvider, which cannot happen under AppLayout — and
+     * there would be no admin to hide anything from in that case anyway.
      */
     const admin = useAdminOptional();
-    const isAdmin = Boolean(admin?.eligible);
+    const showChallenge = (admin ? admin.checked : true) && !admin?.eligible;
 
-    const reward = useGrowthReward(month.profit, !isAdmin);
+    const reward = useGrowthReward(month.profit, showChallenge);
     const [showAllActivity, setShowAllActivity] = useState(false);
 
     const currency = balanceCurrency ?? 'USD';
@@ -65,7 +72,7 @@ const Dashboard = () => {
 
     return (
         <div className='space-y-4 sm:space-y-6'>
-            <DashboardHero reward={isAdmin ? undefined : reward} />
+            <DashboardHero reward={showChallenge ? reward : undefined} />
 
             {error && (
                 <p className='rounded-xl border border-rose-900/60 bg-rose-950/30 px-4 py-3 text-sm text-rose-300'>
@@ -115,7 +122,11 @@ const Dashboard = () => {
                 />
             </div>
 
-            <div className='grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]'>
+            {/* `grid-cols-1` is load-bearing on a phone: a bare `grid` makes a
+                single `auto` track, which content wider than the screen — a
+                long contract name, a big figure — stretches instead of being
+                contained, taking the whole page sideways with it. */}
+            <div className='grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]'>
                 <SectionCard
                     icon={TrendingUp}
                     tone='cyan'
@@ -125,7 +136,7 @@ const Dashboard = () => {
                     <PerformanceChart buckets={month.buckets} target={threshold} loading={loading} />
                 </SectionCard>
 
-                <div className='flex flex-col gap-4'>
+                <div className='flex min-w-0 flex-col gap-4'>
                     <SectionCard
                         icon={Clock}
                         tone='cyan'
@@ -152,7 +163,7 @@ const Dashboard = () => {
                         />
                     </SectionCard>
 
-                    {!isAdmin && <ChallengeCard profit={reward.status?.profit ?? 0} threshold={threshold} />}
+                    {showChallenge && <ChallengeCard profit={reward.status?.profit ?? 0} threshold={threshold} />}
                 </div>
             </div>
 
