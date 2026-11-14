@@ -31,7 +31,7 @@ export interface GrowthReward {
  * dashboard's: the two are derived the same way, but only the server's is the
  * one a grant is paid on.
  */
-export const useGrowthReward = (monthProfit: number): GrowthReward => {
+export const useGrowthReward = (monthProfit: number, enabled = true): GrowthReward => {
     const { isAuthenticated, accounts, activeLoginId } = useAuth();
     const subscription = useSubscription();
     const [status, setStatus] = useState<GrowthRewardStatus | null>(null);
@@ -59,6 +59,10 @@ export const useGrowthReward = (monthProfit: number): GrowthReward => {
     }, [loginKey]);
 
     useEffect(() => {
+        // An account the challenge is not offered to never asks the server
+        // about it. A hook cannot be called conditionally, so the caller
+        // switches the read off rather than skipping the hook.
+        if (!enabled) return;
         if (!isAuthenticated) return;
         const creds = credentials();
         if (!creds) return;
@@ -83,7 +87,7 @@ export const useGrowthReward = (monthProfit: number): GrowthReward => {
         return () => {
             active = false;
         };
-    }, [isAuthenticated, credentials, monthProfit]);
+    }, [enabled, isAuthenticated, credentials, monthProfit]);
 
     const claim = useCallback(() => {
         const creds = credentials();

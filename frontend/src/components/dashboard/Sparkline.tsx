@@ -2,6 +2,12 @@ interface SparklineProps {
     /** Per-day profit. Plotted as a running total, so the line is the curve. */
     values: number[];
     positive: boolean;
+    /**
+     * Overrides the profit/loss colouring. The stat tiles colour their curve by
+     * what it measures — trades, a month — rather than by whether it is up.
+     */
+    colorClass?: string;
+    className?: string;
 }
 
 /**
@@ -10,7 +16,7 @@ interface SparklineProps {
  * Drawn from the running total rather than the daily figures: a reader of a
  * growth card wants to see where the account got to, not a row of spikes.
  */
-const Sparkline = ({ values, positive }: SparklineProps) => {
+const Sparkline = ({ values, positive, colorClass, className = 'h-10 w-full' }: SparklineProps) => {
     if (values.length < 2) return null;
 
     let total = 0;
@@ -34,7 +40,7 @@ const Sparkline = ({ values, positive }: SparklineProps) => {
             viewBox='0 0 100 100'
             preserveAspectRatio='none'
             aria-hidden
-            className={`h-10 w-full ${positive ? 'text-emerald-400' : 'text-rose-400'}`}
+            className={`${className} ${colorClass ?? (positive ? 'text-emerald-400' : 'text-rose-400')}`}
         >
             <polyline
                 points={points}

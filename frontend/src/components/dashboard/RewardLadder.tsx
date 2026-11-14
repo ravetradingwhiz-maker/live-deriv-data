@@ -48,6 +48,9 @@ const RewardLadder = ({ profit, threshold, claimable, claiming, error, onClaim }
                     <span className='text-slate-500'> of </span>
                     <span className='font-mono font-semibold text-white'>${fmt(threshold)}</span>
                 </p>
+                <span className='ml-auto shrink-0 font-mono text-xs font-semibold text-slate-400'>
+                    {Math.round(pct * 100)}%
+                </span>
             </div>
 
             <div className='mt-2.5 h-2 overflow-hidden rounded-full bg-ink-600'>

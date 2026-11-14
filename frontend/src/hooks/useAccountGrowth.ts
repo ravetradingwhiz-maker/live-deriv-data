@@ -23,6 +23,14 @@ export interface MonthGrowth extends GrowthPeriod {
 export interface AccountGrowth {
     month: MonthGrowth;
     day: GrowthPeriod;
+    /**
+     * The month's settled trades, newest first, for the activity list.
+     *
+     * Taken from the rows already fetched for the figures above rather than a
+     * request of its own — and from the profit table rather than the in-memory
+     * session history, which empties on every reload.
+     */
+    recent: ProfitTableRow[];
     loading: boolean;
     error: string | null;
     refresh: () => void;
@@ -115,7 +123,9 @@ export const useAccountGrowth = (): AccountGrowth => {
         ? EMPTY_PERIOD
         : { ...dayStats, percent: growthPercent(dayStats.profit, currentBalance) };
 
-    return { month, day, loading, error, refresh: load };
+    const recent = [...rows].sort((a, b) => (Number(b.sell_time) || 0) - (Number(a.sell_time) || 0));
+
+    return { month, day, recent, loading, error, refresh: load };
 };
 
 export default useAccountGrowth;
