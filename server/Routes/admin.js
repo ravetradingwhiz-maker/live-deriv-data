@@ -1,19 +1,31 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const adminController = require('../Controllers/adminController');
+const { requireAdminToken } = require('../Middlewares/adminToken');
 
 const router = express.Router();
 
 const checkLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
 const markupLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+/* The allow-list routes are driven by hand a few times a year; anything
+   hammering them is not an administrator. */
+const manageLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
 // The frontend checks the logged-in account loginid(s).
 router.get('/check', checkLimiter, adminController.check);
 
-// Admin management — use from Postman.  POST/DELETE body: { "loginid": "ROT90364524" }
-router.get('/list', adminController.list);
-router.post('/', adminController.add);
-router.delete('/', adminController.remove);
+/*
+ * Admin management — by hand (Postman, curl), never by a browser.
+ *
+ * Behind the shared secret: `POST` here writes the allow-list that turns
+ * admin mode on across the bots and the clones, and it stood open to the
+ * internet. Send it as `X-Admin-Token`, or as a bearer token.
+ *
+ * POST/DELETE body: { "loginid": "ROT90364524" }
+ */
+router.get('/list', manageLimiter, requireAdminToken, adminController.list);
+router.post('/', manageLimiter, requireAdminToken, adminController.add);
+router.delete('/', manageLimiter, requireAdminToken, adminController.remove);
 
 // Subscriptions CRUD
 router.get('/subscriptions', adminController.listSubscriptions);
