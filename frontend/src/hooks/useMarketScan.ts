@@ -13,8 +13,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * go away — the scan is a fixed opening act, and the bot starts when it ends.
  */
 
-/** How long the scan runs before the bot is started. */
-const SCAN_MS = 5000;
+/**
+ * How long the scan runs before the bot is started.
+ *
+ * Long enough to read as a deliberate opening act and to keep the first
+ * trades from being placed behind the modal; short enough not to be the
+ * waiting itself. The scanner paints on its own interval and has no fixed
+ * number of steps to get through, so this can be shortened freely.
+ */
+const SCAN_MS = 2500;
 
 interface MarketScan {
     /** Whether the scan is on screen. */

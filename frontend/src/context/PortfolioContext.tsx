@@ -80,6 +80,15 @@ interface PortfolioContextValue {
     /** Session totals over `history`, for the positions panel. */
     sessionStats: SessionStats;
     clearHistory: () => void;
+    /**
+     * Bumped every time the history is cleared.
+     *
+     * A bot keeps its own running total — the figure on its card is the bot's,
+     * not a sum over this history — so Reset has to reach it somehow. This is
+     * the signal it watches; a counter rather than a boolean, so two resets in
+     * a row are two distinct events.
+     */
+    clearedAt: number;
     /** Admin (fake-trade) mode: inject a simulated open position so it shows live. */
     addAdminPosition: (pos: OpenPosition) => void;
     /** Admin (fake-trade) mode: settle a simulated position and record it to history. */
@@ -103,9 +112,12 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
     positionsRef.current = positions;
     const subRef = useRef<Subscription | null>(null);
 
+    const [clearedAt, setClearedAt] = useState(0);
+
     const clearHistory = useCallback(() => {
         setHistory([]);
         recordedRef.current = new Set();
+        setClearedAt(n => n + 1);
     }, []);
 
     // ── Admin (fake-trade) mode ──────────────────────────────────────────────
@@ -243,6 +255,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
                 history,
                 sessionStats,
                 clearHistory,
+                clearedAt,
                 addAdminPosition,
                 settleAdminPosition,
             }}

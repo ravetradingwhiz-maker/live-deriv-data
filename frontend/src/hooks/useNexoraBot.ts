@@ -208,6 +208,18 @@ const predictBinary = (states: number[], blend = 0.65): { pOne: number; conf: nu
 
 const DIGIT_WINDOW = 120;
 
+/**
+ * What the premium strategies count as "recent".
+ *
+ * They were reading the same 120-tick digit window as the free families, and
+ * TickStrike was reading the whole 500-tick price history. Over a window that
+ * long the statistic barely moves between ticks, so a gate it happens to sit
+ * just under holds for minutes at a time and the bot stays on "Scanning market
+ * for the next signal…". Sixty ticks is still enough to measure a bias and
+ * short enough to actually respond to one.
+ */
+const PREMIUM_WINDOW = 60;
+
 // Build a two-sided (yes/no) signal for a ~50/50 family from P(yes).
 const mkBinary = (
     family: NexoraFamily,
@@ -355,7 +367,7 @@ const premiumSignal = (
     risk: RiskLevel
 ): NexoraSignal | null => {
     const digits = quotes.map(q => lastDigitOf(q, decimals));
-    const win = digits.slice(-DIGIT_WINDOW);
+    const win = digits.slice(-PREMIUM_WINDOW);
     const n = win.length || 1;
     if (win.length < 12) return null;
 
@@ -403,7 +415,10 @@ const premiumSignal = (
     if (strategy === 'over8_killer') {
         // Over 8 → win only on digit 9. Fire when 9 is over-represented recently.
         const p9 = win.filter(d => d === 9).length / n;
-        const need = { low: 0.14, medium: 0.12, high: 0.1 }[risk];
+        /* Over a 60-tick window the expected share of 9s is 0.10 with a spread
+           of about 0.04, so 0.14 asked for a full standard deviation of excess
+           before it would fire — rare, and rarer still for being sticky. */
+        const need = { low: 0.12, medium: 0.11, high: 0.1 }[risk];
         return {
             family: 'over8_killer',
             contract_type: 'DIGITOVER',
@@ -420,8 +435,12 @@ const premiumSignal = (
     if (strategy === 'tickstrike_pro') {
         // High tick → predict the 5th tick is the highest of the series. Favoured
         // by upward momentum, so gate on a bullish direction model.
+        /* The recent window, not the whole 500-tick history: averaged over
+           that much the up/down probability sits a hair from 0.5 and barely
+           moves, so landing just under the gate stalled the bot for minutes. */
+        const recent = quotes.slice(-PREMIUM_WINDOW);
         const dirs: number[] = [];
-        for (let i = 1; i < quotes.length; i++) dirs.push(quotes[i] > quotes[i - 1] ? 1 : 0);
+        for (let i = 1; i < recent.length; i++) dirs.push(recent[i] > recent[i - 1] ? 1 : 0);
         const up = predictBinary(dirs);
         return {
             family: 'tickstrike_pro',
@@ -934,6 +953,30 @@ export const useNexoraBot = (config: NexoraConfig) => {
         },
         [refreshDisplay, maybeTrade]
     );
+
+    /**
+     * Reset on the drawer's Reset.
+     *
+     * The card's Total P/L is this hook's own running total, not a sum over
+     * the portfolio's session history, so clearing that history left the
+     * figure standing. The drawer bumps `clearedAt`; this clears the counters
+     * behind the figure along with the journal and the last session's result.
+     *
+     * A running bot is left alone, matching what Reset already does elsewhere:
+     * `netRef` is what the profit target and max loss are measured against, so
+     * zeroing it mid-run would quietly move both goalposts.
+     */
+    const clearedAt = portfolio?.clearedAt ?? 0;
+    useEffect(() => {
+        if (clearedAt === 0) return; // the initial value, not a reset
+        if (runningRef.current) return;
+
+        netRef.current = 0;
+        statsRef.current = { netProfit: 0, trades: 0, wins: 0, losses: 0 };
+        setStats({ netProfit: 0, trades: 0, wins: 0, losses: 0 });
+        setJournal([]);
+        setSessionResult(null);
+    }, [clearedAt]);
 
     // (Re)subscribe to the tick feed whenever the symbol changes.
     useEffect(() => {
