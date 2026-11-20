@@ -4,6 +4,9 @@ const Subscription = require('../Models/Subscription');
 const Payment = require('../Models/Payment');
 const Setting = require('../Models/Setting');
 const { TIERS, getTiers } = require('../config/tiers');
+const { addMonths } = require('../Services/subscriptionService');
+const { METHOD_DEFS, DEFAULTS: METHOD_DEFAULTS, getPaymentMethods } = require('../config/paymentMethods');
+const payhero = require('../Services/payHeroService');
 
 // Deriv v4 markup-statistics REST endpoint (must be called server-side with a
 // read-scoped app token — the browser gets 403). Mirrors quantum-vault.
@@ -121,11 +124,25 @@ module.exports = {
     // GET /api/admin/subscriptions?q=&status=
     listSubscriptions: async (req, res, next) => {
         try {
-            const filter = {};
+            /* Both clauses below can be an $or, and assigning filter.$or twice
+               silently drops the first — so they are collected into an $and. */
+            const clauses = [];
+
+            /* Effective state, not the stored field. The sweep marks lapsed rows
+               `expired` hourly, so between sweeps a row can still read `active`
+               with a date in the past; the date is what decides. */
             const status = String(req.query.status || '').trim();
-            if (status === 'active' || status === 'expired') filter.status = status;
+            const now = new Date();
+            if (status === 'active') {
+                clauses.push({ status: 'active' }, { expiresAt: { $gt: now } });
+            } else if (status === 'expired') {
+                clauses.push({ $or: [{ status: 'expired' }, { expiresAt: { $lte: now } }] });
+            }
+
             const q = String(req.query.q || '').trim();
-            if (q) filter.$or = [{ loginids: new RegExp(q, 'i') }, { email: new RegExp(q, 'i') }];
+            if (q) clauses.push({ $or: [{ loginids: new RegExp(q, 'i') }, { email: new RegExp(q, 'i') }] });
+
+            const filter = clauses.length ? { $and: clauses } : {};
             const subs = await Subscription.find(filter).sort('-createdAt').limit(1000).lean();
             res.json({ count: subs.length, subscriptions: subs });
         } catch (error) {
@@ -144,8 +161,9 @@ module.exports = {
             if (!loginids.length) throw createError(422, 'at least one loginid is required');
             if (!TIERS[tier]) throw createError(422, 'tier must be alpha, quantum or apex');
             const months = Number(req.body.months) || TIERS[tier].months;
-            const expiresAt = new Date();
-            expiresAt.setMonth(expiresAt.getMonth() + months);
+            // Shared with paid activation so a granted month and a bought one
+            // are the same length — `setMonth` alone overflows on the 31st.
+            const expiresAt = addMonths(Date.now(), months);
             const sub = await Subscription.create({
                 loginids,
                 email: String(req.body.email || ''),
@@ -183,6 +201,12 @@ module.exports = {
                 const d = new Date(req.body.expiresAt);
                 if (Number.isNaN(d.getTime())) throw createError(422, 'invalid expiresAt');
                 patch.expiresAt = d;
+                /* Extending a lapsed subscription has to revive it too. The
+                   sweep will have set `expired`, and the access check demands
+                   both an active status and a future date — so moving only the
+                   date would look like it worked and change nothing. An
+                   explicit status in the same request still wins. */
+                if (!patch.status && d > new Date()) patch.status = 'active';
             }
             const sub = await Subscription.findByIdAndUpdate(req.params.id, patch, { new: true });
             if (!sub) throw createError(404, 'subscription not found');
@@ -228,7 +252,7 @@ module.exports = {
         }
     },
 
-    // PUT /api/admin/pricing  { alpha:{priceUSD,months}, quantum:{...}, apex:{...} }
+    // PUT /api/admin/pricing  { alpha:{priceUSD,months,slotsLeft}, quantum:{...}, apex:{...} }
     setPricing: async (req, res, next) => {
         try {
             const body = req.body || {};
@@ -239,10 +263,89 @@ module.exports = {
                 const entry = {};
                 if (o.priceUSD != null && !Number.isNaN(Number(o.priceUSD))) entry.priceUSD = Number(o.priceUSD);
                 if (o.months != null && !Number.isNaN(Number(o.months))) entry.months = Number(o.months);
+                // Zero is a meaningful value here — it takes the "slots left"
+                // line off the card — so it is stored rather than treated as
+                // an empty field.
+                if (o.slotsLeft != null && !Number.isNaN(Number(o.slotsLeft))) {
+                    entry.slotsLeft = Math.max(0, Math.floor(Number(o.slotsLeft)));
+                }
                 if (Object.keys(entry).length) value[key] = entry;
             }
             await Setting.updateOne({ key: 'pricing' }, { $set: { value } }, { upsert: true });
             res.json({ ok: true, tiers: await getTiers() });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // ── Payment methods ──────────────────────────────────────────────────────
+    // GET /api/admin/payment-methods
+    getPaymentMethods: async (req, res, next) => {
+        try {
+            res.json({ methods: await getPaymentMethods(), defs: METHOD_DEFS, defaults: METHOD_DEFAULTS });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // PUT /api/admin/payment-methods  { card: true, mpesa: false, crypto: true }
+    setPaymentMethods: async (req, res, next) => {
+        try {
+            const body = req.body || {};
+            const value = {};
+            for (const key of Object.keys(METHOD_DEFAULTS)) {
+                if (typeof body[key] === 'boolean') value[key] = body[key];
+            }
+            // Refuse to switch every method off — that would leave a dead checkout.
+            if (Object.keys(value).length && !Object.values(value).some(Boolean)) {
+                throw createError(422, 'At least one payment method must stay enabled');
+            }
+            await Setting.updateOne({ key: 'payment_methods' }, { $set: { value } }, { upsert: true });
+            res.json({ ok: true, methods: await getPaymentMethods() });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // ── PayHero service wallet ───────────────────────────────────────────────
+    // The float that pays the fee on every M-Pesa push. It empties as you sell,
+    // and when it does M-Pesa stops working while everything else carries on.
+
+    // GET /api/admin/payhero/wallet
+    payHeroWallet: async (req, res, next) => {
+        try {
+            const wallet = await payhero.getServiceWalletBalance();
+            res.json({
+                balance: Number(wallet.available_balance) || 0,
+                currency: wallet.currency || 'KES',
+                updatedAt: wallet.updated_at || null,
+            });
+        } catch (error) {
+            // A missing key or a PayHero outage is a state of the integration,
+            // not a server fault — say which, so the page can show it.
+            next(createError(502, error.message));
+        }
+    },
+
+    // POST /api/admin/payhero/topup  { amount, phone }
+    payHeroTopUp: async (req, res, next) => {
+        try {
+            const amount = Math.round(Number((req.body || {}).amount));
+            const phone = String((req.body || {}).phone || '').trim();
+            if (!Number.isInteger(amount) || amount < 1) throw createError(422, 'Enter an amount of at least 1 KES');
+            if (!phone) throw createError(422, 'Enter the phone number to charge');
+
+            let result;
+            try {
+                result = await payhero.topUpServiceWallet({ amount, phone });
+            } catch (e) {
+                // normalisePhone's complaint is the admin's to fix, so it reads
+                // as a 422 rather than a gateway failure.
+                if (/valid Safaricom number/i.test(e.message)) throw createError(422, e.message);
+                throw createError(502, e.message);
+            }
+
+            res.json({ ok: true, status: result.status || 'QUEUED', reference: result.reference || '' });
         } catch (error) {
             next(error);
         }
