@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import { ArrowRight, Crown, Pencil, Sparkles, Target } from 'lucide-react';
+import { ArrowRight, Crown, Pencil, Target } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import useAccountName from '@/hooks/useAccountName';
 import { DEFAULT_THRESHOLD, type GrowthReward } from '@/hooks/useGrowthReward';
@@ -86,23 +86,10 @@ const DashboardHero = ({ reward }: DashboardHeroProps) => {
                 <div className='relative md:contents'>
                 {/* Left — who you are and the way in. */}
                 <div className='flex min-w-0 flex-col items-start pr-32 text-left sm:pr-40 md:pr-0'>
-                    <div className='flex flex-wrap items-center gap-x-4 gap-y-2'>
-                        <span className='inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-300'>
-                            <Sparkles size={12} />
-                            AI Trading Assistant
-                        </span>
-                        {/* Desktop only — the phone reference carries the pill
-                            alone, and a narrow column has no room for both. */}
-                        <span className='hidden items-center gap-1.5 text-xs text-slate-400 md:inline-flex'>
-                            <span className='h-1.5 w-1.5 rounded-full bg-emerald-400' />
-                            Your journey starts here
-                        </span>
-                    </div>
-
                     {/* 22px on a phone. Poppins is wide: measured on the real
                         page, "Welcome Back," still broke in two at 24px in a
                         column this narrow, taking the Edit pill down with it. */}
-                    <h1 className='mt-4 text-[22px] font-extrabold leading-tight text-white sm:text-3xl md:text-4xl'>
+                    <h1 className='text-[22px] font-extrabold leading-tight text-white sm:text-3xl md:text-4xl'>
                         Welcome Back,
                     </h1>
 

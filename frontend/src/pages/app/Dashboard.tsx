@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ArrowRight, CalendarDays, Clock, Repeat, Target, TrendingUp, Zap } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminOptional } from '@/context/AdminContext';
 import useAccountGrowth from '@/hooks/useAccountGrowth';
@@ -82,41 +81,34 @@ const Dashboard = () => {
 
             <div className='grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4'>
                 <StatCard
-                    label="Today's Profit"
+                    label="Today's profit"
                     value={fmtMoney(day.profit, currency)}
                     caption={`${day.trades} ${day.trades === 1 ? 'trade' : 'trades'} today`}
-                    icon={TrendingUp}
-                    tone='emerald'
                     valueClass={day.profit < 0 ? 'text-rose-400' : 'text-emerald-400'}
                     loading={loading}
                 />
                 <StatCard
-                    label='Monthly Profit'
+                    label='Monthly profit'
                     value={fmtMoney(month.profit, currency)}
                     caption={`${monthName} performance`}
-                    icon={CalendarDays}
-                    tone='violet'
-                    valueClass={month.profit < 0 ? 'text-rose-400' : 'text-white'}
+                    valueClass={month.profit < 0 ? 'text-rose-400' : 'text-emerald-400'}
                     buckets={month.buckets}
+                    curvePositive={month.profit >= 0}
                     loading={loading}
                 />
                 <StatCard
-                    label='Total Trades'
+                    label='Total trades'
                     value={String(month.trades)}
                     /* Month-to-date: the profit table is read from the first of
                        the month, so this cannot claim to be an all-time count. */
                     caption={`${monthName} to date`}
-                    icon={Repeat}
-                    tone='cyan'
                     buckets={month.buckets}
                     loading={loading}
                 />
                 <StatCard
-                    label='Win Rate'
+                    label='Win rate'
                     value={month.winRate === null ? EM_DASH : `${Math.round(month.winRate * 100)}%`}
                     caption={month.winRate === null ? 'Awaiting trade history' : `${monthName} to date`}
-                    icon={Target}
-                    tone='amber'
                     rate={month.winRate}
                     loading={loading}
                 />
@@ -127,20 +119,13 @@ const Dashboard = () => {
                 long contract name, a big figure — stretches instead of being
                 contained, taking the whole page sideways with it. */}
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]'>
-                <SectionCard
-                    icon={TrendingUp}
-                    tone='cyan'
-                    title='Performance Overview'
-                    subtitle='Track your account performance over time.'
-                >
+                <SectionCard title='Performance'>
                     <PerformanceChart buckets={month.buckets} target={threshold} loading={loading} />
                 </SectionCard>
 
                 <div className='flex min-w-0 flex-col gap-4'>
                     <SectionCard
-                        icon={Clock}
-                        tone='cyan'
-                        title='Recent Activity'
+                        title='Recent activity'
                         className='flex-1'
                         action={
                             recent.length > 5 && (
@@ -150,7 +135,6 @@ const Dashboard = () => {
                                     className='inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-300 transition-colors hover:text-cyan-200'
                                 >
                                     {showAllActivity ? 'Show less' : 'View all'}
-                                    <ArrowRight size={13} />
                                 </button>
                             )
                         }
@@ -167,12 +151,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <SectionCard
-                icon={Zap}
-                tone='cyan'
-                title='Quick Access'
-                subtitle='Explore our platforms and tools.'
-            >
+            <SectionCard title='Quick access'>
                 <QuickAccess />
             </SectionCard>
 

@@ -1,26 +1,18 @@
-import type { LucideIcon } from 'lucide-react';
 import Sparkline from '@/components/dashboard/Sparkline';
-
-export type StatTone = 'emerald' | 'violet' | 'cyan' | 'amber';
-
-/** Icon colour and the disc behind it, per measure. */
-const TONES: Record<StatTone, { fg: string; disc: string }> = {
-    emerald: { fg: 'text-emerald-400', disc: 'bg-emerald-400/10' },
-    violet: { fg: 'text-violet-300', disc: 'bg-violet-300/10' },
-    cyan: { fg: 'text-cyan-300', disc: 'bg-cyan-300/10' },
-    amber: { fg: 'text-amber-300', disc: 'bg-amber-300/10' },
-};
 
 interface StatCardProps {
     label: string;
-    /** Already formatted — the card does not know whether it holds money. */
+    /** Already formatted — the tile does not know whether it holds money. */
     value: string;
     caption: string;
-    icon: LucideIcon;
-    tone: StatTone;
     valueClass?: string;
     /** A curve, for a measure with a series behind it. */
     buckets?: number[];
+    /**
+     * Whether that curve is a gain. Only set it where up and down mean
+     * something: a trade count rising is not good news, it is just a count.
+     */
+    curvePositive?: boolean;
     /** A ring instead, for a rate. Null draws the empty track. */
     rate?: number | null;
     loading: boolean;
@@ -43,7 +35,7 @@ const Ring = ({ rate }: { rate: number | null }) => {
                     strokeWidth='3'
                     strokeLinecap='round'
                     strokeDasharray={`${circumference * Math.max(0, Math.min(1, rate))} ${circumference}`}
-                    className='stroke-amber-300 transition-[stroke-dasharray] duration-500'
+                    className='stroke-cyan-400 transition-[stroke-dasharray] duration-500'
                 />
             )}
         </svg>
@@ -53,35 +45,31 @@ const Ring = ({ rate }: { rate: number | null }) => {
 /**
  * One figure from the account, with what it measures beside it.
  *
- * The tile carries a formatted string rather than a number: today's profit is
- * money, total trades is a count and the win rate is a percentage or a dash,
- * and none of that belongs in a tile.
+ * No icon and no tint. Each tile used to carry a lucide glyph on a coloured
+ * disc — emerald, violet, cyan, amber — and the colour said nothing: a trade
+ * count was cyan and a win rate amber for no reason anyone could read off the
+ * screen. Colour is kept for the one thing it can state plainly, which is
+ * whether a figure is a gain or a loss.
+ *
+ * The tile is also quieter than the panels below it: no border, a lighter
+ * fill, a smaller radius. Giving a figure and a titled section the same frame
+ * flattens the hierarchy between them.
  */
 const StatCard = ({
     label,
     value,
     caption,
-    icon: Icon,
-    tone,
     valueClass = 'text-white',
     buckets,
+    curvePositive,
     rate,
     loading,
 }: StatCardProps) => {
-    const { fg, disc } = TONES[tone];
     const hasCurve = Boolean(buckets && buckets.length > 1);
 
     return (
-        <div className='rounded-xl border border-line bg-ink-800/60 p-4 sm:p-5'>
-            {/* Stacked on a phone — two tiles to a row leaves no width for a
-                disc and a label side by side — and inline from `sm` up, which
-                is how the desktop reference has it. */}
-            <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3'>
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${disc}`}>
-                    <Icon size={17} className={fg} />
-                </span>
-                <p className='min-w-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400'>{label}</p>
-            </div>
+        <div className='rounded-lg bg-ink-800/60 p-4 sm:p-5'>
+            <p className='min-w-0 text-xs font-medium text-slate-400'>{label}</p>
 
             {loading ? (
                 /* Shaped like the loaded tile so the figure lands in place
@@ -97,9 +85,9 @@ const StatCard = ({
                             {value}
                         </p>
 
-                        {/* The phone reference carries neither curve nor ring:
-                            at two tiles to a row the figure needs the width
-                            more than the shape does. */}
+                        {/* The phone layout carries neither curve nor ring: at
+                            two tiles to a row the figure needs the width more
+                            than the shape does. */}
                         <div className='hidden shrink-0 sm:block'>
                             {rate !== undefined ? (
                                 <Ring rate={rate} />
@@ -107,8 +95,10 @@ const StatCard = ({
                                 hasCurve && (
                                     <Sparkline
                                         values={buckets as number[]}
-                                        positive
-                                        colorClass={fg}
+                                        positive={curvePositive ?? true}
+                                        colorClass={
+                                            curvePositive === undefined ? 'text-slate-500' : undefined
+                                        }
                                         className='h-9 w-20'
                                     />
                                 )
