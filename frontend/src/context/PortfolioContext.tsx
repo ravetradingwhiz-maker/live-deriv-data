@@ -53,14 +53,6 @@ export interface ClosedTrade {
     buy_price: number;
     profit: number;
     time: number;
-    /**
-     * Settled by admin (fake-trade) mode rather than by Deriv.
-     *
-     * Marked because these never reach Deriv, so nothing that reads the profit
-     * table can see them — the dashboard has to be told which rows to fold in,
-     * and must not fold in the real ones it already has from there.
-     */
-    simulated?: boolean;
 }
 
 /**
@@ -85,6 +77,16 @@ interface PortfolioContextValue {
     openPositions: OpenPosition[];
     /** Trades that have closed this session (in-memory; cleared on reload). */
     history: ClosedTrade[];
+    /**
+     * The admin-simulated ones, kept apart from `history`.
+     *
+     * These never reach Deriv, so nothing that reads the profit table can see
+     * them and the dashboard has to be handed them directly. They live in
+     * their own list because Reset empties `history` — that is its job, it
+     * clears the run panel's statistics — and resetting a bot run should not
+     * also wipe the month's figures off the dashboard.
+     */
+    simulatedHistory: ClosedTrade[];
     /** Session totals over `history`, for the positions panel. */
     sessionStats: SessionStats;
     clearHistory: () => void;
@@ -115,6 +117,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
     const { isAuthenticated, activeLoginId } = useAuth();
     const [positions, setPositions] = useState<Record<number, OpenPosition>>({});
     const [history, setHistory] = useState<ClosedTrade[]>([]);
+    const [simulatedHistory, setSimulatedHistory] = useState<ClosedTrade[]>([]);
     const recordedRef = useRef<Set<number>>(new Set());
     const positionsRef = useRef(positions);
     positionsRef.current = positions;
@@ -122,6 +125,9 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
 
     const [clearedAt, setClearedAt] = useState(0);
 
+    /* Deliberately leaves `simulatedHistory` alone: Reset is the run panel's
+       control over its own statistics, not a way to erase the account's
+       month. */
     const clearHistory = useCallback(() => {
         setHistory([]);
         recordedRef.current = new Set();
@@ -145,28 +151,29 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
         });
         if (existing && !recordedRef.current.has(contractId)) {
             recordedRef.current.add(contractId);
-            setHistory(prev =>
-                [
-                    {
-                        contract_id: contractId,
-                        contract_type: existing.contract_type,
-                        market: marketNameOf(existing),
-                        longcode: existing.longcode,
-                        buy_price: Number(existing.buy_price) || 0,
-                        profit,
-                        time: Math.floor(Date.now() / 1000),
-                        simulated: true,
-                    },
-                    ...prev,
-                ].slice(0, 100)
-            );
+            const settled: ClosedTrade = {
+                contract_id: contractId,
+                contract_type: existing.contract_type,
+                market: marketNameOf(existing),
+                longcode: existing.longcode,
+                buy_price: Number(existing.buy_price) || 0,
+                profit,
+                time: Math.floor(Date.now() / 1000),
+            };
+            // Recorded twice on purpose: the run panel's history, which Reset
+            // may empty, and the dashboard's, which it may not.
+            setHistory(prev => [settled, ...prev].slice(0, 100));
+            setSimulatedHistory(prev => [settled, ...prev].slice(0, 500));
         }
     }, []);
 
     useEffect(() => {
-        // Reset on (re)subscribe — including account switches.
+        // Reset on (re)subscribe — including account switches. Unlike Reset,
+        // this does clear the simulated run too: it belonged to the account
+        // being switched away from.
         setPositions({});
         setHistory([]);
+        setSimulatedHistory([]);
         recordedRef.current = new Set();
 
         if (!isAuthenticated) return;
@@ -262,6 +269,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
             value={{
                 openPositions,
                 history,
+                simulatedHistory,
                 sessionStats,
                 clearHistory,
                 clearedAt,

@@ -136,13 +136,16 @@ export const useAccountGrowth = (): AccountGrowth => {
     /* Gated on admin mode being active, not merely on the rows existing: on
        leaving it the balance goes back to the real one, and simulated profit
        sitting beside it would be a figure of nothing. */
-    const historyKey = portfolio?.history.length ?? 0;
+    /* Read from `simulatedHistory`, not `history`: Reset in the run panel
+       empties the latter, and clearing a bot session must not take the
+       month's figures off the dashboard with it. */
+    const simulatedKey = portfolio?.simulatedHistory.length ?? 0;
     const allRows = useMemo(() => {
         if (!adminActive) return rows;
-        const simulated = (portfolio?.history ?? []).filter(t => t.simulated).map(asProfitRow);
+        const simulated = (portfolio?.simulatedHistory ?? []).map(asProfitRow);
         return simulated.length ? [...rows, ...simulated] : rows;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rows, adminActive, historyKey]);
+    }, [rows, adminActive, simulatedKey]);
 
     const monthStats = periodStats(allRows, monthStart);
     const dayStats = periodStats(allRows, dayStart);
