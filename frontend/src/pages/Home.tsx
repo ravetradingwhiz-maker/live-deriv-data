@@ -1,26 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowRight,
-    BarChart3,
-    Bot,
     Check,
+    ChevronRight,
     KeyRound,
-    Lock,
     LogIn,
-    SlidersHorizontal,
     Sparkles,
-    TrendingUp,
-    Zap,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import LiveMarkets from '@/components/home/LiveMarkets';
+import CandleBackdrop from '@/components/home/CandleBackdrop';
 import NexoraStar from '@/components/NexoraStar';
 
 const TRADEPILOT_STATS = [
     { value: '10K+', label: 'Trades' },
     { value: '24/7', label: 'Uptime' },
-    { value: '<50ms', label: 'Latency' },
 ];
 
 const TRADEPILOT_FEATURES = [
@@ -39,46 +35,32 @@ const STATS = [
     { value: '2FA', label: 'OAuth-secured login' },
 ];
 
+
 const FEATURES = [
     {
-        icon: Bot,
         title: 'Automated strategies',
         body: 'Run rule-based options strategies around the clock without watching every tick.',
     },
     {
-        icon: BarChart3,
         title: 'Live market data',
         body: 'Stream real-time prices and balances straight from the Deriv WebSocket API.',
     },
     {
-        icon: Lock,
         title: 'Secure by design',
         body: 'Log in with OAuth 2.0 (PKCE) or the classic token flow — your credentials never touch us.',
     },
     {
-        icon: Zap,
         title: 'Fast execution',
         body: 'Low-latency order routing reacts to market moves in under a second.',
     },
     {
-        icon: SlidersHorizontal,
         title: 'Full control',
         body: 'Start, stop, and switch accounts instantly. You stay in charge at all times.',
     },
     {
-        icon: TrendingUp,
         title: 'Performance insights',
         body: 'Track balance, open positions, and results from a single clean dashboard.',
     },
-];
-
-const MARKETS = [
-    { name: 'Volatility 75 Index', tag: 'Synthetic', change: '+2.4%' },
-    { name: 'Volatility 100 Index', tag: 'Synthetic', change: '+1.1%' },
-    { name: 'Boom 1000 Index', tag: 'Synthetic', change: '-0.6%' },
-    { name: 'Crash 500 Index', tag: 'Synthetic', change: '+0.9%' },
-    { name: 'EUR/USD', tag: 'Forex', change: '+0.3%' },
-    { name: 'Gold / USD', tag: 'Commodities', change: '+1.8%' },
 ];
 
 const STEPS = [
@@ -118,6 +100,38 @@ const FAQS = [
     },
 ];
 
+/**
+ * The reference's repeating unit: a left-hand column that introduces the grid
+ * beside it. Keeping it as one component is what holds the three sections that
+ * use it to the same rhythm.
+ */
+const SectionIntro = ({
+    eyebrow,
+    title,
+    lead,
+    action,
+}: {
+    eyebrow: string;
+    title: React.ReactNode;
+    lead: string;
+    action?: { label: string; onClick: () => void };
+}) => (
+    <div className='lg:sticky lg:top-24 lg:self-start'>
+        <p className='text-xs font-semibold uppercase tracking-[0.14em] text-cyan-400'>{eyebrow}</p>
+        <h2 className='mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl'>{title}</h2>
+        <p className='mt-4 max-w-sm text-slate-400'>{lead}</p>
+        {action && (
+            <button
+                onClick={action.onClick}
+                className='mt-7 inline-flex items-center gap-2 rounded-full border border-cyan-700 px-5 py-2.5 text-sm font-semibold text-cyan-300 transition-colors hover:border-cyan-400 hover:text-cyan-200'
+            >
+                {action.label}
+                <ArrowRight size={16} />
+            </button>
+        )}
+    </div>
+);
+
 const Home = () => {
     const { isAuthenticated, loginOAuth2, signup } = useAuth();
     const navigate = useNavigate();
@@ -133,15 +147,14 @@ const Home = () => {
             <section className='border-b border-line'>
                 <div className='container-page grid gap-12 pb-16 pt-8 sm:py-20 lg:grid-cols-2 lg:items-center lg:py-28'>
                     <div>
-                       
-                        <h1 className='mt-5 text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl'>
-                            Trade Deriv options on autopilot
+                        <h1 className='hero-rise text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl'>
+                            Trade Deriv options on <span className='text-cyan-400'>autopilot</span>
                         </h1>
-                        <p className='mt-5 max-w-xl text-lg text-slate-400'>
+                        <p className='hero-rise mt-5 max-w-xl text-lg text-slate-400' style={{ animationDelay: '90ms' }}>
                             Build, run, and monitor automated options strategies with live market data and a
                             secure Deriv login. No manual ticking required.
                         </p>
-                        <div className='mt-8 flex flex-wrap gap-3'>
+                        <div className='hero-rise mt-8 flex flex-wrap gap-3' style={{ animationDelay: '180ms' }}>
                             <button className='btn-primary px-7 py-3 text-base' onClick={primaryCta}>
                                 {isAuthenticated ? (
                                     'Open dashboard'
@@ -164,14 +177,11 @@ const Home = () => {
                                 <ArrowRight size={20} />
                             </a>
                         </div>
-                        <div className='mt-8 flex items-center gap-2 text-sm text-slate-500'>
-                            <Check size={16} className='text-cyan-400' /> No card required
-                        </div>
 
                         {!isAuthenticated && (
                             <button
                                 onClick={signup}
-                                className='mt-5 inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-800 px-5 py-2.5 text-sm text-slate-300 transition-colors hover:border-cyan-600 hover:text-white'
+                                className='hero-rise mt-5 inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-800 px-5 py-2.5 text-sm text-slate-300 transition-colors hover:border-cyan-600 hover:text-white'
                             >
                                 Don&apos;t have a Deriv account?
                                 <span className='font-bold text-cyan-300'>Register here</span>
@@ -179,9 +189,14 @@ const Home = () => {
                         )}
                     </div>
 
-                    {/* Nexora AI card — cyan glow */}
-                    <div className='rounded-3xl border border-cyan-700 bg-ink-800 p-7 shadow-2xl shadow-cyan-900/30 ring-1 ring-cyan-500/20'>
-                        <div className='flex items-center justify-between'>
+                    {/* Nexora AI card — cyan glow, over a candlestick field */}
+                    <div
+                        className='hero-rise relative overflow-hidden rounded-3xl border border-cyan-700 bg-ink-800 p-7 shadow-2xl shadow-cyan-900/30 ring-1 ring-cyan-500/20 [&>*:not(svg)]:relative'
+                        style={{ animationDelay: '260ms' }}
+                    >
+                        <CandleBackdrop />
+                        {/* Everything below sits above the candles. */}
+                        <div className='relative flex items-center justify-between'>
                             <div className='flex items-center gap-3'>
                                 <span className='flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-900 ring-1 ring-cyan-500/30'>
                                     <NexoraStar size={30} />
@@ -198,7 +213,7 @@ const Home = () => {
                         </div>
 
                         {/* Stats */}
-                        <div className='mt-6 grid grid-cols-3 gap-3'>
+                        <div className='mt-6 grid grid-cols-2 gap-3'>
                             {TRADEPILOT_STATS.map(s => (
                                 <div
                                     key={s.label}
@@ -255,104 +270,99 @@ const Home = () => {
 
             {/* Stats */}
             <section className='border-b border-line bg-ink-800'>
-                <div className='container-page grid grid-cols-2 gap-8 py-12 lg:grid-cols-4'>
-                    {STATS.map(s => (
-                        <div key={s.label} className='text-center'>
-                            <p className='text-3xl font-extrabold text-cyan-400'>{s.value}</p>
-                            <p className='mt-1 text-sm text-slate-400'>{s.label}</p>
+                <div className='container-page grid grid-cols-2 gap-y-8 py-12 lg:grid-cols-4'>
+                    {STATS.map((s, i) => (
+                        <div key={s.label} className={i > 0 ? 'lg:border-l lg:border-line lg:pl-8' : ''}>
+                            <p className='font-mono text-3xl font-bold tabular-nums text-white sm:text-4xl'>
+                                {s.value}
+                            </p>
+                            <p className='mt-1.5 max-w-[18ch] text-sm leading-snug text-slate-400'>{s.label}</p>
                         </div>
                     ))}
                 </div>
             </section>
 
             {/* Features */}
-            <section id='features' className='container-page py-20'>
-                <div className='mx-auto max-w-2xl text-center'>
-                    <h2 className='text-3xl font-bold text-white sm:text-4xl'>Everything you need to trade smarter</h2>
-                    <p className='mt-4 text-slate-400'>
-                        A focused toolkit for running automated options strategies on Deriv.
-                    </p>
-                </div>
-                <div className='mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-                    {FEATURES.map(f => (
-                        <div key={f.title} className='card transition-colors hover:border-cyan-800'>
-                            <div className='flex h-11 w-11 items-center justify-center rounded-lg bg-ink-700 text-cyan-400'>
-                                <f.icon size={22} />
-                            </div>
-                            <h3 className='mt-4 text-lg font-semibold text-white'>{f.title}</h3>
-                            <p className='mt-2 text-sm text-slate-400'>{f.body}</p>
-                        </div>
-                    ))}
+            <section id='features' className='container-page py-24'>
+                <div className='grid gap-12 lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-16'>
+                    <SectionIntro
+                        eyebrow='Powerful features'
+                        title='Everything you need to trade smarter'
+                        lead='A focused toolkit for running automated options strategies on Deriv. From real-time data to advanced analytics, we give you the edge.'
+                        action={{ label: 'Explore all features', onClick: primaryCta }}
+                    />
+
+                    <ul className='sm:grid sm:grid-cols-2 sm:gap-x-12'>
+                        {FEATURES.map(f => (
+                            <li key={f.title} className='border-b border-line py-6 first:pt-0 sm:[&:nth-child(2)]:pt-0'>
+                                <h3 className='font-semibold text-white'>{f.title}</h3>
+                                <p className='mt-2 text-sm leading-relaxed text-slate-400'>{f.body}</p>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </section>
 
             {/* Markets */}
-            <section id='markets' className='border-y border-line bg-ink-800 py-20'>
-                <div className='container-page'>
-                    <div className='mx-auto max-w-2xl text-center'>
-                        <h2 className='text-3xl font-bold text-white sm:text-4xl'>Trade the markets that move</h2>
-                        <p className='mt-4 text-slate-400'>
-                            Synthetic indices, forex, and commodities — all from one account.
-                        </p>
-                    </div>
-                    <div className='mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-                        {MARKETS.map(m => {
-                            const up = m.change.startsWith('+');
-                            return (
-                                <div
-                                    key={m.name}
-                                    className='flex items-center justify-between rounded-xl border border-line bg-ink-900 px-5 py-4'
-                                >
-                                    <div>
-                                        <p className='font-semibold text-white'>{m.name}</p>
-                                        <span className='mt-1 inline-block rounded bg-ink-700 px-2 py-0.5 text-xs text-slate-400'>
-                                            {m.tag}
-                                        </span>
-                                    </div>
-                                    <span
-                                        className={`font-mono font-semibold ${up ? 'text-cyan-300' : 'text-rose-400'}`}
-                                    >
-                                        {m.change}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
+            <section id='markets' className='border-y border-line bg-ink-800 py-24'>
+                <div className='container-page grid gap-12 lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-16'>
+                    <SectionIntro
+                        eyebrow='Global markets'
+                        title='Trade the markets that move'
+                        lead='Synthetic indices that run around the clock. Prices and curves below are live from Deriv.'
+                        action={{ label: 'View all markets', onClick: primaryCta }}
+                    />
+                    <LiveMarkets />
                 </div>
             </section>
 
             {/* How it works */}
-            <section id='how-it-works' className='container-page py-20'>
-                <div className='mx-auto max-w-2xl text-center'>
-                    <h2 className='text-3xl font-bold text-white sm:text-4xl'>Up and running in three steps</h2>
-                    <p className='mt-4 text-slate-400'>From login to live trading in minutes.</p>
-                </div>
-                <div className='mt-12 grid gap-6 md:grid-cols-3'>
-                    {STEPS.map(s => (
-                        <div key={s.step} className='card'>
-                            <span className='font-mono text-3xl font-bold text-cyan-700'>{s.step}</span>
-                            <h3 className='mt-3 text-lg font-semibold text-white'>{s.title}</h3>
-                            <p className='mt-2 text-sm text-slate-400'>{s.body}</p>
-                        </div>
+            <section id='how-it-works' className='container-page py-24'>
+                <p className='text-xs font-semibold uppercase tracking-[0.14em] text-cyan-400'>Simple process</p>
+                <h2 className='mt-4 text-3xl font-bold text-white sm:text-4xl'>Up and running in three steps</h2>
+                <p className='mt-4 text-slate-400'>From login to live trading in minutes.</p>
+
+                <ol className='mt-12 grid gap-8 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-start md:gap-4'>
+                    {STEPS.map((s, i) => (
+                        <li key={s.step} className='contents'>
+                            <div>
+                                <span className='font-mono text-sm font-bold text-cyan-400'>{s.step}</span>
+                                <h3 className='mt-3 font-semibold text-white'>{s.title}</h3>
+                                <p className='mt-2 max-w-prose text-sm leading-relaxed text-slate-400'>{s.body}</p>
+                            </div>
+                            {i < STEPS.length - 1 && (
+                                <ChevronRight
+                                    size={20}
+                                    aria-hidden
+                                    className='hidden shrink-0 self-center text-slate-700 md:block'
+                                />
+                            )}
+                        </li>
                     ))}
-                </div>
+                </ol>
             </section>
 
             {/* FAQ */}
             <section id='faq' className='border-t border-line bg-ink-800 py-20'>
-                <div className='container-page mx-auto max-w-3xl'>
-                    <h2 className='text-center text-3xl font-bold text-white sm:text-4xl'>Frequently asked questions</h2>
-                    <div className='mt-10 space-y-3'>
+                <div className='container-page grid gap-12 lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-16'>
+                    <SectionIntro
+                        eyebrow='Frequently asked questions'
+                        title='Got questions?'
+                        lead='Answers to the most common questions about the platform, trading, and account setup.'
+                    />
+                    <div>
                         {FAQS.map(f => (
                             <details
                                 key={f.q}
-                                className='group rounded-xl border border-line bg-ink-900 p-5 [&_summary]:cursor-pointer'
+                                className='group border-b border-line py-5 first:pt-0 [&_summary]:cursor-pointer'
                             >
-                                <summary className='flex items-center justify-between font-semibold text-white marker:content-none'>
+                                <summary className='flex items-start justify-between gap-6 text-sm font-semibold text-white marker:content-none'>
                                     {f.q}
-                                    <span className='text-cyan-500 transition-transform group-open:rotate-45'>+</span>
+                                    <span className='mt-0.5 shrink-0 text-lg leading-none text-cyan-500 transition-transform group-open:rotate-45'>
+                                        +
+                                    </span>
                                 </summary>
-                                <p className='mt-3 text-sm text-slate-400'>{f.a}</p>
+                                <p className='mt-3 max-w-prose text-sm leading-relaxed text-slate-400'>{f.a}</p>
                             </details>
                         ))}
                     </div>
@@ -361,21 +371,33 @@ const Home = () => {
 
             {/* CTA */}
             <section className='container-page py-20'>
-                <div className='rounded-2xl border border-cyan-800 bg-ink-800 px-8 py-14 text-center'>
-                    <h2 className='text-3xl font-bold text-white sm:text-4xl'>Ready to automate your trading?</h2>
-                    <p className='mx-auto mt-4 max-w-xl text-slate-400'>
-                        Connect your Deriv account and launch your first automated strategy today.
-                    </p>
-                    <button className='btn-primary mx-auto mt-8 px-8 py-3 text-base' onClick={primaryCta}>
-                        {isAuthenticated ? (
-                            'Open dashboard'
-                        ) : (
-                            <>
-                                <LogIn size={20} />
-                                Login with Deriv
-                            </>
-                        )}
-                    </button>
+                <div className='grid items-center gap-8 rounded-2xl border border-cyan-900 bg-ink-800 px-6 py-12 sm:px-10 lg:grid-cols-[minmax(0,1fr)_auto]'>
+                    <div>
+                        <p className='text-xs font-semibold uppercase tracking-[0.14em] text-cyan-400'>
+                            Ready to trade?
+                        </p>
+                        <h2 className='mt-4 max-w-md text-3xl font-bold leading-tight text-white sm:text-4xl'>
+                            Your Deriv trading journey starts here.
+                        </h2>
+                        <p className='mt-4 max-w-md text-slate-400'>
+                            Connect your Deriv account and launch your first automated strategy today.
+                        </p>
+                    </div>
+                    <div className='lg:text-right'>
+                        <button className='btn-primary px-8 py-3 text-base' onClick={primaryCta}>
+                            {isAuthenticated ? (
+                                'Open dashboard'
+                            ) : (
+                                <>
+                                    <LogIn size={20} />
+                                    Login with Deriv
+                                </>
+                            )}
+                        </button>
+                        <p className='mt-3 text-xs text-slate-500'>
+                            Free, secure, and takes less than a minute.
+                        </p>
+                    </div>
                 </div>
             </section>
 
