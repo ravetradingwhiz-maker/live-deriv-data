@@ -53,6 +53,14 @@ export interface ClosedTrade {
     buy_price: number;
     profit: number;
     time: number;
+    /**
+     * Settled by admin (fake-trade) mode rather than by Deriv.
+     *
+     * Marked because these never reach Deriv, so nothing that reads the profit
+     * table can see them — the dashboard has to be told which rows to fold in,
+     * and must not fold in the real ones it already has from there.
+     */
+    simulated?: boolean;
 }
 
 /**
@@ -147,6 +155,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
                         buy_price: Number(existing.buy_price) || 0,
                         profit,
                         time: Math.floor(Date.now() / 1000),
+                        simulated: true,
                     },
                     ...prev,
                 ].slice(0, 100)

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useOAuthCallback } from '@/hooks/useOAuthCallback';
 import { useAuth } from '@/context/AuthContext';
 import { clearAdminExitSuppression } from '@/context/AdminContext';
+import { clearCSRFToken } from '@/config/auth-config';
 import { OAuthTokenExchangeService } from '@/services/oauth-token-exchange.service';
 import { parseLoginInfoFromUrl, processLegacyLoginInfo } from '@/utils/auth-utils';
 import { Atom } from 'react-loading-indicators';
@@ -17,8 +18,8 @@ type Status = 'processing' | 'error';
  * (no full page reload, no Home flash).
  */
 const Callback = () => {
-    const { isProcessing, isValid, params, error: callbackError } = useOAuthCallback();
-    const { refreshAuthState } = useAuth();
+    const { isProcessing, isValid, params, error: callbackError, errorReason } = useOAuthCallback();
+    const { refreshAuthState, loginOAuth2 } = useAuth();
     const navigate = useNavigate();
     const [status, setStatus] = useState<Status>('processing');
     const [message, setMessage] = useState('Loading Nexora AI');
@@ -28,6 +29,9 @@ const Callback = () => {
         if (handled.current) return;
 
         const finishSuccess = () => {
+            // The state token is consumed here, not at validation time, so a
+            // failed/retried token exchange still has it to validate against.
+            clearCSRFToken();
             // A fresh login re-arms admin auto-detect: clear any exit suppression
             // from earlier this tab so exiting then logging back in re-activates.
             clearAdminExitSuppression();
@@ -39,6 +43,7 @@ const Callback = () => {
             navigate(dest, { replace: true });
         };
         const finishError = (msg: string) => {
+            if (errorReason) console.error('[OAuth] callback failed:', errorReason);
             setStatus('error');
             setMessage(msg);
         };
@@ -76,7 +81,7 @@ const Callback = () => {
             handled.current = true;
             finishError('This page expects a login redirect from Deriv.');
         }
-    }, [isProcessing, isValid, params.code, callbackError, navigate, refreshAuthState]);
+    }, [isProcessing, isValid, params.code, callbackError, errorReason, navigate, refreshAuthState]);
 
     return (
         <div className='flex min-h-screen flex-col items-center justify-center bg-ink-900 px-6 text-center'>
@@ -92,9 +97,14 @@ const Callback = () => {
                     </div>
                     <h1 className='text-xl font-bold text-white'>Login failed</h1>
                     <p className='mt-2 text-sm text-slate-400'>{message}</p>
-                    <button className='btn-primary mt-6' onClick={() => navigate('/', { replace: true })}>
-                        Back to home
-                    </button>
+                    <div className='mt-6 flex flex-wrap items-center justify-center gap-3'>
+                        <button className='btn-primary' onClick={() => void loginOAuth2()}>
+                            Sign in again
+                        </button>
+                        <button className='btn-ghost' onClick={() => navigate('/', { replace: true })}>
+                            Back to home
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

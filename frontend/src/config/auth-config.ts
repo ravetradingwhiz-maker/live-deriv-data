@@ -113,16 +113,30 @@ const storeCSRFToken = (token: string): void => {
     sessionStorage.setItem('oauth_csrf_token_timestamp', Date.now().toString());
 };
 
-export const validateCSRFToken = (token: string): boolean => {
+/**
+ * Why a state check failed. These are NOT equivalent: `mismatch` is the only
+ * one that looks like an actual attack. `no_stored_token` means we have nothing
+ * to compare against (new tab, reaped mobile tab, different origin), and
+ * `expired` means the user took too long on Deriv's screen. Reported so logs
+ * say which branch real users hit instead of lumping all three together.
+ */
+export type CSRFFailureReason = 'no_stored_token' | 'mismatch' | 'expired';
+
+export interface CSRFCheckResult {
+    valid: boolean;
+    reason?: CSRFFailureReason;
+}
+
+export const checkCSRFToken = (token: string): CSRFCheckResult => {
     const storedToken = sessionStorage.getItem('oauth_csrf_token');
     const timestamp = sessionStorage.getItem('oauth_csrf_token_timestamp');
-    if (!storedToken || !timestamp) return false;
-    if (storedToken !== token) return false;
+    if (!storedToken || !timestamp) return { valid: false, reason: 'no_stored_token' };
+    if (storedToken !== token) return { valid: false, reason: 'mismatch' };
     if (Date.now() - parseInt(timestamp, 10) > TEN_MINUTES) {
         clearCSRFToken();
-        return false;
+        return { valid: false, reason: 'expired' };
     }
-    return true;
+    return { valid: true };
 };
 
 export const clearCSRFToken = (): void => {
