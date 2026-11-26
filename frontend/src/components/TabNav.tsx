@@ -82,8 +82,15 @@ const TabLinks = ({ className }: { className?: string }) => (
  * roughly a thousand pixels, which is more than a 1024px window has once the
  * page gutters are off it. The row below is the one that has to hold a tab
  * nobody can read, so the merge waits for the width rather than taking it.
+ *
+ * Centred on the bar rather than on the space left over, which is why it is
+ * taken out of the flow: the brand on one side and the account controls on
+ * the other are nowhere near the same width, so a nav centred between them
+ * would sit visibly off the middle of the page it belongs to.
  */
-export const HeaderTabs = () => <TabLinks className='hidden items-center gap-1 xl:flex' />;
+export const HeaderTabs = () => (
+    <TabLinks className='absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 xl:flex' />
+);
 
 /**
  * The tabs on their own row, between `md` and `xl`.
@@ -94,8 +101,12 @@ export const HeaderTabs = () => <TabLinks className='hidden items-center gap-1 x
  */
 const TabNav = () => (
     <div className='sticky top-16 z-30 hidden bg-ink-900/95 backdrop-blur md:block xl:hidden'>
-        <div className='container-page border-b border-line'>
-            <TabLinks className='flex gap-1 overflow-x-auto py-1.5' />
+        {/* The scroll lives on the outside and the centring on the inside. A
+            row that is both centred and scrollable puts its first tab out of
+            reach the moment the set is wider than the window; `w-max` means
+            the centring simply stops applying at that point. */}
+        <div className='container-page overflow-x-auto border-b border-line'>
+            <TabLinks className='mx-auto flex w-max gap-1 py-1.5' />
         </div>
     </div>
 );

@@ -24,7 +24,7 @@ const AppLayout = () => {
         <BotRunProvider>
             <div className='flex min-h-screen flex-col bg-ink-900'>
                 <header className='sticky top-0 z-40 border-b border-line bg-ink-900/90 backdrop-blur'>
-                    <div className='container-page flex h-16 items-center gap-4'>
+                    <div className='container-page relative flex h-16 items-center gap-4'>
                         <div className='flex shrink-0 items-center gap-2.5'>
                             <AdminMenu />
                             <BrandLogo markOnly />
