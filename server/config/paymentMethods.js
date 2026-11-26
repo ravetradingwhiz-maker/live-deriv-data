@@ -6,7 +6,7 @@
 const METHOD_DEFS = {
     card: { label: 'Card', desc: 'Credit / debit card via Paystack (USD)' },
     mpesa: { label: 'M-Pesa', desc: 'Safaricom mobile money via PayHero (KES)' },
-    crypto: { label: 'Crypto', desc: 'USDT (TRC-20) on the TRON network' },
+    crypto: { label: 'Crypto', desc: 'USDT on TRON (TRC-20) or USDC on Ethereum (ERC-20)' },
 };
 
 const DEFAULTS = { card: true, mpesa: true, crypto: true };

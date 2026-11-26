@@ -33,7 +33,12 @@ const createPaymentSchema = Joi.object({
     tier: Joi.string()
         .valid(...TIER_IDS)
         .required(),
-    payCurrency: Joi.string().valid('usdt').required(),
+    /* Kept loose and unused by the controller, which derives the coin from the
+       chain. A checkout still posting the old fixed 'usdt' must not be
+       rejected over a field that no longer decides anything. */
+    payCurrency: Joi.string().optional(),
+    /* Absent means TRC-20, so an older checkout keeps the behaviour it had. */
+    network: Joi.string().valid('trc20', 'erc20').optional(),
     email: Joi.string().email().required(),
     loginids: loginidsField,
 });

@@ -4,7 +4,17 @@
 // proxies them to the backend. Set API_URL only when the API is on another host.
 const API_URL = (process.env.API_URL || '').replace(/\/$/, '');
 
-export type PayCurrency = 'usdt';
+export type PayCurrency = 'usdt' | 'usdc';
+
+/** The chains the checkout can open an order on. */
+export type PayNetwork = 'trc20' | 'erc20';
+
+/** One rail, as the server reports it — only those with a wallet configured. */
+export interface PayChain {
+    id: PayNetwork;
+    coin: string;
+    label: string;
+}
 /** What live-deriv itself sells. The checkout and pricing cards use this. */
 export type Tier = 'alpha' | 'quantum' | 'apex';
 
@@ -25,6 +35,8 @@ export type Product = 'nexora' | 'quantumsyn' | 'nyx';
 export interface CreatePaymentBody {
     tier: Tier;
     payCurrency: PayCurrency;
+    /** Omitted means TRC-20, which is what the server defaults to. */
+    network?: PayNetwork;
     email: string;
     loginids: string[];
 }
@@ -38,6 +50,9 @@ export interface PaymentOrder {
     payCurrency: string;
     payAddress: string;
     payAmount: number;
+    /** Echoed by the server so the pending screen names the right coin. */
+    coin?: string;
+    network?: PayNetwork;
 }
 
 export interface CardInitResult {
@@ -131,10 +146,16 @@ export interface TierPricing {
 /** Which checkout methods an admin has enabled. */
 export type PaymentMethodFlags = { card: boolean; mpesa: boolean; crypto: boolean };
 
-export const getPaymentMethods = (): Promise<PaymentMethodFlags> =>
+export interface PaymentMethodsResult {
+    methods: PaymentMethodFlags;
+    /** Rails with a receiving wallet set. Empty from an older server. */
+    chains: PayChain[];
+}
+
+export const getPaymentMethods = (): Promise<PaymentMethodsResult> =>
     fetch(`${API_URL}/api/payments/methods`)
         .then(json)
-        .then(d => d.methods);
+        .then(d => ({ methods: d.methods, chains: Array.isArray(d.chains) ? d.chains : [] }));
 
 /** Public current tier prices (reflects admin overrides). */
 export const getPricing = (): Promise<Record<Tier, TierPricing>> =>

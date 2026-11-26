@@ -6,6 +6,7 @@ const { createPaymentSchema, paystackInitSchema, mpesaInitSchema } = require('..
 const { getTiers } = require('../config/tiers');
 const { getPaymentMethods } = require('../config/paymentMethods');
 const tron = require('../Services/tronChainService');
+const eth = require('../Services/ethChainService');
 const { addMonths } = require('../Services/subscriptionService');
 const paystack = require('../Services/paystackService');
 const payhero = require('../Services/payHeroService');
@@ -30,6 +31,43 @@ const assertMethodEnabled = async id => {
     if (!methods[id]) throw createError(403, 'That payment method is currently unavailable');
 };
 const round6 = n => Math.round(n * 1e6) / 1e6;
+
+/**
+ * The crypto rails on offer.
+ *
+ * Both coins are dollar stablecoins, so an order's USD price is also its coin
+ * amount and the unique-amount trick works unchanged across the two. The
+ * address comes from env per chain: sending USDC to a TRON address, or USDT
+ * to an Ethereum one, loses the money, so they can never share a field.
+ */
+const CHAINS = {
+    trc20: {
+        provider: 'tron',
+        payCurrency: 'usdttrc20',
+        coin: 'USDT',
+        label: 'USDT (TRC-20)',
+        envKey: 'TRON_WALLET_ADDRESS',
+        incoming: (address, since) => tron.getIncomingUsdt(address, since),
+    },
+    erc20: {
+        provider: 'ethereum',
+        payCurrency: 'usdcerc20',
+        coin: 'USDC',
+        label: 'USDC (ERC-20)',
+        envKey: 'ETH_WALLET_ADDRESS',
+        incoming: (address, since) => eth.getIncomingUsdc(address, since),
+    },
+};
+
+/** The chain an order settles on, from its stored provider. */
+const chainOf = payment =>
+    Object.values(CHAINS).find(c => c.provider === payment.provider) || CHAINS.trc20;
+
+/** Which rails have a receiving address configured, for the checkout to show. */
+const availableChains = () =>
+    Object.entries(CHAINS)
+        .filter(([, c]) => Boolean(process.env[c.envKey]))
+        .map(([id, c]) => ({ id, coin: c.coin, label: c.label }));
 
 /**
  * Picks a payable USDT amount that's unique among the currently-pending orders,
@@ -106,8 +144,9 @@ const activatePayment = async payment => {
 };
 
 /**
- * Looks for a confirmed on-chain USDT-TRC20 transfer that matches a pending
- * order's exact amount. Marks the order paid (→ activate) or expired.
+ * Looks for a confirmed on-chain transfer matching a pending order's exact
+ * amount, on whichever chain that order was opened against. Marks the order
+ * paid (→ activate) or expired.
  */
 const checkOnchain = async payment => {
     if (payment.status !== 'pending') return;
@@ -118,11 +157,13 @@ const checkOnchain = async payment => {
         return;
     }
 
+    const chain = chainOf(payment);
+
     let transfers = [];
     try {
-        transfers = await tron.getIncomingUsdt(payment.payAddress, new Date(payment.createdAt).getTime());
+        transfers = await chain.incoming(payment.payAddress, new Date(payment.createdAt).getTime());
     } catch (e) {
-        console.error('[payment] TronGrid query failed:', e.message);
+        console.error(`[payment] ${chain.provider} chain query failed:`, e.message);
         return;
     }
 
@@ -252,7 +293,7 @@ module.exports = {
     // GET /api/payments/methods — public; which methods the checkout should show.
     methods: async (req, res, next) => {
         try {
-            res.json({ methods: await getPaymentMethods() });
+            res.json({ methods: await getPaymentMethods(), chains: availableChains() });
         } catch (error) {
             next(error);
         }
@@ -261,10 +302,19 @@ module.exports = {
     // POST /api/payments/create
     create: async (req, res, next) => {
         try {
-            const { tier, email, loginids } = await createPaymentSchema.validateAsync(req.body);
+            const { tier, email, loginids, network } = await createPaymentSchema.validateAsync(req.body);
             await assertMethodEnabled('crypto');
-            const address = process.env.TRON_WALLET_ADDRESS;
-            if (!address) throw createError(500, 'Receiving wallet not configured');
+
+            /* Defaults to TRC-20 so a checkout that has not shipped the
+               network picker yet keeps working exactly as it did. */
+            const chain = CHAINS[network || 'trc20'];
+            if (!chain) throw createError(400, 'Unsupported network');
+
+            const address = process.env[chain.envKey];
+            /* Refused rather than falling back to the other chain: sending
+               USDC to a TRON address loses it, so an unconfigured rail must
+               not quietly become the configured one. */
+            if (!address) throw createError(503, `${chain.label} is not available right now`);
 
             const tiers = await getTiers();
             const tierCfg = tiers[tier];
@@ -272,10 +322,10 @@ module.exports = {
 
             const payment = await Payment.create({
                 orderId: genOrderId(),
-                provider: 'tron',
+                provider: chain.provider,
                 tier,
                 priceUSD: tierCfg.priceUSD,
-                payCurrency: 'usdttrc20',
+                payCurrency: chain.payCurrency,
                 payAddress: address,
                 payAmount,
                 email,
@@ -290,6 +340,8 @@ module.exports = {
                 payCurrency: payment.payCurrency,
                 payAddress: payment.payAddress,
                 payAmount: payment.payAmount,
+                network: network || 'trc20',
+                coin: chain.coin,
                 status: payment.status,
             });
         } catch (error) {

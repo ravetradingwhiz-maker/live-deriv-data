@@ -23,7 +23,8 @@ import {
     getPricing,
     initCardPayment,
     initMpesaPayment,
-    type PayCurrency,
+    type PayChain,
+    type PayNetwork,
     type PaymentMethodFlags,
     type PaymentOrder,
     type Tier,
@@ -41,7 +42,7 @@ const TIERS: Record<Tier, { label: string; priceUSD: number; term: string }> = {
 // Crypto first — it's irreversible (no chargeback exposure), so it's the option
 // we lead with.
 const METHODS: { id: Method; title: string; sub: string }[] = [
-    { id: 'crypto', title: 'Crypto', sub: 'USDT' },
+    { id: 'crypto', title: 'Crypto', sub: 'USDT / USDC' },
     { id: 'card', title: 'Card', sub: 'Credit / Debit' },
     { id: 'mpesa', title: 'M-Pesa', sub: 'Mobile money' },
 ];
@@ -111,7 +112,10 @@ const Checkout = () => {
     // skeleton rather than guessing, otherwise disabled methods flash on screen
     // and then vanish once the real flags arrive.
     const [enabled, setEnabled] = useState<PaymentMethodFlags | null>(null);
-    const coin: PayCurrency = 'usdt';
+    /* Rails the server has a wallet for. An older server sends none, and the
+       picker then stays hidden and the order opens on TRC-20 as before. */
+    const [chains, setChains] = useState<PayChain[]>([]);
+    const [network, setNetwork] = useState<PayNetwork>('trc20');
     const [agreed, setAgreed] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
     const [phase, setPhase] = useState<Phase>('form');
@@ -121,6 +125,11 @@ const Checkout = () => {
     const [copied, setCopied] = useState(false);
     const [copiedAmount, setCopiedAmount] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    /* The coin this order is in. Taken from the order rather than the picker
+       so a pending screen cannot name a coin the order was not opened with. */
+    const orderCoin = order?.coin ?? (order?.payCurrency === 'usdcerc20' ? 'USDC' : 'USDT');
+    const orderNetwork = order?.payCurrency === 'usdcerc20' ? 'ERC-20 / Ethereum' : 'TRC-20 / TRON';
 
     const loginids = accounts.map(a => a.loginid);
     const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
@@ -136,7 +145,13 @@ const Checkout = () => {
 
     useEffect(() => {
         getPaymentMethods()
-            .then(setEnabled)
+            .then(r => {
+                setEnabled(r.methods);
+                setChains(r.chains);
+                /* Never leave the choice on a rail the server cannot settle:
+                   if TRC-20 is off, start on whatever is actually on. */
+                if (r.chains.length && !r.chains.some(c => c.id === 'trc20')) setNetwork(r.chains[0].id);
+            })
             // If the flags can't be read, offer everything rather than a dead checkout.
             .catch(() => setEnabled({ card: true, mpesa: true, crypto: true }));
     }, []);
@@ -156,7 +171,13 @@ const Checkout = () => {
         setSubmitting(true);
         setError(null);
         try {
-            const created = await createPayment({ tier, payCurrency: coin, email, loginids });
+            const created = await createPayment({
+                tier,
+                payCurrency: network === 'erc20' ? 'usdc' : 'usdt',
+                network,
+                email,
+                loginids,
+            });
             setOrder(created);
             setPhase('pending');
         } catch (e: any) {
@@ -326,7 +347,7 @@ const Checkout = () => {
                             title='Copy amount'
                             className='flex items-center gap-1.5 text-xl font-extrabold text-emerald-400 transition-colors hover:text-emerald-300'
                         >
-                            {order.payAmount} USDT
+                            {order.payAmount} {orderCoin}
                             <Copy size={15} />
                             {copiedAmount && <span className='text-[11px] font-semibold text-emerald-300'>Copied</span>}
                         </button>
@@ -362,7 +383,11 @@ const Checkout = () => {
                         <Loader2 size={16} className='animate-spin' /> Waiting for payment confirmation…
                     </div>
                     <p className='text-center text-[11px] text-slate-500'>
-                        Send the <strong>exact</strong> amount in <strong>USDT (TRC-20 / TRON)</strong> — the amount is
+                        Send the <strong>exact</strong> amount in{' '}
+                        <strong>
+                            {orderCoin} ({orderNetwork})
+                        </strong>{' '}
+                        — the amount is
                         unique to this order so we can match it. This page updates automatically once the network
                         confirms (usually a couple of minutes).
                     </p>
@@ -455,12 +480,45 @@ const Checkout = () => {
                         />
                     </label>
 
-                    {activeMethod === 'crypto' && (
-                        <p className='flex items-center gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
-                            <Coins size={14} className='shrink-0 text-emerald-400' /> You&apos;ll pay in{' '}
-                            <strong className='text-slate-200'>USDT (TRC-20)</strong> on the TRON network.
-                        </p>
-                    )}
+                    {activeMethod === 'crypto' &&
+                        (chains.length > 1 ? (
+                            <div className='flex flex-col gap-1.5'>
+                                <span className='text-xs font-semibold text-slate-400'>Network</span>
+                                <div className='grid grid-cols-2 gap-2'>
+                                    {chains.map(c => (
+                                        <button
+                                            key={c.id}
+                                            type='button'
+                                            onClick={() => setNetwork(c.id)}
+                                            className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                                                network === c.id
+                                                    ? 'border-cyan-400 bg-cyan-400/10'
+                                                    : 'border-line bg-ink-800 hover:border-cyan-700'
+                                            }`}
+                                        >
+                                            <span className='block text-sm font-bold text-white'>{c.coin}</span>
+                                            <span className='block text-[11px] text-slate-400'>
+                                                {c.id === 'trc20' ? 'TRC-20 · TRON' : 'ERC-20 · Ethereum'}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                                {/* The address is chain-specific and the two are not
+                                    interchangeable, so say so before they send. */}
+                                <p className='flex items-center gap-1.5 text-[11px] text-slate-500'>
+                                    <Coins size={13} className='shrink-0 text-emerald-400' />
+                                    Send only {chains.find(c => c.id === network)?.coin} on this network.
+                                </p>
+                            </div>
+                        ) : (
+                            <p className='flex items-center gap-1.5 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-slate-400'>
+                                <Coins size={14} className='shrink-0 text-emerald-400' /> You&apos;ll pay in{' '}
+                                <strong className='text-slate-200'>
+                                    {chains[0]?.label ?? 'USDT (TRC-20)'}
+                                </strong>
+                                .
+                            </p>
+                        ))}
 
                     {activeMethod === 'mpesa' && (
                         <>
@@ -545,7 +603,7 @@ const Checkout = () => {
                             ? `Pay $${priceUSD} by card`
                             : activeMethod === 'mpesa'
                               ? 'Pay with M-Pesa'
-                              : `Pay $${priceUSD} in USDT`}
+                              : `Pay $${priceUSD} in ${network === 'erc20' ? 'USDC' : 'USDT'}`}
                     </button>
                     <p className='flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500'>
                         <Lock size={11} /> Secure checkout · unlocks for all your logins once payment confirms.
