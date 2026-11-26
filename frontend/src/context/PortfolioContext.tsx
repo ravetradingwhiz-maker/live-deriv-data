@@ -226,6 +226,46 @@ interface PortfolioContextValue {
     settleAdminPosition: (contractId: number, profit: number, exit?: ContractDetails) => void;
 }
 
+/**
+ * Where an account's simulated trades are written down, one key per account.
+ *
+ * Only the simulated ones. Real trades are read back from Deriv's profit table,
+ * which is authoritative and needs no copy here; a simulated trade exists
+ * nowhere but this browser, so one that is not written down is gone on the next
+ * refresh — which is what the dashboard's admin figures were doing.
+ */
+const SIM_KEY = 'nx_sim_history_';
+
+/** Nothing older is read back. The dashboard looks at the month, and a store
+ *  that only ever grew would outlive every reason to keep it. */
+const SIM_MAX_AGE_S = 45 * 24 * 60 * 60;
+
+const loadSimulated = (loginId?: string | null): ClosedTrade[] => {
+    if (!loginId) return [];
+    try {
+        const raw = localStorage.getItem(SIM_KEY + loginId);
+        const parsed: unknown = raw ? JSON.parse(raw) : null;
+        if (!Array.isArray(parsed)) return [];
+        const cutoff = Math.floor(Date.now() / 1000) - SIM_MAX_AGE_S;
+        return (parsed as ClosedTrade[]).filter(
+            t => t && typeof t.contract_id === 'number' && (Number(t.time) || 0) >= cutoff
+        );
+    } catch {
+        // Unreadable or blocked storage: the figures go back to resetting on
+        // reload, which is where they were, rather than taking the app down.
+        return [];
+    }
+};
+
+const saveSimulated = (loginId: string | null | undefined, trades: ClosedTrade[]): void => {
+    if (!loginId) return;
+    try {
+        localStorage.setItem(SIM_KEY + loginId, JSON.stringify(trades));
+    } catch {
+        /* full or blocked — nothing to do but carry on in memory */
+    }
+};
+
 const PortfolioContext = createContext<PortfolioContextValue | null>(null);
 
 /**
@@ -242,6 +282,11 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
     const recordedRef = useRef<Set<number>>(new Set());
     const positionsRef = useRef(positions);
     positionsRef.current = positions;
+    /* Mirrors, so a settle can write the next list to storage without reading
+       state inside an updater — which React is free to run twice. */
+    const simulatedRef = useRef(simulatedHistory);
+    simulatedRef.current = simulatedHistory;
+    const loginRef = useRef<string | null>(null);
     const subRef = useRef<Subscription | null>(null);
 
     const [clearedAt, setClearedAt] = useState(0);
@@ -288,18 +333,28 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
             // Recorded twice on purpose: the run panel's history, which Reset
             // may empty, and the dashboard's, which it may not.
             setHistory(prev => [settled, ...prev].slice(0, 100));
-            setSimulatedHistory(prev => [settled, ...prev].slice(0, 500));
+            const nextSimulated = [settled, ...simulatedRef.current].slice(0, 500);
+            simulatedRef.current = nextSimulated;
+            setSimulatedHistory(nextSimulated);
+            saveSimulated(loginRef.current, nextSimulated);
         }
     }, []);
 
     useEffect(() => {
-        // Reset on (re)subscribe — including account switches. Unlike Reset,
-        // this does clear the simulated run too: it belonged to the account
-        // being switched away from.
+        // Reset on (re)subscribe — including account switches.
         setPositions({});
         setHistory([]);
-        setSimulatedHistory([]);
         recordedRef.current = new Set();
+
+        /* The simulated run is re-read rather than emptied. It belongs to the
+           account being switched TO, and this is the only copy of it there is:
+           emptying it here is what made the dashboard's admin figures vanish on
+           every reload. Set before the subscription, so a settle arriving
+           immediately writes to the right account's key. */
+        loginRef.current = activeLoginId;
+        const stored = loadSimulated(activeLoginId);
+        simulatedRef.current = stored;
+        setSimulatedHistory(stored);
 
         if (!isAuthenticated) return;
 
