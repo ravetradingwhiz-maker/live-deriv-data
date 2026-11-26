@@ -122,7 +122,23 @@ interface AdminContextValue {
      * (Deriv's real proposal payout) so wins pay exactly like a real trade; falls
      * back to the static multiplier table when it's unavailable.
      */
-    simulate: (stake: number, contractType: string, barrier?: number, payout?: number) => SimOutcome;
+    /**
+     * Applies a round's result to the admin balance.
+     *
+     * `forcedWin` is for legs that share a tick: the tick decides them, so the
+     * caller passes what it decided rather than letting each leg draw its own
+     * verdict — which is how a combo could report an outcome no single tick
+     * can produce.
+     */
+    simulate: (
+        stake: number,
+        contractType: string,
+        barrier?: number,
+        payout?: number,
+        forcedWin?: boolean
+    ) => SimOutcome;
+    /** The verdict for one round, drawn once where several legs share a tick. */
+    decideRound: (stake: number) => boolean;
 }
 
 const AdminContext = createContext<AdminContextValue | null>(null);
@@ -333,11 +349,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     );
 
     const simulate = useCallback(
-        (stake: number, contractType: string, barrier?: number, payout?: number): SimOutcome => {
+        (
+            stake: number,
+            contractType: string,
+            barrier?: number,
+            payout?: number,
+            forcedWin?: boolean
+        ): SimOutcome => {
             if (balanceRef.current < stake) return { won: false, profit: 0, insufficient: true };
             // Prefer Deriv's real payout; fall back to the static multiplier table.
             const winPayout = payout && payout > 0 ? payout : stake * payoutMultiplier(contractType, barrier);
-            const won = decideOutcome(stake);
+            // A leg whose tick has already been settled takes that result; one
+            // standing on its own draws its own.
+            const won = forcedWin ?? decideOutcome(stake);
             const profit = won ? round2(winPayout - stake) : -round2(stake);
             const next = Math.max(0, round2(balanceRef.current + profit));
             balanceRef.current = next;
@@ -471,6 +495,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
             exit,
             setBalance,
             simulate,
+            decideRound: decideOutcome,
         }),
         [
             eligible,
@@ -485,6 +510,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
             exit,
             setBalance,
             simulate,
+            decideOutcome,
         ]
     );
 

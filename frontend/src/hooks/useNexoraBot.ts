@@ -35,6 +35,14 @@ import {
 } from '@/utils/smart-ai';
 import { useAdminOptional } from '@/context/AdminContext';
 import { usePortfolioOptional } from '@/context/PortfolioContext';
+import {
+    digitWins,
+    directionExit,
+    isDigitContract,
+    isDirectionContract,
+    pickRoundDigit,
+    withLastDigit,
+} from '@/utils/admin-ticks';
 import { FALLBACK_SYMBOLS } from '@/constants/symbols';
 
 const symbolDisplayName = (symbol: string): string =>
@@ -761,6 +769,21 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 const entryQuote = feed()[feed().length - 1];
                 const startedAt = Math.floor(Date.now() / 1000);
 
+                /* Every leg of a round is bought on one tick, so one tick has to
+                   explain all of them. The verdict is drawn once, the tick is
+                   built to produce it, and each leg then reads its own result
+                   off that tick — which is what the market does.
+
+                   Drawing a verdict per leg is how Over 2 + Under 7 could report
+                   both legs losing, which no digit produces: Over 2 loses on 0-2
+                   and Under 7 on 7-9. */
+                const dec = decimalsRef.current;
+                const roundWin = adminCtx.decideRound(stake);
+                const digitRound = parts.every(leg => isDigitContract(leg.contract_type));
+                const directionRound =
+                    !digitRound && parts.length === 1 && isDirectionContract(parts[0].contract_type);
+                const roundDigit = digitRound ? pickRoundDigit(parts, roundWin) : null;
+
                 for (const leg of parts) {
                     const legDuration = leg.duration ?? duration;
                     // Send the REAL proposal first so the simulated payout matches Deriv.
@@ -773,7 +796,18 @@ export const useNexoraBot = (config: NexoraConfig) => {
                         barrier: leg.barrier,
                         currency: cfg.currency,
                     });
-                    const outcome = adminCtx.simulate(stake, leg.contract_type, leg.barrier, payout ?? undefined);
+                    /* The tick settles the leg wherever a tick can be built for
+                       it. Anything else — a tick-high round, say — keeps the
+                       round's own verdict, since there is no spot to construct
+                       that would mean anything. */
+                    const legWin = roundDigit == null ? roundWin : digitWins(leg.contract_type, leg.barrier, roundDigit);
+                    const outcome = adminCtx.simulate(
+                        stake,
+                        leg.contract_type,
+                        leg.barrier,
+                        payout ?? undefined,
+                        legWin
+                    );
                     if (outcome.insufficient) {
                         pushJournal({ result: 'error', text: 'Insufficient balance' });
                         inFlightRef.current = false;
@@ -807,12 +841,24 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 if (sig.smart) markSmartAiPlaced(smartRef.current, sig.smart);
                 const settleMs = duration * 1000 + 400 + Math.random() * 400;
                 setTimeout(() => {
-                    // Read at settlement, not at purchase: the exit spot is
-                    // whatever the feed is on when the duration runs out.
-                    const exitQuote = feed()[feed().length - 1];
+                    /* Built from the verdict, not read off the feed. A digit
+                       round keeps the market's own price and overwrites only the
+                       last digit, so the level is real and the fiction is one
+                       digit wide. A direction round has to move the whole quote,
+                       because where the exit sits against the entry IS its
+                       result and a forced digit would say nothing. */
+                    const live = feed()[feed().length - 1] ?? entryQuote;
+                    let exitStr: string | undefined;
+                    if (roundDigit != null && live != null) {
+                        exitStr = withLastDigit(live, dec, roundDigit);
+                    } else if (directionRound && entryQuote != null) {
+                        exitStr = directionExit(entryQuote, parts[0].contract_type, roundWin, dec);
+                    } else {
+                        exitStr = spot(live);
+                    }
                     const exit = {
-                        exit_tick: exitQuote,
-                        exit_tick_display_value: spot(exitQuote),
+                        exit_tick: exitStr == null ? undefined : Number(exitStr),
+                        exit_tick_display_value: exitStr,
                         exit_tick_time: Math.floor(Date.now() / 1000),
                     };
                     for (const p of placed) portfolioRef.current?.settleAdminPosition(p.contractId, p.profit, exit);
