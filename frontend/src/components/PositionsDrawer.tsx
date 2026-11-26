@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { ListChecks, Loader2, RotateCcw, Square, X } from 'lucide-react';
+import { ChevronDown, ListChecks, Loader2, RotateCcw, Square, X } from 'lucide-react';
 import { LabelPairedChevronsRightCaptionRegularIcon } from '@deriv/quill-icons/LabelPaired';
-import { LegacyHandleLessIcon } from '@deriv/quill-icons/Legacy';
+import { LegacyHandleLessIcon, LegacyRadioOffIcon, LegacyRadioOnIcon } from '@deriv/quill-icons/Legacy';
 import { useAuth } from '@/context/AuthContext';
-import { marketNameOf, usePortfolio, type ClosedTrade, type OpenPosition } from '@/context/PortfolioContext';
+import {
+    marketNameOf,
+    usePortfolio,
+    type ClosedTrade,
+    type ContractDetails,
+    type OpenPosition,
+} from '@/context/PortfolioContext';
 import { useBotRun } from '@/context/BotRunContext';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { getActiveCurrency, sellContract } from '@/services/trade-api';
-import { contractTypeLabel, fmtSigned, fmtTime } from '@/utils/contract-format';
+import { contractTypeLabel, fmtDateTime, fmtSigned } from '@/utils/contract-format';
+import MarketIcon from '@/components/market/MarketIcon';
 import TradeTypeIcon from '@/components/TradeTypeIcon';
 
 /**
@@ -44,10 +51,24 @@ const PANEL = 366;
 /** The app header is 4rem tall and sticky; the panel starts below it. */
 const HEADER = 64;
 
+/**
+ * The transactions grid — type, entry/exit spot, buy price and P/L, and the
+ * disclosure chevron. The header and every row are laid out on it, which is
+ * what keeps a column under its own label.
+ *
+ * Each row fills two lines of it: the type spans both, the entry spot sits above
+ * the exit spot, and the buy price above the P/L it produced. That pairing is
+ * the point of the layout — a contract's two ends read down a column rather
+ * than across a line.
+ */
+const GRID = 'grid grid-cols-[0.9fr_1fr_1.1fr_1rem] items-center gap-x-2';
+
 /** Rows come from two stores; this is the shape the list actually renders. */
 interface Row {
     contract_id: number;
     contract_type?: string;
+    /** The symbol, for the market mark. `market` is its display name. */
+    symbol?: string;
     market: string;
     stake: number;
     profit: number;
@@ -56,27 +77,44 @@ interface Row {
     /** Closed rows carry the time they settled; open ones their current value. */
     time?: number;
     value?: number;
+    /** Spots, times and barriers — what the row shows once it is expanded. */
+    details: ContractDetails;
 }
 
 const openRow = (p: OpenPosition): Row => ({
     contract_id: p.contract_id,
     contract_type: p.contract_type,
+    symbol: p.underlying_symbol || p.underlying,
     market: marketNameOf(p),
     stake: Number(p.buy_price) || 0,
     profit: Number(p.profit) || 0,
     value: Number(p.bid_price) || 0,
     isOpen: true,
+    details: p,
 });
 
 const closedRow = (t: ClosedTrade): Row => ({
     contract_id: t.contract_id,
     contract_type: t.contract_type,
+    symbol: t.symbol,
     market: t.market,
     stake: Number(t.buy_price) || 0,
     profit: Number(t.profit) || 0,
     time: t.time,
     isOpen: false,
+    details: t,
 });
+
+/**
+ * The contract in words — "Over 2" rather than "DIGITOVER", with the barrier
+ * the type means nothing without.
+ */
+const typeNameOf = (row: Row): string => {
+    const label = contractTypeLabel(row.contract_type);
+    const { barrier, high_barrier, low_barrier } = row.details;
+    if (high_barrier && low_barrier) return `${label} ${low_barrier} – ${high_barrier}`;
+    return barrier ? `${label} ${barrier}` : label;
+};
 
 /**
  * The drawer's toggle mark — the pair the bots' run panel uses, each on the
@@ -114,6 +152,164 @@ const Tile = ({ title, value, tone }: { title: string; value: string; tone?: str
     </div>
 );
 
+/**
+ * A figure that is not knowable yet — the bar the bots' run panel holds in the
+ * same places. A dash would say the contract has no such figure; this says it
+ * does not have it yet, which is a different thing.
+ */
+const Pending = ({ className = 'w-10' }: { className?: string }) => (
+    <span className={`inline-block h-2.5 animate-pulse rounded bg-ink-700 ${className}`} />
+);
+
+/**
+ * One end of a contract. A filled dot opens it and a hollow one closes it —
+ * the marks the bots' run panel uses, and the reason the two lines need no
+ * labels of their own in a column this narrow.
+ */
+const Spot = ({ entry, value, pending }: { entry: boolean; value?: string; pending: boolean }) => (
+    <span
+        className='flex items-center gap-1 text-[11px] tabular-nums text-slate-300'
+        title={entry ? 'Entry spot' : 'Exit spot'}
+    >
+        {entry ? (
+            <LegacyRadioOnIcon height={10} width={10} className='shrink-0' />
+        ) : (
+            <LegacyRadioOffIcon height={10} width={10} className='shrink-0' />
+        )}
+        {value ? <span className='truncate'>{value}</span> : pending ? <Pending /> : <span>—</span>}
+    </span>
+);
+
+/** One line of an expanded row. Rendered only when there is a value for it. */
+const Detail = ({ label, value }: { label: string; value?: string | number }) =>
+    value == null || value === '' ? null : (
+        <div className='flex items-baseline justify-between gap-3'>
+            <span className='shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500'>{label}</span>
+            <span className='min-w-0 break-words text-right text-[11px] text-slate-200'>{value}</span>
+        </div>
+    );
+
+interface TransactionProps {
+    row: Row;
+    expanded: boolean;
+    onToggle: () => void;
+    onSell: (id: number) => void;
+    selling: boolean;
+    currency: string;
+}
+
+/**
+ * One transaction. The summary is the whole row, and tapping it opens the rest
+ * underneath — the market, the times and the reference ids, which are what you
+ * go looking for after the fact and never while scanning the list.
+ *
+ * The summary is a single button rather than a row of them, so it is one tab
+ * stop and one target; Sell lives in the opened half for the same reason.
+ */
+const Transaction = ({ row, expanded, onToggle, onSell, selling, currency }: TransactionProps) => {
+    const { details: d } = row;
+    const up = row.profit >= 0;
+    const panelId = `transaction-${row.contract_id}`;
+
+    return (
+        <div
+            className={`overflow-hidden rounded-xl border bg-ink-800 ${
+                row.isOpen ? 'border-cyan-500/40' : 'border-line'
+            }`}
+        >
+            <button
+                type='button'
+                onClick={onToggle}
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                className={`${GRID} w-full grid-rows-2 px-2.5 py-2 text-left transition-colors hover:bg-ink-700/60`}
+            >
+                {/* Type — the market and the contract as their own marks, down the
+                    left of both lines. Each carries its name as a title, and both
+                    are spelled out in the half below. */}
+                {/* Drawn at one size, set here rather than asked of each icon: the
+                    market marks are illustrations and the trade-type ones are
+                    glyphs, and at their natural sizes the pair reads as one icon
+                    and an afterthought beside it. */}
+                <span className='col-start-1 row-span-2 row-start-1 flex items-center gap-1.5 [&_svg]:h-5 [&_svg]:w-5'>
+                    <span className='flex shrink-0 items-center' title={row.market}>
+                        <MarketIcon type={row.symbol || ''} />
+                    </span>
+                    <TradeTypeIcon type={row.contract_type} label={typeNameOf(row)} />
+                </span>
+
+                <span className='col-start-2 row-start-1'>
+                    <Spot
+                        entry
+                        value={d.entry_spot_display_value ?? d.entry_tick_display_value}
+                        pending={row.isOpen}
+                    />
+                </span>
+                <span className='col-start-3 row-start-1 text-right text-[11px] font-semibold tabular-nums text-white'>
+                    {row.stake.toFixed(2)} {currency}
+                </span>
+
+                <span className='col-start-2 row-start-2'>
+                    <Spot entry={false} value={d.exit_tick_display_value} pending={row.isOpen} />
+                </span>
+                {/* A running contract's P/L swings between loss and profit on every
+                    tick and settles at neither, so the row reports none until it is
+                    final — the run panel holds the same bar there, for the same
+                    reason. The live figure is still a tap away, under Current value. */}
+                {row.isOpen ? (
+                    <span className='col-start-3 row-start-2 flex justify-end'>
+                        <Pending className='w-12' />
+                    </span>
+                ) : (
+                    <span
+                        className={`col-start-3 row-start-2 text-right text-xs font-bold tabular-nums ${
+                            up ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                    >
+                        {fmtSigned(row.profit)}
+                    </span>
+                )}
+
+                <ChevronDown
+                    size={14}
+                    className={`col-start-4 row-span-2 row-start-1 shrink-0 text-slate-500 transition-transform duration-200 ${
+                        expanded ? 'rotate-180' : ''
+                    }`}
+                />
+            </button>
+
+            {expanded && (
+                <div id={panelId} className='flex flex-col gap-1.5 border-t border-line bg-ink-900/60 px-3 py-2.5'>
+                    <Detail label='Market' value={row.market} />
+                    <Detail label='Trade type' value={typeNameOf(row)} />
+                    <Detail label='Duration' value={d.tick_count ? `${d.tick_count} ticks` : undefined} />
+                    <Detail label='Start time' value={fmtDateTime(d.date_start)} />
+                    <Detail label='Entry spot time' value={fmtDateTime(d.entry_tick_time)} />
+                    <Detail label='Exit time' value={fmtDateTime(d.exit_tick_time ?? row.time)} />
+                    {row.isOpen && <Detail label='Current value' value={`${(row.value ?? 0).toFixed(2)} ${currency}`} />}
+                    <Detail label='Reference (buy)' value={d.transaction_ids?.buy} />
+                    <Detail label='Reference (sell)' value={d.transaction_ids?.sell} />
+
+                    {/* Selling is only possible while the contract is live, and it is
+                        an action rather than a figure — so it sits here, under the
+                        detail it acts on, and not in the summary line. */}
+                    {row.isOpen && (
+                        <button
+                            type='button'
+                            onClick={() => onSell(row.contract_id)}
+                            disabled={selling}
+                            className='mt-1 flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/20 disabled:opacity-50'
+                        >
+                            {selling ? <Loader2 size={12} className='animate-spin' /> : <X size={12} />}
+                            Sell at market
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PositionsDrawer = () => {
     const { openPositions, history, sessionStats, clearHistory } = usePortfolio();
     const { isRunning, stop: stopBot } = useBotRun();
@@ -123,6 +319,8 @@ const PositionsDrawer = () => {
 
     const [open, setOpen] = useState(false);
     const [selling, setSelling] = useState<Record<number, boolean>>({});
+    /** One row open at a time: the detail is a lookup, not a comparison. */
+    const [expanded, setExpanded] = useState<number | null>(null);
 
     /*
      * The mobile tab bar is fixed to the bottom of the viewport, so the panel has
@@ -310,6 +508,19 @@ const PositionsDrawer = () => {
                         </div>
                     </div>
 
+                    {/* Column labels, above the scroll rather than inside it, so they
+                        stay put while the list moves under them. */}
+                    {rows.length > 0 && (
+                        <div
+                            className={`${GRID} shrink-0 border-b border-line px-3 py-2 text-[10px] font-bold uppercase leading-tight tracking-wide text-slate-500`}
+                        >
+                            <span>Type</span>
+                            <span>Entry/Exit spot</span>
+                            <span className='text-right'>Buy price and P/L</span>
+                            <span />
+                        </div>
+                    )}
+
                     {/* `min-h-0` so this scrolls instead of stretching the panel and
                         pushing the statistics off the bottom. */}
                     <div className='flex min-h-0 flex-1 flex-col overflow-y-auto p-3'>
@@ -325,52 +536,19 @@ const PositionsDrawer = () => {
                             </div>
                         ) : (
                             <div className='flex flex-col gap-2'>
-                                {rows.map(r => {
-                                    const up = r.profit >= 0;
-                                    return (
-                                        <div
-                                            key={r.contract_id}
-                                            className={`flex items-center gap-2 rounded-xl border bg-ink-800 p-2.5 ${
-                                                r.isOpen ? 'border-cyan-500/40' : 'border-line'
-                                            }`}
-                                        >
-                                            <TradeTypeIcon
-                                                type={r.contract_type}
-                                                label={contractTypeLabel(r.contract_type)}
-                                            />
-                                            <div className='min-w-0 flex-1'>
-                                                <p className='truncate text-xs font-semibold text-white'>{r.market}</p>
-                                                <p className='mt-0.5 text-[10px] text-slate-500'>
-                                                    {r.isOpen
-                                                        ? `Stake ${r.stake.toFixed(2)} · Value ${(r.value ?? 0).toFixed(2)}`
-                                                        : `${fmtTime(r.time ?? 0)} · Stake ${r.stake.toFixed(2)}`}
-                                                </p>
-                                            </div>
-                                            <span
-                                                className={`text-sm font-bold ${
-                                                    up ? 'text-emerald-400' : 'text-rose-400'
-                                                }`}
-                                            >
-                                                {fmtSigned(r.profit)}
-                                            </span>
-                                            {r.isOpen && (
-                                                <button
-                                                    type='button'
-                                                    onClick={() => onSell(r.contract_id)}
-                                                    disabled={!!selling[r.contract_id]}
-                                                    className='flex items-center gap-1 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-500/20 disabled:opacity-50'
-                                                >
-                                                    {selling[r.contract_id] ? (
-                                                        <Loader2 size={12} className='animate-spin' />
-                                                    ) : (
-                                                        <X size={12} />
-                                                    )}
-                                                    Sell
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                {rows.map(r => (
+                                    <Transaction
+                                        key={r.contract_id}
+                                        row={r}
+                                        currency={currency}
+                                        expanded={expanded === r.contract_id}
+                                        onToggle={() =>
+                                            setExpanded(id => (id === r.contract_id ? null : r.contract_id))
+                                        }
+                                        onSell={onSell}
+                                        selling={!!selling[r.contract_id]}
+                                    />
+                                ))}
                             </div>
                         )}
                     </div>

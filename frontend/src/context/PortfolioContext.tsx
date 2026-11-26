@@ -28,7 +28,39 @@ export const marketNameOf = (c: {
     return FALLBACK_SYMBOLS.find(s => s.symbol === symbol)?.display_name ?? symbol;
 };
 
-export interface OpenPosition {
+/**
+ * What `proposal_open_contract` carries beyond the few figures a summary row
+ * needs — the spots, times and barriers the transactions panel shows when a
+ * row is expanded.
+ *
+ * Both an open and a settled contract carry them, so a row keeps its details
+ * after it settles rather than losing them the moment it leaves the stream.
+ *
+ * Spots are read from the `*_display_value` strings and not the numbers beside
+ * them: Deriv quotes each symbol to its own number of decimals, and the number
+ * has already dropped the trailing zeros a digit contract turns on.
+ */
+export interface ContractDetails {
+    entry_spot_display_value?: string;
+    entry_spot?: number;
+    /* The same tick under its other name. Deriv sends both, and which of the
+       two is filled in varies by contract type, so the panel reads whichever
+       arrived. */
+    entry_tick_display_value?: string;
+    entry_tick?: number;
+    entry_tick_time?: number;
+    exit_tick_display_value?: string;
+    exit_tick?: number;
+    exit_tick_time?: number;
+    date_start?: number;
+    tick_count?: number;
+    barrier?: string;
+    high_barrier?: string;
+    low_barrier?: string;
+    transaction_ids?: { buy?: number; sell?: number };
+}
+
+export interface OpenPosition extends ContractDetails {
     contract_id: number;
     contract_type?: string;
     display_name?: string;
@@ -45,15 +77,42 @@ export interface OpenPosition {
     is_sold?: number;
 }
 
-export interface ClosedTrade {
+export interface ClosedTrade extends ContractDetails {
     contract_id: number;
     contract_type?: string;
     market: string;
+    /** The symbol itself, which the market mark beside the row is drawn from —
+     *  `market` is its display name and cannot be mapped back to a symbol. */
+    symbol?: string;
     longcode?: string;
     buy_price: number;
     profit: number;
     time: number;
 }
+
+/**
+ * The detail fields, picked one by one rather than spread.
+ *
+ * A `proposal_open_contract` payload also carries the contract's whole tick
+ * stream and audit trail, and a hundred of those kept in session history is a
+ * lot of memory for figures nothing reads.
+ */
+const detailsOf = (c: ContractDetails): ContractDetails => ({
+    entry_spot_display_value: c.entry_spot_display_value,
+    entry_spot: c.entry_spot,
+    entry_tick_display_value: c.entry_tick_display_value,
+    entry_tick: c.entry_tick,
+    entry_tick_time: c.entry_tick_time,
+    exit_tick_display_value: c.exit_tick_display_value,
+    exit_tick: c.exit_tick,
+    exit_tick_time: c.exit_tick_time,
+    date_start: c.date_start,
+    tick_count: c.tick_count,
+    barrier: c.barrier,
+    high_barrier: c.high_barrier,
+    low_barrier: c.low_barrier,
+    transaction_ids: c.transaction_ids,
+});
 
 /**
  * The run panel's six figures, over the trades that have closed this session.
@@ -102,7 +161,7 @@ interface PortfolioContextValue {
     /** Admin (fake-trade) mode: inject a simulated open position so it shows live. */
     addAdminPosition: (pos: OpenPosition) => void;
     /** Admin (fake-trade) mode: settle a simulated position and record it to history. */
-    settleAdminPosition: (contractId: number, profit: number) => void;
+    settleAdminPosition: (contractId: number, profit: number, exit?: ContractDetails) => void;
 }
 
 const PortfolioContext = createContext<PortfolioContextValue | null>(null);
@@ -142,7 +201,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
         setPositions(prev => ({ ...prev, [pos.contract_id]: pos }));
     }, []);
 
-    const settleAdminPosition = useCallback((contractId: number, profit: number) => {
+    const settleAdminPosition = useCallback((contractId: number, profit: number, exit?: ContractDetails) => {
         const existing = positionsRef.current[contractId];
         setPositions(prev => {
             const next = { ...prev };
@@ -155,10 +214,14 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
                 contract_id: contractId,
                 contract_type: existing.contract_type,
                 market: marketNameOf(existing),
+                symbol: existing.underlying_symbol || existing.underlying,
                 longcode: existing.longcode,
                 buy_price: Number(existing.buy_price) || 0,
                 profit,
                 time: Math.floor(Date.now() / 1000),
+                // The exit spot exists only at settlement, so it arrives with
+                // the call rather than from the position being settled.
+                ...detailsOf({ ...existing, ...exit }),
             };
             // Recorded twice on purpose: the run panel's history, which Reset
             // may empty, and the dashboard's, which it may not.
@@ -204,10 +267,12 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
                                         contract_id: id,
                                         contract_type: poc.contract_type,
                                         market: marketNameOf(poc),
+                                        symbol: poc.underlying_symbol || poc.underlying,
                                         longcode: poc.longcode,
                                         buy_price: buy,
                                         profit,
                                         time: poc.sell_time || poc.purchase_time || Math.floor(Date.now() / 1000),
+                                        ...detailsOf(poc),
                                     },
                                     ...prev,
                                 ].slice(0, 100)

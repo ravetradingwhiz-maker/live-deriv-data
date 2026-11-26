@@ -30,3 +30,22 @@ export const fmtTime = (epochSeconds: number): string =>
         hour: '2-digit',
         minute: '2-digit',
     });
+
+/**
+ * A full date and time, for the detail lines a transaction expands into.
+ *
+ * Shown in the reader's own zone rather than the GMT Deriv quotes: the only
+ * reason to read an entry time is to line it up against something else that
+ * happened, and that something was on the clock on the wall.
+ */
+export const fmtDateTime = (epochSeconds?: number): string | undefined =>
+    epochSeconds
+        ? new Date(epochSeconds * 1000).toLocaleString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+          })
+        : undefined;

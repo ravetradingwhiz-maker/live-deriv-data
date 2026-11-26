@@ -738,6 +738,21 @@ export const useNexoraBot = (config: NexoraConfig) => {
                 let comboProfit = 0;
                 const placed: { contractId: number; profit: number }[] = [];
 
+                /* The tick the round is entered on, quoted to the symbol's own
+                   decimals. A simulated contract never reaches Deriv, so nothing
+                   else will ever fill in its spots, and the transactions panel
+                   would show a dash where every other row shows a price. The
+                   feed is the one the signal was read from, so this is the price
+                   the round is notionally taken at. */
+                const spot = (q?: number) => (q == null ? undefined : q.toFixed(decimalsRef.current));
+                /* The traded market's own feed, which is not always the
+                   configured one: a Smart AI round picks its own market, and
+                   reading the configured symbol's last tick would put another
+                   market's price on the row. */
+                const feed = () => windowsRef.current[symbol] ?? quotesRef.current;
+                const entryQuote = feed()[feed().length - 1];
+                const startedAt = Math.floor(Date.now() / 1000);
+
                 for (const leg of parts) {
                     const legDuration = leg.duration ?? duration;
                     // Send the REAL proposal first so the simulated payout matches Deriv.
@@ -771,14 +786,28 @@ export const useNexoraBot = (config: NexoraConfig) => {
                         bid_price: round2(Math.max(0, stake + outcome.profit)),
                         profit: outcome.profit,
                         currency: cfg.currency,
-                        purchase_time: Math.floor(Date.now() / 1000),
+                        purchase_time: startedAt,
+                        entry_spot: entryQuote,
+                        entry_spot_display_value: spot(entryQuote),
+                        entry_tick_time: startedAt,
+                        date_start: startedAt,
+                        tick_count: legDuration,
+                        barrier: leg.barrier == null ? undefined : String(leg.barrier),
                     });
                 }
 
                 if (sig.smart) markSmartAiPlaced(smartRef.current, sig.smart);
                 const settleMs = duration * 1000 + 400 + Math.random() * 400;
                 setTimeout(() => {
-                    for (const p of placed) portfolioRef.current?.settleAdminPosition(p.contractId, p.profit);
+                    // Read at settlement, not at purchase: the exit spot is
+                    // whatever the feed is on when the duration runs out.
+                    const exitQuote = feed()[feed().length - 1];
+                    const exit = {
+                        exit_tick: exitQuote,
+                        exit_tick_display_value: spot(exitQuote),
+                        exit_tick_time: Math.floor(Date.now() / 1000),
+                    };
+                    for (const p of placed) portfolioRef.current?.settleAdminPosition(p.contractId, p.profit, exit);
                     // One round, one settlement: the legs net off against each other.
                     onContractSettled(comboProfit, sig);
                 }, settleMs);
