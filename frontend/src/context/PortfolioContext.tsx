@@ -42,23 +42,75 @@ export const marketNameOf = (c: {
  */
 export interface ContractDetails {
     entry_spot_display_value?: string;
-    entry_spot?: number;
-    /* The same tick under its other name. Deriv sends both, and which of the
-       two is filled in varies by contract type, so the panel reads whichever
-       arrived. */
+    entry_spot?: number | string;
     entry_tick_display_value?: string;
-    entry_tick?: number;
+    entry_tick?: number | string;
     entry_tick_time?: number;
+    exit_spot_display_value?: string;
+    exit_spot?: number | string;
+    exit_spot_time?: number;
+    sell_spot_display_value?: string;
+    sell_spot?: number | string;
+    sell_spot_time?: number;
     exit_tick_display_value?: string;
-    exit_tick?: number;
+    exit_tick?: number | string;
     exit_tick_time?: number;
+    sell_time?: number;
     date_start?: number;
     tick_count?: number;
     barrier?: string;
     high_barrier?: string;
     low_barrier?: string;
     transaction_ids?: { buy?: number; sell?: number };
+    /** The contract's own ticks. On the live payload only — not kept. */
+    tick_stream?: { epoch?: number; tick?: number; tick_display_value?: string }[];
+    /** The two spots, resolved once at settlement and kept. */
+    entrySpot?: string;
+    exitSpot?: string;
 }
+
+/**
+ * The entry and exit spots, whichever of their names the payload used.
+ *
+ * The stream spells each of them several ways and fills in different ones for
+ * different contract types, so reading a single name shows a dash on contracts
+ * that do carry the price. This is the chain the bots' run panel reads, plus
+ * the contract's own ticks as a last resort.
+ *
+ * The last tick only counts once the contract is settled: on a running one it
+ * is the current price, which is not an exit spot and must not be shown as one.
+ */
+export const spotsOf = (c: ContractDetails, settled: boolean): { entry?: string; exit?: string } => {
+    const show = (v?: number | string) => (v == null || v === '' ? undefined : String(v));
+    const ticks = Array.isArray(c.tick_stream) ? c.tick_stream : [];
+    const first = ticks[0];
+    const last = settled && ticks.length > 1 ? ticks[ticks.length - 1] : undefined;
+
+    return {
+        entry:
+            c.entrySpot ??
+            show(c.entry_spot_display_value) ??
+            show(c.entry_spot) ??
+            show(c.entry_tick_display_value) ??
+            show(c.entry_tick) ??
+            show(first?.tick_display_value) ??
+            show(first?.tick),
+        exit:
+            c.exitSpot ??
+            show(c.exit_spot_display_value) ??
+            show(c.exit_spot) ??
+            show(c.sell_spot_display_value) ??
+            show(c.sell_spot) ??
+            show(c.exit_tick_display_value) ??
+            show(c.exit_tick) ??
+            show(last?.tick_display_value) ??
+            show(last?.tick),
+    };
+};
+
+/** When the contract ended, under whichever name carried it. */
+export const exitTimeOf = (c: ContractDetails): number | undefined =>
+    c.exit_tick_time ?? c.exit_spot_time ?? c.sell_spot_time ?? c.sell_time;
 
 export interface OpenPosition extends ContractDetails {
     contract_id: number;
@@ -103,15 +155,25 @@ const detailsOf = (c: ContractDetails): ContractDetails => ({
     entry_tick_display_value: c.entry_tick_display_value,
     entry_tick: c.entry_tick,
     entry_tick_time: c.entry_tick_time,
+    exit_spot_display_value: c.exit_spot_display_value,
+    exit_spot: c.exit_spot,
+    exit_spot_time: c.exit_spot_time,
+    sell_spot_display_value: c.sell_spot_display_value,
+    sell_spot: c.sell_spot,
+    sell_spot_time: c.sell_spot_time,
     exit_tick_display_value: c.exit_tick_display_value,
     exit_tick: c.exit_tick,
     exit_tick_time: c.exit_tick_time,
+    sell_time: c.sell_time,
     date_start: c.date_start,
     tick_count: c.tick_count,
     barrier: c.barrier,
     high_barrier: c.high_barrier,
     low_barrier: c.low_barrier,
     transaction_ids: c.transaction_ids,
+    // Resolved here, while the tick stream is still in hand to resolve it from.
+    entrySpot: spotsOf(c, true).entry,
+    exitSpot: spotsOf(c, true).exit,
 });
 
 /**
@@ -250,6 +312,14 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
                     // No open contracts → Deriv sends an empty object. Ignore it
                     // so it doesn't render as a blank "—" position.
                     if (!id) return;
+
+                    /* The last payload, parked where it can be read from the
+                       console as `__poc`. The endpoint renames fields between
+                       versions — `underlying_symbol` for `underlying` was one —
+                       and when a figure goes missing from a row, the payload it
+                       came in is the only thing that settles which name it has
+                       now. It logs nothing and holds one object. */
+                    (window as unknown as Record<string, unknown>).__poc = poc;
 
                     if (poc.is_sold) {
                         setPositions(prev => {

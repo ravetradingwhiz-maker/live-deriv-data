@@ -749,7 +749,15 @@ export const useNexoraBot = (config: NexoraConfig) => {
                    configured one: a Smart AI round picks its own market, and
                    reading the configured symbol's last tick would put another
                    market's price on the row. */
-                const feed = () => windowsRef.current[symbol] ?? quotesRef.current;
+                const feed = () => {
+                    const w = windowsRef.current[symbol];
+                    // A scanned market gets an empty window before its first tick
+                    // lands, so an existing one is not yet a usable one.
+                    if (w?.length) return w;
+                    // quotesRef is the configured market alone. Another market's
+                    // price on this row would be worse than no price at all.
+                    return symbol === cfgRef.current.symbol ? quotesRef.current : [];
+                };
                 const entryQuote = feed()[feed().length - 1];
                 const startedAt = Math.floor(Date.now() / 1000);
 

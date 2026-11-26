@@ -4,7 +4,9 @@ import { LabelPairedChevronsRightCaptionRegularIcon } from '@deriv/quill-icons/L
 import { LegacyHandleLessIcon, LegacyRadioOffIcon, LegacyRadioOnIcon } from '@deriv/quill-icons/Legacy';
 import { useAuth } from '@/context/AuthContext';
 import {
+    exitTimeOf,
     marketNameOf,
+    spotsOf,
     usePortfolio,
     type ClosedTrade,
     type ContractDetails,
@@ -208,6 +210,7 @@ interface TransactionProps {
  */
 const Transaction = ({ row, expanded, onToggle, onSell, selling, currency }: TransactionProps) => {
     const { details: d } = row;
+    const spots = spotsOf(d, !row.isOpen);
     const up = row.profit >= 0;
     const panelId = `transaction-${row.contract_id}`;
 
@@ -239,18 +242,14 @@ const Transaction = ({ row, expanded, onToggle, onSell, selling, currency }: Tra
                 </span>
 
                 <span className='col-start-2 row-start-1'>
-                    <Spot
-                        entry
-                        value={d.entry_spot_display_value ?? d.entry_tick_display_value}
-                        pending={row.isOpen}
-                    />
+                    <Spot entry value={spots.entry} pending={row.isOpen} />
                 </span>
                 <span className='col-start-3 row-start-1 text-right text-[11px] font-semibold tabular-nums text-white'>
                     {row.stake.toFixed(2)} {currency}
                 </span>
 
                 <span className='col-start-2 row-start-2'>
-                    <Spot entry={false} value={d.exit_tick_display_value} pending={row.isOpen} />
+                    <Spot entry={false} value={spots.exit} pending={row.isOpen} />
                 </span>
                 {/* A running contract's P/L swings between loss and profit on every
                     tick and settles at neither, so the row reports none until it is
@@ -266,7 +265,7 @@ const Transaction = ({ row, expanded, onToggle, onSell, selling, currency }: Tra
                             up ? 'text-emerald-400' : 'text-rose-400'
                         }`}
                     >
-                        {fmtSigned(row.profit)}
+                        {fmtSigned(row.profit)} {currency}
                     </span>
                 )}
 
@@ -285,7 +284,7 @@ const Transaction = ({ row, expanded, onToggle, onSell, selling, currency }: Tra
                     <Detail label='Duration' value={d.tick_count ? `${d.tick_count} ticks` : undefined} />
                     <Detail label='Start time' value={fmtDateTime(d.date_start)} />
                     <Detail label='Entry spot time' value={fmtDateTime(d.entry_tick_time)} />
-                    <Detail label='Exit time' value={fmtDateTime(d.exit_tick_time ?? row.time)} />
+                    <Detail label='Exit time' value={fmtDateTime(exitTimeOf(d) ?? row.time)} />
                     {row.isOpen && <Detail label='Current value' value={`${(row.value ?? 0).toFixed(2)} ${currency}`} />}
                     <Detail label='Reference (buy)' value={d.transaction_ids?.buy} />
                     <Detail label='Reference (sell)' value={d.transaction_ids?.sell} />
