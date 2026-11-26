@@ -6,8 +6,8 @@ import NexoraStar from '@/components/NexoraStar';
 export interface Tab {
     to: string;
     label: string;
-    /** Two-line label for the mobile bottom bar (kept uniform across items). */
-    lines: [string, string];
+    /** What the mobile bar calls it, where the full name has no room. */
+    short: string;
     icon?: LucideIcon;
     /** Use the multi-color Nexora star instead of a lucide icon. */
     star?: boolean;
@@ -16,41 +16,87 @@ export interface Tab {
 }
 
 export const APP_TABS: Tab[] = [
-    { to: '/app/dashboard', label: 'Dashboard', lines: ['Dash', 'board'], icon: LayoutDashboard, color: 'text-cyan-400' },
-    { to: '/app/trade-pilot-free', label: 'Nexora AI Free', lines: ['Nexora AI', 'Free'], star: true },
-    { to: '/app/trade-pilot-premium', label: 'Nexora AI Premium', lines: ['Nexora AI', 'Premium'], icon: Crown, color: 'text-amber-400' },
+    { to: '/app/dashboard', label: 'Dashboard', short: 'Dashboard', icon: LayoutDashboard, color: 'text-cyan-400' },
+    { to: '/app/trade-pilot-free', label: 'Nexora AI Free', short: 'Free', star: true },
+    {
+        to: '/app/trade-pilot-premium',
+        label: 'Nexora AI Premium',
+        short: 'Premium',
+        icon: Crown,
+        color: 'text-amber-400',
+    },
     // Open positions and trade history are not tabs: both live in the
     // positions panel, which is reachable from every tab rather than being one.
-    { to: '/app/pricing', label: 'AI Pricing', lines: ['AI', 'Pricing'], icon: Tag, color: 'text-emerald-400' },
+    { to: '/app/pricing', label: 'AI Pricing', short: 'Pricing', icon: Tag, color: 'text-emerald-400' },
 ];
 
 /**
- * Horizontal, scrollable tab navigation shown below the header. Divider lines
- * sit on the inner container so they align with the content width.
+ * The tabs themselves, in whichever bar is carrying them.
+ *
+ * Where you are is said with a rule under the label and the label turning
+ * white. It was a filled pill with two glow shadows, which made the quietest
+ * statement on the page — you are here — the loudest thing on it.
+ */
+const TabLinks = ({ className }: { className?: string }) => (
+    <nav className={className}>
+        {APP_TABS.map(tab => {
+            const Icon = tab.icon;
+            return (
+                <NavLink
+                    key={tab.to}
+                    to={tab.to}
+                    className={({ isActive }) =>
+                        `relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                            isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                        }`
+                    }
+                >
+                    {({ isActive }) => (
+                        <>
+                            {tab.star ? <NexoraStar size={17} /> : Icon && <Icon size={17} className={tab.color} />}
+                            {tab.label}
+                            {/* Always rendered, so moving between tabs is the rule
+                                fading rather than one element replacing another. */}
+                            <span
+                                aria-hidden='true'
+                                className={`absolute inset-x-3 bottom-0.5 h-0.5 rounded-full bg-cyan-400 transition-opacity duration-200 ${
+                                    isActive ? 'opacity-100' : 'opacity-0'
+                                }`}
+                            />
+                        </>
+                    )}
+                </NavLink>
+            );
+        })}
+    </nav>
+);
+
+/**
+ * The tabs inside the app header, from `xl` up.
+ *
+ * The header's middle was empty across its whole width while the tabs took a
+ * second bar of their own — 112px of chrome before any page began. One bar
+ * carries both.
+ *
+ * `xl` and not `lg`: the brand, four labels and the account controls come to
+ * roughly a thousand pixels, which is more than a 1024px window has once the
+ * page gutters are off it. The row below is the one that has to hold a tab
+ * nobody can read, so the merge waits for the width rather than taking it.
+ */
+export const HeaderTabs = () => <TabLinks className='hidden items-center gap-1 xl:flex' />;
+
+/**
+ * The tabs on their own row, between `md` and `xl`.
+ *
+ * Four labels plus the brand and the account controls genuinely do not fit on
+ * one line at those widths, and shrinking the type to force it would cost more
+ * than the row saves.
  */
 const TabNav = () => (
-    <div className='sticky top-16 z-30 hidden bg-ink-900/95 backdrop-blur md:block'>
-        <nav className='container-page flex gap-2 overflow-x-auto border-y border-line py-2.5 md:overflow-visible'>
-            {APP_TABS.map(tab => {
-                const Icon = tab.icon;
-                return (
-                    <NavLink
-                        key={tab.to}
-                        to={tab.to}
-                        className={({ isActive }) =>
-                            `flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all md:flex-1 ${
-                                isActive
-                                    ? 'border-cyan-400 bg-cyan-600 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.6),0_0_18px_rgba(34,211,238,0.55)]'
-                                    : 'border-line bg-ink-800 text-slate-200 hover:border-cyan-700 hover:text-cyan-300'
-                            }`
-                        }
-                    >
-                        {tab.star ? <NexoraStar size={17} /> : Icon && <Icon size={17} className={tab.color} />}
-                        {tab.label}
-                    </NavLink>
-                );
-            })}
-        </nav>
+    <div className='sticky top-16 z-30 hidden bg-ink-900/95 backdrop-blur md:block xl:hidden'>
+        <div className='container-page border-b border-line'>
+            <TabLinks className='flex gap-1 overflow-x-auto py-1.5' />
+        </div>
     </div>
 );
 

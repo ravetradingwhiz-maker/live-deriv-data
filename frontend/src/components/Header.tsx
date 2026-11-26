@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, LogOut, Menu, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import BrandLogo from '@/components/BrandLogo';
@@ -17,6 +17,13 @@ const Header = () => {
     const { isAuthenticated, loginOAuth2, signup, logout } = useAuth();
     const [menuOpen, setMenuOpen] = useState(false);
     const navigate = useNavigate();
+    const onHome = useLocation().pathname === '/';
+
+    /* Every one of these sections lives on the home page, and this header is
+       also on Pricing — where all four links did nothing at all when clicked.
+       Off the home page they become real navigation to it, which lands at the
+       section because the browser handles the fragment on load. */
+    const hrefOf = (hash: string) => (onHome ? hash : `/${hash}`);
 
     return (
         <>
@@ -29,7 +36,7 @@ const Header = () => {
                             {NAV_LINKS.map(link => (
                                 <a
                                     key={link.href}
-                                    href={link.href}
+                                    href={hrefOf(link.href)}
                                     className='text-sm font-medium text-slate-300 transition-colors hover:text-cyan-300'
                                 >
                                     {link.label}
@@ -98,7 +105,7 @@ const Header = () => {
                     {NAV_LINKS.map(link => (
                         <a
                             key={link.href}
-                            href={link.href}
+                            href={hrefOf(link.href)}
                             className='px-3 py-4 text-base font-medium text-slate-300 transition-colors hover:text-cyan-300'
                             onClick={() => setMenuOpen(false)}
                         >

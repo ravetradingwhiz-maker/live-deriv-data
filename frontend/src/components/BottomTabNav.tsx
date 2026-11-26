@@ -33,13 +33,15 @@ const BottomTabNav = () => (
                             ) : (
                                 Icon && <Icon size={20} className={tab.color} />
                             )}
+                            {/* One word, on one line. It was the full name
+                                broken across two — "Dash" above "board" —
+                                which is a hyphenation artifact, not a label. */}
                             <span
-                                className={`flex flex-col text-center text-[9px] font-semibold leading-tight ${
+                                className={`w-full truncate text-center text-[10px] font-semibold leading-tight ${
                                     isActive ? 'text-cyan-400' : 'text-slate-400'
                                 }`}
                             >
-                                <span>{tab.lines[0]}</span>
-                                <span>{tab.lines[1] || ' '}</span>
+                                {tab.short}
                             </span>
                         </>
                     )}
