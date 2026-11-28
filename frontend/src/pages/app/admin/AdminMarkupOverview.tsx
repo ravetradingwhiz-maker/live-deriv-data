@@ -30,34 +30,50 @@ const fmtKES = (n: number) => `KES ${(Number(n) || 0).toLocaleString('en-KE', { 
 const fmtNum = (n: number) => (Number(n) || 0).toLocaleString('en-US');
 const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-const RANGES: Record<string, { label: string; get: () => { from: string; to: string } }> = {
-    mtd: {
-        label: 'This month',
-        get: () => {
-            const n = new Date();
-            return { from: isoDay(new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1))), to: isoDay(n) };
-        },
-    },
-    last30: {
-        label: 'Last 30 days',
-        get: () => {
-            const n = new Date();
-            const f = new Date(n);
-            f.setUTCDate(f.getUTCDate() - 29);
-            return { from: isoDay(f), to: isoDay(n) };
-        },
-    },
-    lastMonth: {
-        label: 'Last month',
-        get: () => {
-            const n = new Date();
-            return {
-                from: isoDay(new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1))),
-                to: isoDay(new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 0))),
-            };
-        },
-    },
+/**
+ * How the round numbers are worked out, in UTC — which is the day Deriv bills
+ * on, not the one the browser is in.
+ */
+const getPresetRange = (preset: string): { from: string; to: string } => {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth();
+    const d = now.getUTCDate();
+    const day = (date: Date) => isoDay(date);
+    switch (preset) {
+        case 'today':
+            return { from: day(new Date(Date.UTC(y, m, d))), to: day(new Date(Date.UTC(y, m, d))) };
+        case 'yesterday': {
+            const yest = new Date(Date.UTC(y, m, d - 1));
+            return { from: day(yest), to: day(yest) };
+        }
+        case '7d':
+            return { from: day(new Date(Date.UTC(y, m, d - 6))), to: day(new Date(Date.UTC(y, m, d))) };
+        case '30d':
+            return { from: day(new Date(Date.UTC(y, m, d - 29))), to: day(new Date(Date.UTC(y, m, d))) };
+        case 'lastMonth':
+            return { from: day(new Date(Date.UTC(y, m - 1, 1))), to: day(new Date(Date.UTC(y, m, 0))) };
+        case 'thisMonth':
+        default:
+            return { from: day(new Date(Date.UTC(y, m, 1))), to: day(new Date(Date.UTC(y, m, d))) };
+    }
 };
+
+const PRESETS: { id: string; label: string }[] = [
+    { id: 'today', label: 'Today' },
+    { id: 'yesterday', label: 'Yesterday' },
+    { id: '7d', label: 'Last 7 days' },
+    { id: '30d', label: 'Last 30 days' },
+    { id: 'thisMonth', label: 'This month' },
+    { id: 'lastMonth', label: 'Last month' },
+    { id: 'custom', label: 'Custom range' },
+];
+
+/** How the markup is divided. The page shows both halves, not just one. */
+const SPLIT = [
+    { pct: 60, label: '60%' },
+    { pct: 40, label: '40%' },
+];
 
 /* The rate is read once a page load from a free public endpoint. If it cannot
    be reached the shilling figures are simply not drawn, rather than drawn at a
@@ -97,14 +113,23 @@ const labelFor = (site: string) => {
 const AdminMarkupOverview = () => {
     const { adminLoginid } = useAdmin();
     const usdToKes = useUsdToKes();
-    const [rangeKey, setRangeKey] = useState('mtd');
-    const [range, setRange] = useState(RANGES.mtd.get());
+    const [preset, setPreset] = useState('thisMonth');
+    const [range, setRange] = useState(() => getPresetRange('thisMonth'));
     const [sites, setSites] = useState<MarkupSite[]>([]);
     const [total, setTotal] = useState<MarkupTotal>(ZERO);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => setRange(RANGES[rangeKey].get()), [rangeKey]);
+    /* A preset sets both dates; editing either date makes the range custom,
+       so the control never claims to be showing a month it is not. */
+    const choosePreset = (id: string) => {
+        setPreset(id);
+        if (id !== 'custom') setRange(getPresetRange(id));
+    };
+    const setDay = (which: 'from' | 'to', value: string) => {
+        setPreset('custom');
+        setRange(r => ({ ...r, [which]: value }));
+    };
 
     const load = useCallback(async () => {
         if (!adminLoginid) return;
@@ -145,21 +170,41 @@ const AdminMarkupOverview = () => {
                         {usdToKes && <span className='ml-2'>· 1 USD = {usdToKes.toFixed(2)} KES</span>}
                     </p>
                 </div>
-                <div className='flex items-center gap-2'>
-                    {Object.entries(RANGES).map(([key, r]) => (
-                        <button
-                            key={key}
-                            type='button'
-                            onClick={() => setRangeKey(key)}
-                            className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                                rangeKey === key
-                                    ? 'bg-cyan-600 text-white'
-                                    : 'border border-line bg-ink-800 text-slate-300 hover:text-white'
-                            }`}
+                <div className='flex flex-wrap items-end gap-2'>
+                    <label className='block'>
+                        <span className='mb-1 block text-[11px] font-semibold text-slate-500'>Range</span>
+                        <select
+                            value={preset}
+                            onChange={e => choosePreset(e.target.value)}
+                            className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs font-semibold text-white focus:border-cyan-500 focus:outline-none'
                         >
-                            {r.label}
-                        </button>
-                    ))}
+                            {PRESETS.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className='block'>
+                        <span className='mb-1 block text-[11px] font-semibold text-slate-500'>From</span>
+                        <input
+                            type='date'
+                            value={range.from}
+                            max={range.to}
+                            onChange={e => setDay('from', e.target.value)}
+                            className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none'
+                        />
+                    </label>
+                    <label className='block'>
+                        <span className='mb-1 block text-[11px] font-semibold text-slate-500'>To</span>
+                        <input
+                            type='date'
+                            value={range.to}
+                            min={range.from}
+                            onChange={e => setDay('to', e.target.value)}
+                            className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none'
+                        />
+                    </label>
                     <button
                         type='button'
                         onClick={() => void load()}
@@ -188,15 +233,39 @@ const AdminMarkupOverview = () => {
                     {/* The total is the page. Everything else gives it scale,
                         so everything else is quieter. */}
                     <div className='card'>
-                        <p className='text-[11px] uppercase tracking-wider text-slate-500'>Total markup</p>
-                        <p className='mt-1 text-4xl font-extrabold text-cyan-300'>
-                            {fmtUSD(total.app_markup_usd)}
-                        </p>
-                        {usdToKes && (
-                            <p className='mt-0.5 text-lg font-bold text-white'>
-                                {fmtKES(total.app_markup_usd * usdToKes)}
-                            </p>
-                        )}
+                        <div className='flex flex-wrap items-start justify-between gap-x-10 gap-y-5'>
+                            <div>
+                                <p className='text-[11px] uppercase tracking-wider text-slate-500'>Total markup</p>
+                                <p className='mt-1 text-4xl font-extrabold text-cyan-300'>
+                                    {fmtUSD(total.app_markup_usd)}
+                                </p>
+                                {usdToKes && (
+                                    <p className='mt-0.5 text-lg font-bold text-white'>
+                                        {fmtKES(total.app_markup_usd * usdToKes)}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Both halves, beside the figure they come out of,
+                                so the sum is checkable at a glance. */}
+                            <div className='flex gap-8'>
+                                {SPLIT.map(({ pct, label }) => (
+                                    <div key={pct}>
+                                        <p className='text-[11px] uppercase tracking-wider text-slate-500'>
+                                            {label}
+                                        </p>
+                                        <p className='mt-1 text-2xl font-extrabold text-white'>
+                                            {fmtUSD((total.app_markup_usd * pct) / 100)}
+                                        </p>
+                                        {usdToKes && (
+                                            <p className='mt-0.5 text-sm font-semibold text-slate-400'>
+                                                {fmtKES((total.app_markup_usd * usdToKes * pct) / 100)}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <div className='mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-line pt-3 text-xs'>
                             <span className='text-slate-500'>
                                 Volume <span className='ml-1 font-bold text-slate-300'>{fmtUSD(total.volume_usd)}</span>
