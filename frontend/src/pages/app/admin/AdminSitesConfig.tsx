@@ -33,6 +33,12 @@ const valueOf = (row: CredentialSite | undefined, key: string): CredentialValue 
     return v && typeof v === 'object' ? (v as CredentialValue) : null;
 };
 
+/* A row that already holds something is being changed, not filled in, and the
+   button says which. The confirmation keeps the same word, so the thing you
+   pressed and the thing that happened are called the same. */
+const isFilled = (row: CredentialSite, fields: CredentialField[]) =>
+    fields.some(f => valueOf(row, f.key)?.set);
+
 const nameOf = (row: CredentialSite) => {
     const label = valueOf(row, 'label');
     return (label?.value as string) || row.site;
@@ -75,6 +81,7 @@ const AdminSitesConfig = () => {
     }, [load]);
 
     const row = useMemo(() => sites.find(s => s.site === active), [sites, active]);
+    const filled = !!row && isFilled(row, fields);
 
     /* Switching site throws the draft away rather than carrying half a token
        from one site onto another. */
@@ -278,7 +285,11 @@ const AdminSitesConfig = () => {
                                     ) : saved ? (
                                         <Check size={15} />
                                     ) : null}
-                                    {saved ? 'Saved' : `Save ${nameOf(row)}`}
+                                    {saved
+                                        ? filled
+                                            ? 'Updated'
+                                            : 'Saved'
+                                        : `${filled ? 'Update' : 'Save'} ${nameOf(row)}`}
                                 </button>
                                 <button
                                     type='button'
