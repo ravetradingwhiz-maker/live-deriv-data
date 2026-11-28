@@ -81,7 +81,7 @@ const StatCard = ({
             ) : (
                 <>
                     <div className='mt-3 flex items-end justify-between gap-3'>
-                        <p className={`font-mono text-2xl font-bold leading-none sm:text-3xl ${valueClass}`}>
+                        <p className={`app-figure font-mono font-bold leading-none ${valueClass}`}>
                             {value}
                         </p>
 

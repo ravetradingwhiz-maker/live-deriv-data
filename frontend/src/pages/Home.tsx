@@ -153,18 +153,18 @@ const Home = () => {
 
                 <div className='container-page relative grid gap-12 pb-28 pt-8 sm:py-20 sm:pb-32 lg:grid-cols-2 lg:items-center lg:py-28 lg:pb-36'>
                     <div>
-                        <p className='festive-only font-christmas hero-rise mb-1 text-3xl leading-none text-[rgb(var(--festive-snow))] sm:text-4xl lg:text-5xl'>
+                        <p className='festive-only festive-wordmark font-christmas hero-rise mb-1 text-3xl leading-none sm:text-4xl lg:text-5xl'>
                             Merry Christmas
                         </p>
-                        <h1 className='hero-rise text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl'>
+                        <h1 className='hero-rise hero-headline font-extrabold leading-tight text-white'>
                             Trade Deriv options on <span className='text-cyan-400'>autopilot</span>
                         </h1>
-                        <p className='hero-rise mt-5 max-w-xl text-lg text-slate-400' style={{ animationDelay: '90ms' }}>
+                        <p className='hero-rise mt-5 max-w-xl text-[clamp(0.875rem,4vw,1.125rem)] text-slate-400' style={{ animationDelay: '90ms' }}>
                             Build, run, and monitor automated options strategies with live market data and a
                             secure Deriv login. No manual ticking required.
                         </p>
                         <div className='hero-rise mt-8 flex flex-wrap gap-3' style={{ animationDelay: '180ms' }}>
-                            <button className='btn-primary px-7 py-3 text-base' onClick={primaryCta}>
+                            <button className='btn-primary hero-cta fit-line' onClick={primaryCta}>
                                 {isAuthenticated ? (
                                     'Open dashboard'
                                 ) : (
@@ -180,7 +180,7 @@ const Home = () => {
                                 href='https://t.me/livederivdataanalysis_VIP'
                                 target='_blank'
                                 rel='noopener noreferrer'
-                                className='btn-ghost btn-ring px-7 py-3 text-base'
+                                className='btn-ghost btn-ring hero-cta fit-line'
                             >
                                 Join Community
                                 <ArrowRight size={20} />
@@ -190,7 +190,7 @@ const Home = () => {
                         {!isAuthenticated && (
                             <button
                                 onClick={signup}
-                                className='hero-rise mt-5 inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-800 px-5 py-2.5 text-sm text-slate-300 transition-colors hover:border-cyan-600 hover:text-white'
+                                className='hero-rise hero-note fit-line mt-5 inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-800 text-slate-300 transition-colors hover:border-cyan-600 hover:text-white'
                             >
                                 Don&apos;t have a Deriv account?
                                 <span className='font-bold text-cyan-300'>Register here</span>
@@ -206,7 +206,7 @@ const Home = () => {
 
                     {/* Nexora AI card — cyan glow, over a candlestick field */}
                     <div
-                        className='hero-rise relative overflow-hidden rounded-3xl border border-cyan-700 bg-ink-800 p-7 shadow-2xl shadow-cyan-900/30 ring-1 ring-cyan-500/20 [&>*:not(svg)]:relative'
+                        className='hero-rise relative overflow-hidden rounded-3xl border border-cyan-700 bg-ink-800 p-5 shadow-2xl sm:p-7 shadow-cyan-900/30 ring-1 ring-cyan-500/20 [&>*:not(svg)]:relative'
                         style={{ animationDelay: '260ms' }}
                     >
                         <CandleBackdrop />
@@ -221,7 +221,7 @@ const Home = () => {
                                     <p className='text-xs text-slate-400'>Your autonomous trading copilot</p>
                                 </div>
                             </div>
-                            <span className='inline-flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-ink-900 px-2.5 py-1 text-xs font-bold'>
+                            <span className='fit-line inline-flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-ink-900 px-2.5 py-1 text-[clamp(0.6rem,2.6vw,0.75rem)] font-bold'>
                         
                                 <span className='text-nexora'>AI Powered</span>
                             </span>
@@ -262,7 +262,7 @@ const Home = () => {
                         </div>
 
                         <button
-                            className='btn-nexora mt-6 w-full text-base'
+                            className='btn-nexora hero-cta fit-line mt-6 w-full'
                             onClick={() => {
                                 if (isAuthenticated) {
                                     navigate('/app/trade-pilot-free');

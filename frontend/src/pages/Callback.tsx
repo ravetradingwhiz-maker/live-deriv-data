@@ -84,7 +84,18 @@ const Callback = () => {
     }, [isProcessing, isValid, params.code, callbackError, errorReason, navigate, refreshAuthState]);
 
     return (
-        <div className='flex min-h-screen flex-col items-center justify-center bg-ink-900 px-6 text-center'>
+        <div className='relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ink-900 px-6 text-center'>
+            {/* The wait is the first thing anyone sees on the way in, so it
+                gets the season too — snow behind the loader, frost at the
+                edge. Both respond to whichever flag is on, because this screen
+                sits between the public site and the app and belongs to
+                neither. */}
+            <div
+                aria-hidden='true'
+                className='festive-any-only festive-snow pointer-events-none absolute inset-0'
+            />
+            <div aria-hidden='true' className='festive-any-only festive-frost' />
+
             {status === 'processing' ? (
                 <>
                     <Atom color={['#32cd32', '#327fcd', '#cd32cd', '#cd8032']} />

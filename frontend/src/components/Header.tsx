@@ -30,7 +30,7 @@ const Header = () => {
         <>
             <header className='sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-4'>
                 <div className='container-page'>
-                    <div className='festive-header relative flex h-16 items-center justify-between rounded-full border border-line bg-ink-800/85 pl-4 pr-3 shadow-lg shadow-black/20 backdrop-blur sm:pl-6'>
+                    <div className='festive-header relative flex h-14 items-center justify-between rounded-full border border-line bg-ink-800/85 pl-3 pr-2 shadow-lg shadow-black/20 backdrop-blur sm:h-16 sm:pl-6 sm:pr-3'>
                         {/* Strung from the bar itself, so it hangs from the
                             thing it is tied to rather than floating near it. */}
                         <FestiveLights />
@@ -76,7 +76,7 @@ const Header = () => {
                         <div className='flex items-center gap-1 md:hidden'>
                             <ThemeToggle />
                             <button
-                                className='inline-flex h-10 w-10 items-center justify-center text-slate-200'
+                                className='festive-on-red inline-flex h-10 w-10 items-center justify-center text-slate-200'
                                 onClick={() => setMenuOpen(o => !o)}
                                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                             >

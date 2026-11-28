@@ -102,8 +102,14 @@ const DashboardHero = ({ reward }: DashboardHeroProps) => {
                     {/* 22px on a phone. Poppins is wide: measured on the real
                         page, "Welcome Back," still broke in two at 24px in a
                         column this narrow, taking the Edit pill down with it. */}
-                    <h1 className='text-[22px] font-extrabold leading-tight text-white sm:text-3xl md:text-4xl'>
-                        Welcome Back,
+                    {/* Two greetings, one of which CSS hides. Swapping them in
+                        JavaScript would mean the wrong one in the first paint
+                        on the one day of the year it matters. */}
+                    <h1 className='app-title font-extrabold leading-tight text-white'>
+                        <span className='xmas-day-hide'>Welcome Back,</span>
+                        <span className='xmas-day-only font-christmas leading-none'>
+                            Merry Christmas,
+                        </span>
                     </h1>
 
                     {displayName && (

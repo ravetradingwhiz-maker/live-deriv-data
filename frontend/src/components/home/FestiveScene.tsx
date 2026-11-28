@@ -57,7 +57,7 @@ const FestiveScene = () => {
                 there is nothing for him to stay out of the way of. From `sm` up the hero is two columns and the gap beside
                 the headline opens, which is where he belongs — big enough to
                 be scenery and set back far enough to stay behind the words. */}
-            <div className='absolute -right-4 top-[19%] h-56 w-56 sm:left-[28%] sm:opacity-40 sm:right-auto sm:top-8 sm:h-96 sm:w-96 lg:left-[26%] lg:h-[30rem] lg:w-[30rem]'>
+            <div className='absolute -right-4 top-[19%] h-56 w-56 max-[400px]:-right-3 max-[400px]:h-40 max-[400px]:w-40 sm:left-[28%] sm:opacity-40 sm:right-auto sm:top-8 sm:h-96 sm:w-96 lg:left-[26%] lg:h-[30rem] lg:w-[30rem]'>
                 <DotLottieReact
                     src='/festive/santa.lottie'
                     loop

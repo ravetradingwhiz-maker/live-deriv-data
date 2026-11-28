@@ -68,7 +68,7 @@ const AdminMenu = () => {
                 type='button'
                 aria-label={open ? 'Close admin menu' : 'Open admin menu'}
                 onClick={() => setOpen(o => !o)}
-                className='inline-flex h-10 w-10 items-center justify-center text-violet-300 transition-colors hover:text-violet-200'
+                className='festive-on-red inline-flex h-10 w-10 items-center justify-center text-violet-300 transition-colors hover:text-violet-200'
             >
                 {open ? <X size={22} /> : <Menu size={22} />}
             </button>

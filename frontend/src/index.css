@@ -401,23 +401,34 @@
 }
 
 /* Snow: three drifting layers of dots rather than a few dozen elements, so
-   the whole effect is three composited nodes and no per-flake layout. */
+   the whole effect is three gradients and no per-flake layout.
+
+   The drift is a transform on a pseudo-element twice the height of its box,
+   not a moving `background-position`. Position repaints the entire layer on
+   every frame, which is affordable inside the home hero and visibly is not
+   across a full viewport — the loading screen and the app shell both cover
+   one. A transform is composited instead, so it costs the same whatever the
+   area, and looks identical everywhere. */
 @keyframes festive-snowfall {
     from {
-        background-position:
-            0 -200px,
-            0 -200px,
-            0 -200px;
+        transform: translate3d(0, 0, 0);
     }
     to {
-        background-position:
-            140px 900px,
-            -90px 900px,
-            60px 900px;
+        transform: translate3d(0, 50%, 0);
     }
 }
 
 .festive-snow {
+    overflow: hidden;
+}
+
+.festive-snow::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -100%;
+    bottom: 0;
     background-image:
         radial-gradient(2.5px 2.5px at 40px 60px, rgb(var(--festive-snow) / 0.85), transparent),
         radial-gradient(2px 2px at 160px 120px, rgb(var(--festive-snow) / 0.7), transparent),
@@ -426,7 +437,8 @@
         220px 220px,
         260px 260px,
         180px 180px;
-    animation: festive-snowfall 14s linear infinite;
+    will-change: transform;
+    animation: festive-snowfall 16s linear infinite;
 }
 
 /* The lights sway as one strand, which is what a strung wire does. */
@@ -462,7 +474,7 @@
 /* Decoration is the first thing to drop. The scene stays; only the motion
    stops, so nothing disappears for anyone who asked for less movement. */
 @media (prefers-reduced-motion: reduce) {
-    .festive-snow,
+    .festive-snow::before,
     .festive-garland,
     .festive-bulb {
         animation: none;
@@ -495,4 +507,104 @@
 :root.festive-app .festive-app-header {
     background-color: rgb(var(--festive-red) / 0.92);
     border-color: rgb(var(--festive-red-lift) / 0.9);
+}
+
+/* ── Christmas Day ────────────────────────────────────────────────────────
+   One day, decided before paint by the script in index.html. Both greetings
+   are rendered and CSS picks one, so the right words are in the first frame
+   rather than a second behind it. */
+.xmas-day-only {
+    display: none;
+}
+:root.xmas-day .xmas-day-only {
+    display: inline;
+}
+:root.xmas-day .xmas-day-hide {
+    display: none;
+}
+
+/* ── Readable in either theme ─────────────────────────────────────────────
+   The wordmark is snow on a dark page and near-black on a light one. It was
+   snow in both, which on white is nothing at all. */
+.festive-wordmark {
+    color: rgb(var(--festive-snow));
+}
+:root.light .festive-wordmark {
+    color: rgb(17 24 39);
+}
+
+/* The hamburger and the theme toggle sit ON the crimson bar, so in light
+   mode they have to stop being dark-on-light and become light-on-red. */
+:root.light.festive .festive-on-red,
+:root.light.festive-app .festive-on-red {
+    color: rgb(var(--festive-snow));
+}
+
+/* ── The hero headline, sized to the viewport rather than to breakpoints ──
+   It was 36px from 0 to 639px wide, which is two different problems at the
+   two ends of that range: at 440px "Trade Deriv options on" fits on one
+   line, at 360px it does not, so the same headline sets in two lines on an
+   iPhone and three on a Samsung and the hero reads as broken on one of them.
+
+   A breakpoint would only move the cliff. Scaling with the viewport removes
+   it: every width gets the size that fits it, and the clamp's ceiling keeps
+   the large end exactly where the design had it. */
+.hero-headline {
+    font-size: clamp(1.75rem, 7.8vw, 3.75rem);
+}
+
+/* The buttons under it, scaled on the same curve. They were a fixed 16px
+   with 28px of side padding at every width below `sm`, which on a 360px
+   phone is a button nearly as wide as the screen sitting beside Santa. The
+   ceilings put both back exactly where the design had them from about
+   420px up, so only the narrow end changes. */
+.hero-cta {
+    padding-inline: clamp(1.1rem, 5vw, 1.75rem);
+    padding-block: clamp(0.6rem, 2.6vw, 0.75rem);
+    font-size: clamp(0.875rem, 3.9vw, 1rem);
+}
+
+/* The "Don't have a Deriv account?" line under them, on the same curve.
+   It is one long string on one line, so at a fixed 14px it was the widest
+   thing in the hero on the narrowest phone. */
+.hero-note {
+    padding-inline: clamp(0.85rem, 4vw, 1.25rem);
+    padding-block: clamp(0.5rem, 2.2vw, 0.625rem);
+    font-size: clamp(0.75rem, 3.4vw, 0.875rem);
+}
+
+/* A label that shrinks rather than breaks.
+   These are short, deliberate strings — "Access Nexora AI For Free" — and
+   splitting one across three lines on a narrow phone reads as a mistake,
+   not as a wrap. They keep one line; the clamps above are what make that
+   fit, by taking the size down instead of taking the words down a line. */
+.fit-line {
+    white-space: nowrap;
+}
+
+/* ── Frost ───────────────────────────────────────────────────────────────
+   A cold edge rather than a border: light gathering at the top of the
+   viewport the way it gathers on a window, fading out before it reaches
+   anything anyone is reading. Fixed, so it stays put while the page moves
+   under it, and `pointer-events: none` so it never catches a tap. */
+.festive-frost {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+    background:
+        linear-gradient(to bottom, rgb(var(--festive-snow) / 0.1), transparent 22%),
+        radial-gradient(120% 60% at 50% -10%, rgb(var(--festive-snow) / 0.07), transparent 60%);
+}
+
+/* ── In-app type, scaled to the screen ───────────────────────────────────
+   The dashboard was built at desktop sizes with one mobile step below `sm`,
+   which on a 360px phone leaves headings and figures reading a size too
+   large for the column they sit in. The ceilings keep the desktop exactly
+   as designed; only the narrow end moves. */
+.app-title {
+    font-size: clamp(1.15rem, 5.4vw, 2.25rem);
+}
+.app-figure {
+    font-size: clamp(1.25rem, 5.6vw, 1.875rem);
 }

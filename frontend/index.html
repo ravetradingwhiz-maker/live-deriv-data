@@ -22,6 +22,17 @@
                     if (localStorage.getItem('nx_festive') === '1') {
                         document.documentElement.classList.add('festive');
                     }
+                    if (localStorage.getItem('nx_festive_app') === '1') {
+                        document.documentElement.classList.add('festive-app');
+                    }
+
+                    /* Christmas Day itself, in the reader's own timezone.
+                       Decided here so the greeting is right in the first
+                       paint rather than swapping a second later. */
+                    var now = new Date();
+                    if (now.getMonth() === 11 && now.getDate() === 25) {
+                        document.documentElement.classList.add('xmas-day');
+                    }
                 } catch (e) {}
             })();
         </script>

@@ -23,7 +23,7 @@ const AppLayout = () => {
         <BotRunProvider>
             <div className='flex min-h-screen flex-col bg-ink-900'>
                 <header className='festive-app-header sticky top-0 z-40 border-b border-line bg-ink-900/90 backdrop-blur'>
-                    <div className='container-page relative flex h-16 items-center gap-4'>
+                    <div className='container-page relative flex h-14 items-center gap-3 sm:h-16 sm:gap-4'>
                         <div className='flex shrink-0 items-center gap-2.5'>
                             <AdminMenu />
                             <BrandLogo markOnly />
@@ -42,6 +42,16 @@ const AppLayout = () => {
                 </header>
 
                 <TabNav />
+
+                {/* December, over the whole app rather than one card:
+                    snow drifting behind everything and frost gathering at the
+                    top edge. Both are decoration, so they are hidden from the
+                    reader and cannot catch a pointer. */}
+                <div
+                    aria-hidden='true'
+                    className='festive-app-only festive-snow pointer-events-none fixed inset-0 z-20'
+                />
+                <div aria-hidden='true' className='festive-app-only festive-frost' />
 
                 <main className='container-page py-8 pb-24 md:pb-8'>
                     <Outlet />

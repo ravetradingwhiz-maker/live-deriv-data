@@ -43,6 +43,7 @@ export const useAppearance = (): void => {
                    without it every visit starts plain and then jumps. */
                 try {
                     localStorage.setItem('nx_festive', flags.christmas ? '1' : '0');
+                    localStorage.setItem('nx_festive_app', flags.christmasApp ? '1' : '0');
                 } catch {
                     /* private mode, blocked storage — the page still works,
                        it just flashes once per visit */

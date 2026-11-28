@@ -11,7 +11,7 @@ const fmt = (value: number, currency?: string): string =>
     }`.trim();
 
 const Avatar = ({ isDemo, currency }: { isDemo: boolean; currency?: string }) => (
-    <span className='flex h-9 w-9 shrink-0 items-center justify-center'>
+    <span className='flex h-7 w-7 shrink-0 items-center justify-center sm:h-9 sm:w-9'>
         <CurrencyIcon currency={currency} isVirtual={isDemo} iconSize='sm' />
     </span>
 );
@@ -64,7 +64,7 @@ const AccountSwitcher = () => {
         <div className='relative' ref={ref}>
             <button
                 onClick={() => setOpen(o => !o)}
-                className='flex items-center gap-2.5 rounded-full border border-line bg-ink-800 py-1.5 pl-1.5 pr-3 transition-colors hover:border-cyan-600'
+                className='flex items-center gap-1.5 rounded-full border border-line bg-ink-800 py-1 pl-1 pr-2 transition-colors hover:border-cyan-600 sm:gap-2.5 sm:py-1.5 sm:pl-1.5 sm:pr-3'
                 aria-haspopup='menu'
                 aria-expanded={open}
             >
@@ -75,11 +75,11 @@ const AccountSwitcher = () => {
                         // so the real balance never flashes before the admin balance.
                         <span className='my-0.5 block h-4 w-24 animate-pulse rounded bg-ink-600' aria-label='Loading balance' />
                     ) : (
-                        <span className='block whitespace-nowrap font-mono text-sm font-semibold text-emerald-400'>
+                        <span className='block whitespace-nowrap font-mono text-xs font-semibold text-emerald-400 sm:text-sm'>
                             {fmt(activeBalance, activeCurrency)}
                         </span>
                     )}
-                    <span className='block whitespace-nowrap text-[11px] text-slate-400'>
+                    <span className='block whitespace-nowrap text-[10px] text-slate-400 sm:text-[11px]'>
                         {active.is_demo ? 'Demo account' : 'Real account'}
                     </span>
                 </span>
