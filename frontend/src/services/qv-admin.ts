@@ -1,5 +1,5 @@
 /**
- * The vault's admin data, read from here.
+ * The vault's admin data, read and written from here.
  *
  * Markup across every site, the access tokens and the site credentials all
  * live in quantum-vault's database, and this app has no copy of any of them.
@@ -10,8 +10,8 @@
  * That loginid is the credential. The vault resolves it against its admin
  * allow-list — the same check that turns admin mode on in this app — so
  * nobody signs in twice. It holds only because writing that allow-list is
- * behind a shared secret on the vault; if that ever stops being true, this
- * stops being safe.
+ * behind a shared secret on the vault; if that stops being true, this stops
+ * being safe.
  */
 const QV = 'https://api.quantumsyn.pro/api';
 
@@ -32,9 +32,7 @@ const ask = async <T>(path: string, loginid: string, init?: RequestInit, timeout
             headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
         });
         const body = await res.json().catch(() => null);
-        if (!res.ok) {
-            throw new Error(body?.message || `The vault answered ${res.status}.`);
-        }
+        if (!res.ok) throw new Error(body?.message || `The vault answered ${res.status}.`);
         return body as T;
     } finally {
         clearTimeout(timer);
@@ -70,27 +68,44 @@ export interface MarkupAll {
     total: MarkupTotal;
 }
 
-/** Every site's markup and the grand total, live-deriv's own included. */
 export const fetchMarkupAll = (loginid: string, from: string, to: string): Promise<MarkupAll> =>
     ask<MarkupAll>(`/markup-statistics/v4/all?date_from=${from}&date_to=${to}`, loginid);
 
 // ── Access tokens ────────────────────────────────────────────────────────────
 
+export type TokenDuration = '1day' | '1week' | '1month' | 'lifetime';
+export const TOKEN_DURATIONS: { id: TokenDuration; label: string }[] = [
+    { id: '1day', label: '1 day' },
+    { id: '1week', label: '1 week' },
+    { id: '1month', label: '1 month' },
+    { id: 'lifetime', label: 'Lifetime' },
+];
+
 export interface AccessToken {
     _id: string;
-    token?: string;
-    label?: string;
-    name?: string;
-    site?: string;
-    isActive?: boolean;
-    isUsed?: boolean;
-    usedAt?: string | null;
-    expiresAt?: string | null;
-    createdAt?: string;
+    token: string;
+    clientName: string;
+    duration: TokenDuration;
+    description?: string;
+    /** The vault works this out: active, used, expired or deactivated. */
+    status: 'active' | 'used' | 'expired' | 'deactivated';
+    isActive: boolean;
+    isUsed: boolean;
+    usedAt: string | null;
+    expiresAt: string | null;
+    validationCount?: number;
+    lastValidatedAt?: string | null;
+    createdAt: string;
 }
 
-export const fetchTokens = (loginid: string): Promise<{ tokens?: AccessToken[]; data?: AccessToken[] }> =>
-    ask(`/access-tokens`, loginid);
+export const fetchTokens = (loginid: string): Promise<{ data: AccessToken[]; total: number }> =>
+    ask(`/access-tokens?includeExpired=true`, loginid);
+
+export const createToken = (
+    loginid: string,
+    body: { clientName: string; duration: TokenDuration; description?: string }
+): Promise<{ data: AccessToken }> =>
+    ask(`/access-tokens/create`, loginid, { method: 'POST', body: JSON.stringify(body) });
 
 export const deactivateToken = (loginid: string, id: string): Promise<unknown> =>
     ask(`/access-tokens/${encodeURIComponent(id)}/deactivate`, loginid, { method: 'PATCH' });
@@ -106,21 +121,20 @@ export interface CredentialField {
     label: string;
     /** Never sent back in full — `value` is a masked hint, not the secret. */
     secret: boolean;
-    /** Whether emptying it is allowed. The model requires some of them. */
     clear: boolean;
 }
 
-/** One field as it stands on one site. */
 export interface CredentialValue {
     set: boolean;
-    value: string | number | null;
+    value: string | null;
     secret: boolean;
 }
 
 export interface CredentialSite {
     site: string;
     exists: boolean;
-    [field: string]: CredentialValue | string | boolean;
+    updatedAt?: string;
+    [field: string]: CredentialValue | string | boolean | undefined;
 }
 
 export interface CredentialList {
@@ -131,13 +145,17 @@ export interface CredentialList {
 export const fetchCredentials = (loginid: string): Promise<CredentialList> =>
     ask<CredentialList>(`/site-credentials/all`, loginid);
 
+/** Adds a site, or replaces the fields named on one that exists. */
+export const addSite = (loginid: string, body: Record<string, string>): Promise<unknown> =>
+    ask(`/site-credentials`, loginid, { method: 'POST', body: JSON.stringify(body) });
+
 /** Only the fields that changed are sent; anything omitted keeps its value. */
 export const saveCredentialFields = (
     loginid: string,
     site: string,
-    fields: Record<string, string | number>
+    fields: Record<string, string>
 ): Promise<unknown> =>
-    ask(`/site-credentials/fields`, loginid, {
-        method: 'PATCH',
-        body: JSON.stringify({ site, ...fields }),
-    });
+    ask(`/site-credentials/fields`, loginid, { method: 'PATCH', body: JSON.stringify({ site, ...fields }) });
+
+export const deleteSite = (loginid: string, site: string): Promise<unknown> =>
+    ask(`/site-credentials`, loginid, { method: 'DELETE', body: JSON.stringify({ site }) });

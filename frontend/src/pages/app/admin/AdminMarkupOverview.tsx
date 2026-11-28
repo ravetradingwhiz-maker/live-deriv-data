@@ -7,24 +7,14 @@ import { fetchMarkupAll, type MarkupSite, type MarkupTotal } from '@/services/qv
  * Every site's markup, and what they come to together.
  *
  * The Markup page below this one answers "how is this app doing", which is the
- * question you ask second. This one answers "how are we doing" — across the
- * five bots and this app, which earn through the same Deriv account and had
- * never been added up anywhere.
+ * question asked second. This one answers "how are we doing" — across every
+ * site earning through the same Deriv account, which had never been added up
+ * anywhere.
  *
- * The figures come from quantum-vault, which holds each site's markup token.
- * This app's own row arrives in the same sweep rather than being fetched here
- * and added on, so nothing can be counted twice.
+ * Deriv reports in dollars; the money is spent in shillings. Both are shown,
+ * with the rate that converted them, because a figure you have to convert in
+ * your head is a figure you misread.
  */
-
-const SITE_LABELS: Record<string, string> = {
-    quantumsyn: 'QuantumSyn',
-    digitanalyzer: 'Digit Analyzer',
-    '360tradingfx': '360TradingFX',
-    binarytool: 'BinaryTool',
-    dominator: 'Dominator',
-    livederiv: 'Live Deriv',
-};
-const labelFor = (site: string) => SITE_LABELS[site] ?? site;
 
 const ZERO: MarkupTotal = {
     app_markup_usd: 0,
@@ -36,7 +26,9 @@ const ZERO: MarkupTotal = {
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 const fmtUSD = (n: number) => `$${(Number(n) || 0).toFixed(2)}`;
+const fmtKES = (n: number) => `KES ${(Number(n) || 0).toLocaleString('en-KE', { maximumFractionDigits: 0 })}`;
 const fmtNum = (n: number) => (Number(n) || 0).toLocaleString('en-US');
+const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const RANGES: Record<string, { label: string; get: () => { from: string; to: string } }> = {
     mtd: {
@@ -67,20 +59,44 @@ const RANGES: Record<string, { label: string; get: () => { from: string; to: str
     },
 };
 
-const Card = ({ label, value, accent }: { label: string; value: string; accent?: string }) => (
-    <div className='card'>
-        <p className='text-[11px] uppercase tracking-wider text-slate-500'>{label}</p>
-        <p className={`mt-1 text-2xl font-extrabold ${accent ?? 'text-white'}`}>{value}</p>
-    </div>
-);
+/* The rate is read once a page load from a free public endpoint. If it cannot
+   be reached the shilling figures are simply not drawn, rather than drawn at a
+   rate that is a guess. */
+const useUsdToKes = (): number | null => {
+    const [rate, setRate] = useState<number | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        fetch('https://open.er-api.com/v6/latest/USD')
+            .then(r => r.json())
+            .then(d => {
+                if (!cancelled && d?.rates?.KES) setRate(Number(d.rates.KES));
+            })
+            .catch(() => {
+                /* no rate, no shillings — the dollars still read correctly */
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+    return rate;
+};
 
-/* A site the vault could not read says so by name. A total that is short for
-   a reason you cannot see is worse than one that is visibly incomplete. */
-const noteFor = (error: string) =>
-    error === 'not_configured' ? 'No markup token set — add it on Sites Config' : `Could not be read (${error})`;
+/** A site's own name for itself, falling back to its key. */
+const labelFor = (site: string) => {
+    const known: Record<string, string> = {
+        quantumsyn: 'QuantumSyn',
+        digitanalyzer: 'Digit Analyzer',
+        '360tradingfx': '360TradingFX',
+        binarytool: 'BinaryTool',
+        dominator: 'Dominator',
+        livederiv: 'Live Deriv',
+    };
+    return known[site] ?? titleCase(site);
+};
 
 const AdminMarkupOverview = () => {
     const { adminLoginid } = useAdmin();
+    const usdToKes = useUsdToKes();
     const [rangeKey, setRangeKey] = useState('mtd');
     const [range, setRange] = useState(RANGES.mtd.get());
     const [sites, setSites] = useState<MarkupSite[]>([]);
@@ -111,17 +127,22 @@ const AdminMarkupOverview = () => {
         void load();
     }, [load]);
 
-    const unreadable = sites.filter(s => s.error);
+    /* A site that earned nothing is noise in a list you read to see where the
+       money came from. It is counted and named below rather than silently
+       dropped — a list that quietly omits rows is how you stop trusting it. */
+    const earning = sites.filter(s => Number(s.app_markup_usd) > 0);
+    const silent = sites.filter(s => Number(s.app_markup_usd) <= 0);
 
     return (
         <div className='space-y-6'>
-            <div className='flex flex-wrap items-center justify-between gap-3'>
+            <div className='flex flex-wrap items-end justify-between gap-3'>
                 <div>
                     <h1 className='flex items-center gap-2 text-xl font-extrabold text-white'>
                         <Globe size={20} className='text-cyan-400' /> Markup Overview
                     </h1>
                     <p className='mt-0.5 text-xs text-slate-500'>
-                        Every site, {range.from} to {range.to}
+                        {range.from} to {range.to}
+                        {usdToKes && <span className='ml-2'>· 1 USD = {usdToKes.toFixed(2)} KES</span>}
                     </p>
                 </div>
                 <div className='flex items-center gap-2'>
@@ -164,73 +185,98 @@ const AdminMarkupOverview = () => {
                 </div>
             ) : (
                 <>
-                    <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
-                        <Card label='Total markup' value={fmtUSD(total.app_markup_usd)} accent='text-cyan-300' />
-                        <Card label='Volume' value={fmtUSD(total.volume_usd)} />
-                        <Card label='Payout' value={fmtUSD(total.payout_usd)} />
-                        <Card label='Contracts' value={fmtNum(total.contract_count)} />
+                    {/* The total is the page. Everything else gives it scale,
+                        so everything else is quieter. */}
+                    <div className='card'>
+                        <p className='text-[11px] uppercase tracking-wider text-slate-500'>Total markup</p>
+                        <p className='mt-1 text-4xl font-extrabold text-cyan-300'>
+                            {fmtUSD(total.app_markup_usd)}
+                        </p>
+                        {usdToKes && (
+                            <p className='mt-0.5 text-lg font-bold text-white'>
+                                {fmtKES(total.app_markup_usd * usdToKes)}
+                            </p>
+                        )}
+                        <div className='mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-line pt-3 text-xs'>
+                            <span className='text-slate-500'>
+                                Volume <span className='ml-1 font-bold text-slate-300'>{fmtUSD(total.volume_usd)}</span>
+                            </span>
+                            <span className='text-slate-500'>
+                                Payout <span className='ml-1 font-bold text-slate-300'>{fmtUSD(total.payout_usd)}</span>
+                            </span>
+                            <span className='text-slate-500'>
+                                Contracts{' '}
+                                <span className='ml-1 font-bold text-slate-300'>{fmtNum(total.contract_count)}</span>
+                            </span>
+                            <span className='text-slate-500'>
+                                Clients{' '}
+                                <span className='ml-1 font-bold text-slate-300'>{fmtNum(total.client_count)}</span>
+                            </span>
+                        </div>
                     </div>
 
-                    {unreadable.length > 0 && (
-                        <div className='rounded-xl border border-amber-500/40 bg-amber-500/10 p-4'>
-                            <p className='text-sm font-semibold text-amber-300'>
-                                {unreadable.length} of {sites.length} sites are missing from this total
-                            </p>
-                            <ul className='mt-2 space-y-1'>
-                                {unreadable.map(s => (
-                                    <li key={s.site} className='text-xs text-amber-200/80'>
-                                        <span className='font-semibold'>{labelFor(s.site)}</span> —{' '}
-                                        {noteFor(s.error ?? 'unknown')}
-                                    </li>
-                                ))}
-                            </ul>
+                    {earning.length === 0 ? (
+                        <div className='card text-center'>
+                            <p className='text-sm text-slate-400'>No site earned markup in this period.</p>
+                        </div>
+                    ) : (
+                        <div className='card overflow-hidden p-0'>
+                            <div className='overflow-x-auto'>
+                                <table className='w-full text-sm'>
+                                    <thead className='bg-ink-800/60 text-[11px] uppercase tracking-wider text-slate-500'>
+                                        <tr>
+                                            <th className='px-4 py-2.5 text-left font-semibold'>Site</th>
+                                            <th className='px-4 py-2.5 text-right font-semibold'>Markup</th>
+                                            {usdToKes && (
+                                                <th className='px-4 py-2.5 text-right font-semibold'>In KES</th>
+                                            )}
+                                            <th className='px-4 py-2.5 text-right font-semibold'>Volume</th>
+                                            <th className='px-4 py-2.5 text-right font-semibold'>Contracts</th>
+                                            <th className='px-4 py-2.5 text-right font-semibold'>Clients</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className='divide-y divide-line'>
+                                        {earning.map(s => (
+                                            <tr key={s.site} className='text-slate-200'>
+                                                <td className='px-4 py-3 font-semibold text-white'>
+                                                    {labelFor(s.site)}
+                                                </td>
+                                                <td className='px-4 py-3 text-right font-bold tabular-nums text-cyan-300'>
+                                                    {fmtUSD(s.app_markup_usd)}
+                                                </td>
+                                                {usdToKes && (
+                                                    <td className='px-4 py-3 text-right font-semibold tabular-nums'>
+                                                        {fmtKES(s.app_markup_usd * usdToKes)}
+                                                    </td>
+                                                )}
+                                                <td className='px-4 py-3 text-right tabular-nums'>
+                                                    {fmtUSD(s.volume_usd)}
+                                                </td>
+                                                <td className='px-4 py-3 text-right tabular-nums'>
+                                                    {fmtNum(s.contract_count)}
+                                                </td>
+                                                <td className='px-4 py-3 text-right tabular-nums'>
+                                                    {fmtNum(s.client_count)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 
-                    <div className='card overflow-hidden p-0'>
-                        <div className='border-b border-line px-4 py-3'>
-                            <h2 className='text-sm font-bold text-white'>By site</h2>
-                        </div>
-                        <div className='overflow-x-auto'>
-                            <table className='w-full text-sm'>
-                                <thead className='bg-ink-800/60 text-[11px] uppercase tracking-wider text-slate-500'>
-                                    <tr>
-                                        <th className='px-4 py-2.5 text-left font-semibold'>Site</th>
-                                        <th className='px-4 py-2.5 text-right font-semibold'>Markup</th>
-                                        <th className='px-4 py-2.5 text-right font-semibold'>Volume</th>
-                                        <th className='px-4 py-2.5 text-right font-semibold'>Payout</th>
-                                        <th className='px-4 py-2.5 text-right font-semibold'>Contracts</th>
-                                        <th className='px-4 py-2.5 text-right font-semibold'>Clients</th>
-                                    </tr>
-                                </thead>
-                                <tbody className='divide-y divide-line'>
-                                    {sites.map(s => (
-                                        <tr key={s.site} className={s.error ? 'text-slate-600' : 'text-slate-200'}>
-                                            <td className='px-4 py-3 font-semibold'>
-                                                {labelFor(s.site)}
-                                                {s.error && (
-                                                    <span className='ml-2 text-[11px]'>
-                                                        ({noteFor(s.error)})
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className='px-4 py-3 text-right font-bold tabular-nums text-white'>
-                                                {fmtUSD(s.app_markup_usd)}
-                                            </td>
-                                            <td className='px-4 py-3 text-right tabular-nums'>{fmtUSD(s.volume_usd)}</td>
-                                            <td className='px-4 py-3 text-right tabular-nums'>{fmtUSD(s.payout_usd)}</td>
-                                            <td className='px-4 py-3 text-right tabular-nums'>
-                                                {fmtNum(s.contract_count)}
-                                            </td>
-                                            <td className='px-4 py-3 text-right tabular-nums'>
-                                                {fmtNum(s.client_count)}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    {/* Named, not hidden: a site earning nothing because its
+                        token is missing looks exactly like one that simply had
+                        a quiet month, and only this line tells them apart. */}
+                    {silent.length > 0 && (
+                        <p className='text-xs text-slate-500'>
+                            Not listed, nothing earned:{' '}
+                            {silent
+                                .map(s => `${labelFor(s.site)}${s.error === 'not_configured' ? ' (no token)' : ''}`)
+                                .join(', ')}
+                        </p>
+                    )}
                 </>
             )}
         </div>
