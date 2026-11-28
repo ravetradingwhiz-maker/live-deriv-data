@@ -185,3 +185,18 @@ export const topUpPayHero = (body: { amount: number; phone: string }): Promise<{
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     }).then(json);
+
+/** How the app looks — flags the admin flips, read by every visitor. */
+export interface Appearance {
+    christmas: boolean;
+}
+
+export const getAdminAppearance = (): Promise<Appearance> =>
+    fetch(`${API_URL}/api/admin/settings`).then(json);
+
+export const setAdminAppearance = (body: Partial<Appearance>): Promise<Appearance> =>
+    fetch(`${API_URL}/api/admin/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(json);

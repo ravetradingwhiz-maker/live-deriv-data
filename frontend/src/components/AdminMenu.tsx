@@ -9,6 +9,7 @@ import {
     Menu,
     Printer,
     Settings2,
+    SlidersHorizontal,
     ShieldCheck,
     Smartphone,
     Tag,
@@ -41,6 +42,7 @@ export const ADMIN_PAGES: AdminPage[] = [
        set-up rather than day-to-day, so they sit at the end. */
     { to: '/app/admin/tokens', label: 'Tokens', icon: KeyRound, color: 'text-amber-400' },
     { to: '/app/admin/sites-config', label: 'Sites Config', icon: Settings2, color: 'text-violet-400' },
+    { to: '/app/admin/settings', label: 'Settings', icon: SlidersHorizontal, color: 'text-sky-400' },
 ];
 
 /**

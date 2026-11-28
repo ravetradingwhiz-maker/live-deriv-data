@@ -19,6 +19,8 @@ import AdminMarkup from '@/pages/app/admin/AdminMarkup';
 import AdminMarkupOverview from '@/pages/app/admin/AdminMarkupOverview';
 import AdminTokens from '@/pages/app/admin/AdminTokens';
 import AdminSitesConfig from '@/pages/app/admin/AdminSitesConfig';
+import AdminSettings from '@/pages/app/admin/AdminSettings';
+import { useAppearance } from '@/hooks/useAppearance';
 import AdminSubscriptions from '@/pages/app/admin/AdminSubscriptions';
 import AdminPayments from '@/pages/app/admin/AdminPayments';
 import AdminPricing from '@/pages/app/admin/AdminPricing';
@@ -63,6 +65,9 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
  */
 const AppBody = () => {
     const location = useLocation();
+    /* Paints whichever theme the admin has switched on, for every visitor —
+       signed in or not, and before any route decides what to render. */
+    useAppearance();
     if (isAuthRedirect(location.search) || location.pathname === '/callback') {
         return <Callback />;
     }
@@ -94,6 +99,7 @@ const AppBody = () => {
                 <Route path='admin/markup' element={<AdminRoute><AdminMarkup /></AdminRoute>} />
                 <Route path='admin/tokens' element={<AdminRoute><AdminTokens /></AdminRoute>} />
                 <Route path='admin/sites-config' element={<AdminRoute><AdminSitesConfig /></AdminRoute>} />
+                <Route path='admin/settings' element={<AdminRoute><AdminSettings /></AdminRoute>} />
                 <Route path='admin/subscriptions' element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
                 <Route path='admin/payments' element={<AdminRoute><AdminPayments /></AdminRoute>} />
                 <Route path='admin/pricing' element={<AdminRoute><AdminPricing /></AdminRoute>} />

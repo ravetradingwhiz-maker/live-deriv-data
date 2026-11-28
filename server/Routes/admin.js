@@ -1,6 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const adminController = require('../Controllers/adminController');
+const settingsController = require('../Controllers/settingsController');
 const { requireAdminToken } = require('../Middlewares/adminToken');
 
 const router = express.Router();
@@ -26,6 +27,11 @@ router.get('/check', checkLimiter, adminController.check);
 router.get('/list', manageLimiter, requireAdminToken, adminController.list);
 router.post('/', manageLimiter, requireAdminToken, adminController.add);
 router.delete('/', manageLimiter, requireAdminToken, adminController.remove);
+
+/* Appearance — what the app looks like, not what it charges. The public
+   read lives on /api/settings; this pair is the admin page behind it. */
+router.get('/settings', settingsController.getAdminAppearance);
+router.put('/settings', settingsController.setAdminAppearance);
 
 // Subscriptions CRUD
 router.get('/subscriptions', adminController.listSubscriptions);

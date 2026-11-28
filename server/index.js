@@ -44,6 +44,7 @@ app.use('/api/subscription', require('./Routes/subscription'));
 app.use('/api/rewards', require('./Routes/rewards'));
 app.use('/api/profile', require('./Routes/profile'));
 app.use('/api/admin', require('./Routes/admin'));
+app.use('/api/settings', require('./Routes/settings'));
 app.use('/api/printer', require('./Routes/printer'));
 
 // Seed the admin allow-list so auto-detection recognises the admins out of the
