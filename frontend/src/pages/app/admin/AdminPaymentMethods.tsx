@@ -55,10 +55,10 @@ const AdminPaymentMethods = () => {
 
     return (
         <div className='flex w-full flex-col gap-4'>
-            <h1 className='flex items-center gap-2 text-lg font-bold text-white'>
+            <h1 className='flex items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg'>
                 <Wallet size={20} className='text-cyan-400' /> Payment methods
             </h1>
-            <p className='text-sm text-slate-400'>
+            <p className='text-xs text-slate-400 sm:text-sm'>
                 Choose which options appear at checkout. Disabled methods are hidden from customers and rejected by the
                 server, so an existing link can&apos;t be used to pay with them.
             </p>
@@ -86,7 +86,7 @@ const AdminPaymentMethods = () => {
                                     }`}
                                 >
                                     <span className='flex flex-col'>
-                                        <span className='text-sm font-bold text-white'>{defs[id].label}</span>
+                                        <span className='text-xs font-bold sm:text-sm text-white'>{defs[id].label}</span>
                                         <span className='text-xs text-slate-400'>{defs[id].desc}</span>
                                     </span>
 

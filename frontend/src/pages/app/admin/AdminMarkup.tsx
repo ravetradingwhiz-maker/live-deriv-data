@@ -45,8 +45,8 @@ const Sparkline = ({ data }: { data: DayPoint[] }) => {
 
 const Card = ({ label, value, accent }: { label: string; value: string; accent?: string }) => (
     <div className='card'>
-        <p className='text-[11px] uppercase tracking-wider text-slate-500'>{label}</p>
-        <p className={`mt-1 text-2xl font-extrabold ${accent ?? 'text-white'}`}>{value}</p>
+        <p className='text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>{label}</p>
+        <p className={`mt-1 app-figure font-extrabold ${accent ?? 'text-white'}`}>{value}</p>
     </div>
 );
 
@@ -118,7 +118,7 @@ const AdminMarkup = () => {
 
     return (
         <div className='flex w-full flex-col gap-4'>
-            <h1 className='flex items-center gap-2 text-lg font-bold text-white'>
+            <h1 className='flex items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg'>
                 <BarChart3 size={20} className='text-cyan-400' /> Markup
                 {totals.app_id && <span className='text-xs font-normal text-slate-500'>App ID {totals.app_id}</span>}
             </h1>
@@ -171,7 +171,7 @@ const AdminMarkup = () => {
             </div>
 
             <div className='card'>
-                <p className='mb-3 flex items-center gap-2 text-sm font-semibold text-white'>
+                <p className='mb-3 flex items-center gap-2 text-xs font-semibold sm:text-sm text-white'>
                     <TrendingUp size={16} className='text-cyan-400' /> Daily markup · {from} → {to}
                 </p>
                 <Sparkline data={series} />

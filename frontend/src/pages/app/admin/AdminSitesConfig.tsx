@@ -155,7 +155,7 @@ const AdminSitesConfig = () => {
         <div className='space-y-6'>
             <div className='flex flex-wrap items-end justify-between gap-3'>
                 <div>
-                    <h1 className='flex items-center gap-2 text-xl font-extrabold text-white'>
+                    <h1 className='flex items-center gap-2 app-title font-extrabold text-white'>
                         <Settings2 size={20} className='text-violet-400' /> Sites Config
                     </h1>
                     <p className='mt-0.5 text-xs text-slate-500'>
@@ -218,7 +218,7 @@ const AdminSitesConfig = () => {
                 </div>
             ) : sites.length === 0 ? (
                 <div className='card text-center'>
-                    <p className='text-sm text-slate-400'>No sites configured yet.</p>
+                    <p className='text-xs text-slate-400 sm:text-sm'>No sites configured yet.</p>
                     <p className='mt-1 text-xs text-slate-600'>Add one to start reporting its markup.</p>
                 </div>
             ) : (

@@ -134,7 +134,7 @@ const AdminTokens = () => {
         <div className='space-y-6'>
             <div className='flex flex-wrap items-end justify-between gap-3'>
                 <div>
-                    <h1 className='flex items-center gap-2 text-xl font-extrabold text-white'>
+                    <h1 className='flex items-center gap-2 app-title font-extrabold text-white'>
                         <KeyRound size={20} className='text-amber-400' /> Tokens
                     </h1>
                     <p className='mt-0.5 text-xs text-slate-500'>
@@ -228,20 +228,20 @@ const AdminTokens = () => {
                 </div>
             ) : tokens.length === 0 ? (
                 <div className='card text-center'>
-                    <p className='text-sm text-slate-400'>No tokens yet.</p>
+                    <p className='text-xs text-slate-400 sm:text-sm'>No tokens yet.</p>
                     <p className='mt-1 text-xs text-slate-600'>Create one to let a customer into the bots.</p>
                 </div>
             ) : (
                 <div className='card overflow-hidden p-0'>
                     <div className='overflow-x-auto'>
-                        <table className='w-full text-sm'>
-                            <thead className='bg-ink-800/60 text-[11px] uppercase tracking-wider text-slate-500'>
+                        <table className='w-full text-xs sm:text-sm'>
+                            <thead className='bg-ink-800/60 text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>
                                 <tr>
-                                    <th className='px-4 py-2.5 text-left font-semibold'>Token</th>
-                                    <th className='px-4 py-2.5 text-left font-semibold'>For</th>
-                                    <th className='px-4 py-2.5 text-left font-semibold'>State</th>
-                                    <th className='px-4 py-2.5 text-left font-semibold'>Expires</th>
-                                    <th className='px-4 py-2.5 text-right font-semibold'>Actions</th>
+                                    <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-left font-semibold'>Token</th>
+                                    <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-left font-semibold'>For</th>
+                                    <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-left font-semibold'>State</th>
+                                    <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-left font-semibold'>Expires</th>
+                                    <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-right font-semibold'>Actions</th>
                                 </tr>
                             </thead>
                             <tbody className='divide-y divide-line'>
@@ -250,15 +250,15 @@ const AdminTokens = () => {
                                     const spent = t.status !== 'active';
                                     return (
                                         <tr key={t._id} className={spent ? 'text-slate-500' : 'text-slate-200'}>
-                                            <td className='px-4 py-3'>
+                                            <td className='px-2.5 py-2 sm:px-4 sm:py-3'>
                                                 <span className='flex items-center gap-1.5'>
-                                                    <code className='font-mono text-sm font-bold tracking-wider text-white'>
+                                                    <code className='font-mono text-xs font-bold sm:text-sm tracking-wider text-white'>
                                                         {t.token}
                                                     </code>
                                                     <CopyButton value={t.token} />
                                                 </span>
                                             </td>
-                                            <td className='px-4 py-3'>
+                                            <td className='px-2.5 py-2 sm:px-4 sm:py-3'>
                                                 <span className='font-semibold'>{t.clientName}</span>
                                                 {t.description && (
                                                     <span className='block text-[11px] text-slate-500'>
@@ -266,7 +266,7 @@ const AdminTokens = () => {
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className={`px-4 py-3 font-semibold ${STATE_TONE[t.status]}`}>
+                                            <td className={`px-2.5 py-2 sm:px-4 sm:py-3 font-semibold ${STATE_TONE[t.status]}`}>
                                                 {t.status === 'deactivated' ? 'Retired' : t.status}
                                                 {t.validationCount ? (
                                                     <span className='block text-[11px] text-slate-600'>
@@ -274,8 +274,8 @@ const AdminTokens = () => {
                                                     </span>
                                                 ) : null}
                                             </td>
-                                            <td className='px-4 py-3 text-xs'>{fmtDate(t.expiresAt)}</td>
-                                            <td className='px-4 py-3'>
+                                            <td className='px-2.5 py-2 sm:px-4 sm:py-3 text-xs'>{fmtDate(t.expiresAt)}</td>
+                                            <td className='px-2.5 py-2 sm:px-4 sm:py-3'>
                                                 <div className='flex items-center justify-end gap-2'>
                                                     {t.isActive && (
                                                         <button

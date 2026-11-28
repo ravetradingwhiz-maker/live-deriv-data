@@ -78,10 +78,10 @@ const AdminPayHero = () => {
 
     return (
         <div className='flex w-full flex-col gap-4'>
-            <h1 className='flex items-center gap-2 text-lg font-bold text-white'>
+            <h1 className='flex items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg'>
                 <Wallet size={20} className='text-cyan-400' /> M-Pesa float
             </h1>
-            <p className='text-sm text-slate-400'>
+            <p className='text-xs text-slate-400 sm:text-sm'>
                 PayHero charges a fee to your service wallet for every M-Pesa prompt it sends. If this empties, M-Pesa
                 checkouts fail while card and crypto keep working.
             </p>
@@ -104,7 +104,7 @@ const AdminPayHero = () => {
                                 }`}
                             >
                                 {wallet?.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}{' '}
-                                <span className='text-lg font-bold text-slate-400'>{wallet?.currency}</span>
+                                <span className='text-xs font-bold sm:text-sm text-slate-400 sm:text-lg'>{wallet?.currency}</span>
                             </p>
                         )}
                     </div>
@@ -129,7 +129,7 @@ const AdminPayHero = () => {
             {/* ── Top up ──────────────────────────────────────────────────── */}
             <div className='card flex flex-col gap-4'>
                 <div>
-                    <h2 className='text-sm font-bold text-white'>Top up</h2>
+                    <h2 className='text-xs font-bold sm:text-sm text-white'>Top up</h2>
                     <p className='mt-1 text-xs text-slate-400'>
                         An M-Pesa prompt goes to the number below. The balance moves once you enter your PIN.
                     </p>
@@ -159,7 +159,7 @@ const AdminPayHero = () => {
                         step={1}
                         value={amountText}
                         onChange={e => setAmountText(e.target.value)}
-                        className='mt-1 rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
+                        className='mt-1 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs font-semibold sm:text-sm text-white outline-none focus:border-cyan-500'
                     />
                 </div>
 
@@ -172,7 +172,7 @@ const AdminPayHero = () => {
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
                         placeholder='07XX XXX XXX'
-                        className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
+                        className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs font-semibold sm:text-sm text-white outline-none focus:border-cyan-500'
                     />
                 </label>
 

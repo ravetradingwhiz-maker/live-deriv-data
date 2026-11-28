@@ -106,7 +106,7 @@ const AdminSettings = () => {
     return (
         <div className='space-y-6'>
             <div>
-                <h1 className='flex items-center gap-2 text-xl font-extrabold text-white'>
+                <h1 className='flex items-center gap-2 app-title font-extrabold text-white'>
                     <SlidersHorizontal size={20} className='text-sky-400' /> Settings
                 </h1>
                 <p className='mt-0.5 text-xs text-slate-500'>
@@ -130,7 +130,7 @@ const AdminSettings = () => {
                     {THEMES.map(theme => (
                         <div key={theme.key} className='flex items-center justify-between gap-6 px-5 py-4'>
                             <div className='min-w-0'>
-                                <p className='flex items-center gap-2 text-sm font-bold text-white'>
+                                <p className='flex items-center gap-2 text-xs font-bold sm:text-sm text-white'>
                                     {theme.label}
                                     {saved === theme.key && <Check size={14} className='text-emerald-400' />}
                                 </p>

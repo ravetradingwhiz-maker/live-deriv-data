@@ -143,7 +143,7 @@ const AdminSubscriptions = () => {
     return (
         <div className='flex w-full flex-col gap-4'>
             <div className='flex items-center justify-between gap-2'>
-                <h1 className='flex items-center gap-2 text-lg font-bold text-white'>
+                <h1 className='flex items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg'>
                     <Users size={20} className='text-cyan-400' /> Subscriptions
                 </h1>
                 <div className='flex items-center gap-3'>
@@ -198,7 +198,7 @@ const AdminSubscriptions = () => {
                     {rows.map(r => (
                         <div key={r._id} className='card flex flex-wrap items-center gap-3'>
                             <div className='min-w-0 flex-1'>
-                                <p className='truncate text-sm font-semibold text-white'>{r.loginids.join(', ')}</p>
+                                <p className='truncate text-xs font-semibold sm:text-sm text-white'>{r.loginids.join(', ')}</p>
                                 <p className='truncate text-[11px] text-slate-500'>{r.email || 'no email'}</p>
                             </div>
                             <select

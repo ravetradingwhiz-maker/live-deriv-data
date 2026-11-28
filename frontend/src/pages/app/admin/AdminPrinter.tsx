@@ -210,10 +210,10 @@ const AdminPrinter = () => {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <h1 className="flex items-center gap-2 text-lg font-bold text-white">
+      <h1 className="flex items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg">
         <Printer size={20} className="text-cyan-400" /> Printer
       </h1>
-      {/* <p className="text-sm text-slate-400">
+      {/* <p className="text-xs text-slate-400 sm:text-sm">
         Scans the five 1-second markets each round and buys Digit Differs on
         the one whose rarest digit is rarest of all, never reusing the market it
         just traded. Nine rounds in ten win, but the win is small and a loss
@@ -240,10 +240,10 @@ const AdminPrinter = () => {
         <>
           <div className="card flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                 Printing on
               </p>
-              <p className="mt-1 flex flex-wrap items-center gap-2 text-lg font-bold text-white">
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg">
                 <span
                   className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                     session.account_type === "demo"
@@ -259,7 +259,7 @@ const AdminPrinter = () => {
                   {session.lastSymbol ? ` · last on ${session.lastSymbol}` : ""}
                 </span>
               </p>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-xs text-slate-400 sm:text-sm">
                 {session.hourDone
                   ? `${session.hourEndedReason} · next hour in ${countdown}`
                   : `This hour: ${session.hourlyProfit.toFixed(2)} / ${session.hourlyTarget} ${session.currency}` +
@@ -290,15 +290,15 @@ const AdminPrinter = () => {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="card">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                 Rounds
               </p>
-              <p className="mt-1 text-2xl font-extrabold text-white">
+              <p className="mt-1 app-title font-extrabold text-white">
                 {stats?.trades ?? 0}
               </p>
             </div>
             <div className="card">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                 Wins
               </p>
               <p className="mt-1 text-2xl font-extrabold text-emerald-400">
@@ -306,7 +306,7 @@ const AdminPrinter = () => {
               </p>
             </div>
             <div className="card">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                 Losses
               </p>
               <p className="mt-1 text-2xl font-extrabold text-rose-400">
@@ -314,7 +314,7 @@ const AdminPrinter = () => {
               </p>
             </div>
             <div className="card">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                 Net P/L
               </p>
               <p className={`mt-1 text-2xl font-extrabold ${profitClass}`}>
@@ -330,11 +330,11 @@ const AdminPrinter = () => {
           {session && !session.active && (
             <div className="card flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-xs font-semibold sm:text-sm text-white">
                   Stopped
                   {session.stoppedReason ? ` — ${session.stoppedReason}` : ""}
                 </p>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-xs text-slate-400 sm:text-sm">
                   {session.stats.trades} rounds · net{" "}
                   <span className={profitClass}>
                     {session.stats.profit.toFixed(2)}
@@ -366,15 +366,15 @@ const AdminPrinter = () => {
             <>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="card">
-                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                  <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                     Rounds
                   </p>
-                  <p className="mt-1 text-2xl font-extrabold text-white">
+                  <p className="mt-1 app-title font-extrabold text-white">
                     {session.stats.trades}
                   </p>
                 </div>
                 <div className="card">
-                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                  <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                     Wins
                   </p>
                   <p className="mt-1 text-2xl font-extrabold text-emerald-400">
@@ -382,7 +382,7 @@ const AdminPrinter = () => {
                   </p>
                 </div>
                 <div className="card">
-                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                  <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                     Losses
                   </p>
                   <p className="mt-1 text-2xl font-extrabold text-rose-400">
@@ -390,7 +390,7 @@ const AdminPrinter = () => {
                   </p>
                 </div>
                 <div className="card">
-                  <p className="text-[11px] uppercase tracking-wider text-slate-500">
+                  <p className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                     Net P/L
                   </p>
                   <p className={`mt-1 text-2xl font-extrabold ${profitClass}`}>
@@ -405,7 +405,7 @@ const AdminPrinter = () => {
 
           <div className="card flex flex-col gap-4">
             <div>
-              <label className="text-[11px] uppercase tracking-wider text-slate-500">
+              <label className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                 Deriv API token (Trade scope)
               </label>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -439,7 +439,7 @@ const AdminPrinter = () => {
             {resolved.length > 0 && (
               <>
                 <div>
-                  <label className="text-[11px] uppercase tracking-wider text-slate-500">
+                  <label className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
                     Account to trade
                   </label>
                   <select
@@ -565,7 +565,7 @@ const Field = ({
   placeholder?: string;
 }) => (
   <div>
-    <label className="text-[11px] uppercase tracking-wider text-slate-500">
+    <label className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
       {label}
     </label>
     <input
@@ -582,7 +582,7 @@ const Field = ({
 const TradeLog = ({ session }: { session: PrinterSession }) => {
   if (!session.trades.length) {
     return (
-      <div className="card text-sm text-slate-400">
+      <div className="card text-xs text-slate-400 sm:text-sm">
         No rounds yet. The first one lands within a minute of the hour starting.
       </div>
     );
@@ -591,13 +591,13 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
   return (
     <div className="card overflow-x-auto p-0">
       <table className="w-full min-w-[560px] text-left text-sm">
-        <thead className="text-[11px] uppercase tracking-wider text-slate-500">
+        <thead className="text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500">
           <tr className="border-b border-line">
-            <th className="px-4 py-3">Time</th>
-            <th className="px-4 py-3">Market</th>
-            <th className="px-4 py-3">Legs</th>
-            <th className="px-4 py-3">Status</th>
-            <th className="px-4 py-3 text-right">P/L</th>
+            <th className="px-2.5 py-2 sm:px-4 sm:py-3">Time</th>
+            <th className="px-2.5 py-2 sm:px-4 sm:py-3">Market</th>
+            <th className="px-2.5 py-2 sm:px-4 sm:py-3">Legs</th>
+            <th className="px-2.5 py-2 sm:px-4 sm:py-3">Status</th>
+            <th className="px-2.5 py-2 sm:px-4 sm:py-3 text-right">P/L</th>
           </tr>
         </thead>
         <tbody>
@@ -606,7 +606,7 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
               key={`${t.hourKey}-${t.placedAt}`}
               className="border-b border-line/60 last:border-0"
             >
-              <td className="px-4 py-3 text-slate-300">
+              <td className="px-2.5 py-2 sm:px-4 sm:py-3 text-slate-300">
                 {new Date(t.placedAt).toLocaleString([], {
                   month: "short",
                   day: "numeric",
@@ -614,7 +614,7 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
                   minute: "2-digit",
                 })}
               </td>
-              <td className="px-4 py-3 font-medium text-white">
+              <td className="px-2.5 py-2 sm:px-4 sm:py-3 font-medium text-white">
                 {t.symbol}
                 {t.mode === "recovery" && (
                   <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
@@ -622,7 +622,7 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
                   </span>
                 )}
               </td>
-              <td className="px-4 py-3 text-slate-400">
+              <td className="px-2.5 py-2 sm:px-4 sm:py-3 text-slate-400">
                 {t.legs
                   .map((l) => {
                     if (l.contract_type === "DIGITEVEN") return `Even @ ${t.stake}`;
@@ -639,7 +639,7 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
                   })
                   .join(" + ")}
               </td>
-              <td className="px-4 py-3">
+              <td className="px-2.5 py-2 sm:px-4 sm:py-3">
                 {t.status === "failed" ? (
                   <span className="text-rose-400" title={t.reason}>
                     failed
@@ -651,7 +651,7 @@ const TradeLog = ({ session }: { session: PrinterSession }) => {
                 )}
               </td>
               <td
-                className={`px-4 py-3 text-right font-semibold ${
+                className={`px-2.5 py-2 sm:px-4 sm:py-3 text-right font-semibold ${
                   t.profit === null
                     ? "text-slate-500"
                     : t.profit >= 0

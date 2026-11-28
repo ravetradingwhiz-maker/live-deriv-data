@@ -162,7 +162,7 @@ const AdminMarkupOverview = () => {
         <div className='space-y-6'>
             <div className='flex flex-wrap items-end justify-between gap-3'>
                 <div>
-                    <h1 className='flex items-center gap-2 text-xl font-extrabold text-white'>
+                    <h1 className='flex items-center gap-2 app-title font-extrabold text-white'>
                         <Globe size={20} className='text-cyan-400' /> Markup Overview
                     </h1>
                     <p className='mt-0.5 text-xs text-slate-500'>
@@ -235,12 +235,12 @@ const AdminMarkupOverview = () => {
                     <div className='card'>
                         <div className='flex flex-wrap items-start justify-between gap-x-10 gap-y-5'>
                             <div>
-                                <p className='text-[11px] uppercase tracking-wider text-slate-500'>Total markup</p>
+                                <p className='text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>Total markup</p>
                                 <p className='mt-1 text-4xl font-extrabold text-cyan-300'>
                                     {fmtUSD(total.app_markup_usd)}
                                 </p>
                                 {usdToKes && (
-                                    <p className='mt-0.5 text-lg font-bold text-white'>
+                                    <p className='mt-0.5 text-xs font-bold sm:text-sm text-white sm:text-lg'>
                                         {fmtKES(total.app_markup_usd * usdToKes)}
                                     </p>
                                 )}
@@ -251,14 +251,14 @@ const AdminMarkupOverview = () => {
                             <div className='flex gap-8'>
                                 {SPLIT.map(({ pct, label }) => (
                                     <div key={pct}>
-                                        <p className='text-[11px] uppercase tracking-wider text-slate-500'>
+                                        <p className='text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>
                                             {label}
                                         </p>
-                                        <p className='mt-1 text-2xl font-extrabold text-white'>
+                                        <p className='mt-1 app-title font-extrabold text-white'>
                                             {fmtUSD((total.app_markup_usd * pct) / 100)}
                                         </p>
                                         {usdToKes && (
-                                            <p className='mt-0.5 text-sm font-semibold text-slate-400'>
+                                            <p className='mt-0.5 text-xs font-semibold sm:text-sm text-slate-400'>
                                                 {fmtKES((total.app_markup_usd * usdToKes * pct) / 100)}
                                             </p>
                                         )}
@@ -286,45 +286,45 @@ const AdminMarkupOverview = () => {
 
                     {earning.length === 0 ? (
                         <div className='card text-center'>
-                            <p className='text-sm text-slate-400'>No site earned markup in this period.</p>
+                            <p className='text-xs text-slate-400 sm:text-sm'>No site earned markup in this period.</p>
                         </div>
                     ) : (
                         <div className='card overflow-hidden p-0'>
                             <div className='overflow-x-auto'>
-                                <table className='w-full text-sm'>
-                                    <thead className='bg-ink-800/60 text-[11px] uppercase tracking-wider text-slate-500'>
+                                <table className='w-full text-xs sm:text-sm'>
+                                    <thead className='bg-ink-800/60 text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>
                                         <tr>
-                                            <th className='px-4 py-2.5 text-left font-semibold'>Site</th>
-                                            <th className='px-4 py-2.5 text-right font-semibold'>Markup</th>
+                                            <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-left font-semibold'>Site</th>
+                                            <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-right font-semibold'>Markup</th>
                                             {usdToKes && (
-                                                <th className='px-4 py-2.5 text-right font-semibold'>In KES</th>
+                                                <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-right font-semibold'>In KES</th>
                                             )}
-                                            <th className='px-4 py-2.5 text-right font-semibold'>Volume</th>
-                                            <th className='px-4 py-2.5 text-right font-semibold'>Contracts</th>
-                                            <th className='px-4 py-2.5 text-right font-semibold'>Clients</th>
+                                            <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-right font-semibold'>Volume</th>
+                                            <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-right font-semibold'>Contracts</th>
+                                            <th className='px-2.5 py-2 sm:px-4 sm:py-2.5 text-right font-semibold'>Clients</th>
                                         </tr>
                                     </thead>
                                     <tbody className='divide-y divide-line'>
                                         {earning.map(s => (
                                             <tr key={s.site} className='text-slate-200'>
-                                                <td className='px-4 py-3 font-semibold text-white'>
+                                                <td className='px-2.5 py-2 sm:px-4 sm:py-3 font-semibold text-white'>
                                                     {labelFor(s.site)}
                                                 </td>
-                                                <td className='px-4 py-3 text-right font-bold tabular-nums text-cyan-300'>
+                                                <td className='px-2.5 py-2 sm:px-4 sm:py-3 text-right font-bold tabular-nums text-cyan-300'>
                                                     {fmtUSD(s.app_markup_usd)}
                                                 </td>
                                                 {usdToKes && (
-                                                    <td className='px-4 py-3 text-right font-semibold tabular-nums'>
+                                                    <td className='px-2.5 py-2 sm:px-4 sm:py-3 text-right font-semibold tabular-nums'>
                                                         {fmtKES(s.app_markup_usd * usdToKes)}
                                                     </td>
                                                 )}
-                                                <td className='px-4 py-3 text-right tabular-nums'>
+                                                <td className='px-2.5 py-2 sm:px-4 sm:py-3 text-right tabular-nums'>
                                                     {fmtUSD(s.volume_usd)}
                                                 </td>
-                                                <td className='px-4 py-3 text-right tabular-nums'>
+                                                <td className='px-2.5 py-2 sm:px-4 sm:py-3 text-right tabular-nums'>
                                                     {fmtNum(s.contract_count)}
                                                 </td>
-                                                <td className='px-4 py-3 text-right tabular-nums'>
+                                                <td className='px-2.5 py-2 sm:px-4 sm:py-3 text-right tabular-nums'>
                                                     {fmtNum(s.client_count)}
                                                 </td>
                                             </tr>

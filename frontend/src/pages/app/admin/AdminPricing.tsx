@@ -77,10 +77,10 @@ const AdminPricing = () => {
 
     return (
         <div className='flex w-full flex-col gap-4'>
-            <h1 className='flex items-center gap-2 text-lg font-bold text-white'>
+            <h1 className='flex items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg'>
                 <Tag size={20} className='text-cyan-400' /> Pricing
             </h1>
-            <p className='text-sm text-slate-400'>
+            <p className='text-xs text-slate-400 sm:text-sm'>
                 Edit tier prices, durations and remaining slots. Changes apply to new checkouts and the public pricing
                 cards immediately.
             </p>
@@ -99,14 +99,14 @@ const AdminPricing = () => {
                         return (
                             <section key={group.product} className='flex flex-col gap-2'>
                                 <div>
-                                    <h2 className='text-sm font-bold text-white'>{group.title}</h2>
+                                    <h2 className='text-xs font-bold sm:text-sm text-white'>{group.title}</h2>
                                     <p className='text-[11px] text-slate-500'>{group.note}</p>
                                 </div>
                                 <div className='grid gap-3 sm:grid-cols-3'>
                                     {tiersInGroup.map(tier => (
                                     <div key={tier} className='card flex flex-col gap-3'>
                                         <div className='flex items-center justify-between'>
-                                            <span className='text-sm font-bold uppercase tracking-wider text-amber-300'>
+                                            <span className='text-xs font-bold sm:text-sm uppercase tracking-wider text-amber-300'>
                                                 {tiers[tier].label}
                                             </span>
                                             {defaults && (
@@ -122,7 +122,7 @@ const AdminPricing = () => {
                                                 min={0}
                                                 value={tiers[tier].priceUSD}
                                                 onChange={e => edit(tier, 'priceUSD', Number(e.target.value))}
-                                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
+                                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs font-semibold sm:text-sm text-white outline-none focus:border-cyan-500'
                                             />
                                         </label>
                                         <label className='flex flex-col gap-1'>
@@ -132,7 +132,7 @@ const AdminPricing = () => {
                                                 min={1}
                                                 value={tiers[tier].months}
                                                 onChange={e => edit(tier, 'months', Number(e.target.value))}
-                                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
+                                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs font-semibold sm:text-sm text-white outline-none focus:border-cyan-500'
                                             />
                                         </label>
                                         <label className='flex flex-col gap-1'>
@@ -143,7 +143,7 @@ const AdminPricing = () => {
                                                 step={1}
                                                 value={tiers[tier].slotsLeft ?? 0}
                                                 onChange={e => edit(tier, 'slotsLeft', Number(e.target.value))}
-                                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-500'
+                                                className='rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs font-semibold sm:text-sm text-white outline-none focus:border-cyan-500'
                                             />
                                             <span className='text-[10px] text-slate-500'>
                                                 Shown on the public card. Set to 0 to hide the line.

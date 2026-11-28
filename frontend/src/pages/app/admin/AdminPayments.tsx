@@ -40,7 +40,7 @@ const AdminPayments = () => {
     return (
         <div className='flex w-full flex-col gap-4'>
             <div className='flex items-center justify-between'>
-                <h1 className='flex items-center gap-2 text-lg font-bold text-white'>
+                <h1 className='flex items-center gap-2 text-xs font-bold sm:text-sm text-white sm:text-lg'>
                     <CreditCard size={20} className='text-cyan-400' /> Payments
                 </h1>
                 <button onClick={load} className='flex items-center gap-1.5 text-xs text-slate-400 hover:text-white'>
@@ -50,17 +50,17 @@ const AdminPayments = () => {
 
             <div className='grid grid-cols-2 gap-3 sm:grid-cols-3'>
                 <div className='card'>
-                    <p className='text-[11px] uppercase tracking-wider text-slate-500'>Records</p>
-                    <p className='mt-1 text-2xl font-extrabold text-white'>{rows.length}</p>
+                    <p className='text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>Records</p>
+                    <p className='mt-1 app-title font-extrabold text-white'>{rows.length}</p>
                 </div>
                 <div className='card'>
-                    <p className='text-[11px] uppercase tracking-wider text-slate-500'>Paid</p>
+                    <p className='text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>Paid</p>
                     <p className='mt-1 text-2xl font-extrabold text-emerald-400'>
                         {rows.filter(r => r.status === 'paid').length}
                     </p>
                 </div>
                 <div className='card'>
-                    <p className='text-[11px] uppercase tracking-wider text-slate-500'>Paid revenue</p>
+                    <p className='text-[10px] uppercase tracking-wider sm:text-[11px] text-slate-500'>Paid revenue</p>
                     <p className='mt-1 text-2xl font-extrabold text-cyan-400'>${paidTotal.toFixed(2)}</p>
                 </div>
             </div>
@@ -110,7 +110,7 @@ const AdminPayments = () => {
                             </div>
                             <span className='text-xs font-bold uppercase text-amber-300'>{r.tier}</span>
                             <div className='text-right'>
-                                <p className='text-sm font-bold text-white'>${r.priceUSD}</p>
+                                <p className='text-xs font-bold sm:text-sm text-white'>${r.priceUSD}</p>
                                 <p className='text-[10px] text-slate-500'>
                                     {r.payAmount} {r.payCurrency}
                                 </p>
