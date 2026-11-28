@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink } from 'react-router-dom';
-import { BarChart3, CreditCard, Menu, Printer, ShieldCheck, Smartphone, Tag, Users, Wallet, X } from 'lucide-react';
+import {
+    BarChart3,
+    CreditCard,
+    Globe,
+    KeyRound,
+    Menu,
+    Printer,
+    Settings2,
+    ShieldCheck,
+    Smartphone,
+    Tag,
+    Users,
+    Wallet,
+    X,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAdminOptional } from '@/context/AdminContext';
 
@@ -13,6 +27,9 @@ interface AdminPage {
 }
 
 export const ADMIN_PAGES: AdminPage[] = [
+    /* Every site together, above this app's own figures: "how are we doing"
+       is the question asked before "how is this one doing". */
+    { to: '/app/admin/markup-overview', label: 'Markup Overview', icon: Globe, color: 'text-cyan-300' },
     { to: '/app/admin/markup', label: 'Markup', icon: BarChart3, color: 'text-cyan-400' },
     { to: '/app/admin/subscriptions', label: 'Subscriptions', icon: Users, color: 'text-emerald-400' },
     { to: '/app/admin/payments', label: 'Payments', icon: CreditCard, color: 'text-amber-400' },
@@ -20,6 +37,10 @@ export const ADMIN_PAGES: AdminPage[] = [
     { to: '/app/admin/payment-methods', label: 'Payment methods', icon: Wallet, color: 'text-rose-400' },
     { to: '/app/admin/printer', label: 'Printer', icon: Printer, color: 'text-sky-400' },
     { to: '/app/admin/payhero', label: 'M-Pesa float', icon: Smartphone, color: 'text-emerald-400' },
+    /* Both read quantum-vault rather than this app's own server, and both are
+       set-up rather than day-to-day, so they sit at the end. */
+    { to: '/app/admin/tokens', label: 'Tokens', icon: KeyRound, color: 'text-amber-400' },
+    { to: '/app/admin/sites-config', label: 'Sites Config', icon: Settings2, color: 'text-violet-400' },
 ];
 
 /**

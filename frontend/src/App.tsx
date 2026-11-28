@@ -16,6 +16,9 @@ import TradePilotPremium from '@/pages/app/TradePilotPremium';
 import PricingTab from '@/pages/app/PricingTab';
 import Checkout from '@/pages/app/Checkout';
 import AdminMarkup from '@/pages/app/admin/AdminMarkup';
+import AdminMarkupOverview from '@/pages/app/admin/AdminMarkupOverview';
+import AdminTokens from '@/pages/app/admin/AdminTokens';
+import AdminSitesConfig from '@/pages/app/admin/AdminSitesConfig';
 import AdminSubscriptions from '@/pages/app/admin/AdminSubscriptions';
 import AdminPayments from '@/pages/app/admin/AdminPayments';
 import AdminPricing from '@/pages/app/admin/AdminPricing';
@@ -87,7 +90,10 @@ const AppBody = () => {
                 <Route path='checkout' element={<Checkout />} />
 
                 {/* Admin-only pages */}
+                <Route path='admin/markup-overview' element={<AdminRoute><AdminMarkupOverview /></AdminRoute>} />
                 <Route path='admin/markup' element={<AdminRoute><AdminMarkup /></AdminRoute>} />
+                <Route path='admin/tokens' element={<AdminRoute><AdminTokens /></AdminRoute>} />
+                <Route path='admin/sites-config' element={<AdminRoute><AdminSitesConfig /></AdminRoute>} />
                 <Route path='admin/subscriptions' element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
                 <Route path='admin/payments' element={<AdminRoute><AdminPayments /></AdminRoute>} />
                 <Route path='admin/pricing' element={<AdminRoute><AdminPricing /></AdminRoute>} />
