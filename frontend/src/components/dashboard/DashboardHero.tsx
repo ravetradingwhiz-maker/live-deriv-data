@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import useAccountName from '@/hooks/useAccountName';
 import { DEFAULT_THRESHOLD, type GrowthReward } from '@/hooks/useGrowthReward';
 import RewardLadder, { RewardLadderSkeleton } from '@/components/dashboard/RewardLadder';
+import FestiveWreaths from '@/components/home/FestiveWreaths';
 import RewardClaimedModal from '@/components/dashboard/RewardClaimedModal';
 import NicknameModal from '@/components/dashboard/NicknameModal';
 import useNickname from '@/hooks/useNickname';
@@ -56,11 +57,23 @@ const DashboardHero = ({ reward }: DashboardHeroProps) => {
     const threshold = reward?.status?.threshold ?? DEFAULT_THRESHOLD;
 
     return (
-        /* `challenge` is the anchor the card at the foot of the page scrolls to. */
-        <section
-            id='challenge'
-            className='relative overflow-hidden rounded-xl border border-line bg-ink-800/50 p-4 sm:p-6'
-        >
+        /* Wrapped so the wreath can break the card's edge. The card clips its
+           own overflow for the diagonals behind it, and anything hung on a
+           corner inside it is cropped in half — which is exactly what
+           happened. */
+        <div className='relative'>
+            <FestiveWreaths scope='app' corners='one' />
+
+            {/* `challenge` is the anchor the card at the foot of the page scrolls to. */}
+            <section
+                id='challenge'
+                className='relative overflow-hidden rounded-xl border border-line bg-ink-800/50 p-4 sm:p-6'
+            >
+            {/* Snow over the whole card in December. Three CSS gradients, so
+                it costs no element and no canvas — the cheapest festive thing
+                in the app and the only one a workspace can really afford. */}
+            <div aria-hidden className='festive-app-only festive-snow pointer-events-none absolute inset-0' />
+
             {/* Two faint diagonals, as in the reference. Decoration only, so it
                 is hidden from the reader and cannot catch a pointer. */}
             <div aria-hidden className='pointer-events-none absolute inset-0 overflow-hidden'>
@@ -256,7 +269,8 @@ const DashboardHero = ({ reward }: DashboardHeroProps) => {
             )}
 
             {reward?.grant && <RewardClaimedModal grant={reward.grant} onClose={reward.dismissGrant} />}
-        </section>
+            </section>
+        </div>
     );
 };
 

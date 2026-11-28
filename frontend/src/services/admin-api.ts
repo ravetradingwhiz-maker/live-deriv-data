@@ -189,6 +189,7 @@ export const topUpPayHero = (body: { amount: number; phone: string }): Promise<{
 /** How the app looks — flags the admin flips, read by every visitor. */
 export interface Appearance {
     christmas: boolean;
+    christmasApp: boolean;
 }
 
 export const getAdminAppearance = (): Promise<Appearance> =>

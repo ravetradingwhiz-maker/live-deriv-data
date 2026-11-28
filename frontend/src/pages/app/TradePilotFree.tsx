@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePublishBotRun } from '@/context/BotRunContext';
 import { getActiveCurrency } from '@/services/trade-api';
 import { riskStakingLabel, useNexoraBot, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
+import FestiveWreaths from '@/components/home/FestiveWreaths';
 
 /** `recommended` greens the tile and tags it; `isNew` tags it cyan. */
 const STRATEGIES: {
@@ -198,7 +199,8 @@ const TradePilotFree = () => {
 
     return (
         <div className='flex w-full flex-col gap-4'>
-            <div className='card flex flex-col gap-5'>
+            <div className='card relative flex flex-col gap-5'>
+                <FestiveWreaths scope='app' corners='one' />
                 {/* Header */}
                 <div className='flex items-center gap-3'>
                     <NexoraStar size={32} />

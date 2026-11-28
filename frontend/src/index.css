@@ -49,6 +49,23 @@
     --rose-300: 253 164 175;
     --rose-400: 251 113 133;
     --sky-400: 56 189 248;
+
+    /* ── Festive ──────────────────────────────────────────────────────────
+       December only, switched from the admin Settings page.
+
+       The red is deliberately a long way from `--rose-400` (251 113 133),
+       which is a light pink-red and means LOSS everywhere in this app — on
+       P&L figures, on losing rows, on the max-loss modal. A decorative red
+       that sat near it would quietly stop loss-red meaning anything. This
+       one is a deep crimson: unmistakably Christmas, unmistakably not rose.
+
+       Pine is likewise kept away from `--emerald-400` (52 211 153), which
+       means profit. */
+    --festive-red: 150 25 30;
+    --festive-red-lift: 178 34 39;
+    --festive-pine: 24 88 56;
+    --festive-snow: 241 245 249;
+    --festive-gold: 234 179 8;
 }
 
 :root.light {
@@ -353,4 +370,129 @@
     .candle-backdrop {
         animation: none;
     }
+}
+
+/* ── Festive theme ────────────────────────────────────────────────────────
+   Everything here hangs off a `festive` class on <html>, set by the
+   appearance flag the admin switches on the Settings page. Nothing below
+   applies unless that class is present, so the theme leaves no trace when
+   it is off — and turning it off is a switch, not a deploy. */
+
+/* Rendered always, shown only in season. Keeping it in the DOM costs
+   nothing and keeps the markup honest about what the page contains.
+
+   Hidden by a rule that applies only OUT of season, rather than shown by one
+   that applies in it. The difference matters: a reveal rule has to name a
+   display value, and whatever it names overrides the `flex` or `grid` the
+   element was given — which is how a row of ornaments ended up in a column. */
+:root:not(.festive) .festive-only {
+    display: none;
+}
+
+.font-christmas {
+    font-family: 'Mountains of Christmas', 'Gevora', cursive;
+}
+
+/* The home header turns deep crimson. `--festive-red`, never `--rose-400`:
+   rose means loss. */
+:root.festive .festive-header {
+    background-color: rgb(var(--festive-red) / 0.92);
+    border-color: rgb(var(--festive-red-lift) / 0.9);
+}
+
+/* Snow: three drifting layers of dots rather than a few dozen elements, so
+   the whole effect is three composited nodes and no per-flake layout. */
+@keyframes festive-snowfall {
+    from {
+        background-position:
+            0 -200px,
+            0 -200px,
+            0 -200px;
+    }
+    to {
+        background-position:
+            140px 900px,
+            -90px 900px,
+            60px 900px;
+    }
+}
+
+.festive-snow {
+    background-image:
+        radial-gradient(2.5px 2.5px at 40px 60px, rgb(var(--festive-snow) / 0.85), transparent),
+        radial-gradient(2px 2px at 160px 120px, rgb(var(--festive-snow) / 0.7), transparent),
+        radial-gradient(1.5px 1.5px at 90px 30px, rgb(var(--festive-snow) / 0.55), transparent);
+    background-size:
+        220px 220px,
+        260px 260px,
+        180px 180px;
+    animation: festive-snowfall 14s linear infinite;
+}
+
+/* The lights sway as one strand, which is what a strung wire does. */
+@keyframes festive-sway {
+    0%,
+    100% {
+        transform: rotate(-0.6deg);
+    }
+    50% {
+        transform: rotate(0.6deg);
+    }
+}
+
+@keyframes festive-twinkle {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.festive-garland {
+    transform-origin: top center;
+    animation: festive-sway 6s ease-in-out infinite;
+}
+
+.festive-bulb {
+    animation: festive-twinkle 2.4s ease-in-out infinite;
+}
+
+/* Decoration is the first thing to drop. The scene stays; only the motion
+   stops, so nothing disappears for anyone who asked for less movement. */
+@media (prefers-reduced-motion: reduce) {
+    .festive-snow,
+    .festive-garland,
+    .festive-bulb {
+        animation: none;
+    }
+}
+
+/* Register turns pine green for the season. Pine, not `--emerald-400`:
+   emerald is profit, and a call-to-action wearing it would borrow a meaning
+   it has no business carrying. */
+:root.festive .festive-register {
+    background-color: rgb(var(--festive-pine));
+}
+:root.festive .festive-register:hover {
+    background-color: rgb(var(--festive-pine) / 0.85);
+}
+
+/* The app carries its own flag. The home page sells and the app is where
+   people work, so December can run on one without the other — and more to
+   the point, the workspace one can be turned off in January on its own. */
+:root:not(.festive-app) .festive-app-only {
+    display: none;
+}
+
+/* Shown when either is on, for the few surfaces that appear on both sides
+   of the login — pricing is the same component in each. */
+:root:not(.festive):not(.festive-app) .festive-any-only {
+    display: none;
+}
+
+:root.festive-app .festive-app-header {
+    background-color: rgb(var(--festive-red) / 0.92);
+    border-color: rgb(var(--festive-red-lift) / 0.9);
 }

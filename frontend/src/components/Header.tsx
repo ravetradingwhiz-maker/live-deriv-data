@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, LogOut, Menu, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import BrandLogo from '@/components/BrandLogo';
+import FestiveLights from '@/components/home/FestiveLights';
 import AccountSwitcher from '@/components/AccountSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -29,7 +30,10 @@ const Header = () => {
         <>
             <header className='sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-4'>
                 <div className='container-page'>
-                    <div className='relative flex h-16 items-center justify-between rounded-full border border-line bg-ink-800/85 pl-4 pr-3 shadow-lg shadow-black/20 backdrop-blur sm:pl-6'>
+                    <div className='festive-header relative flex h-16 items-center justify-between rounded-full border border-line bg-ink-800/85 pl-4 pr-3 shadow-lg shadow-black/20 backdrop-blur sm:pl-6'>
+                        {/* Strung from the bar itself, so it hangs from the
+                            thing it is tied to rather than floating near it. */}
+                        <FestiveLights />
                         <BrandLogo />
 
                         <nav className='absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex'>
@@ -62,7 +66,7 @@ const Header = () => {
                                     >
                                         Login
                                     </button>
-                                    <button className='btn-primary px-5 py-2 text-sm' onClick={signup}>
+                                    <button className='btn-primary festive-register px-5 py-2 text-sm' onClick={signup}>
                                         Register
                                     </button>
                                 </>
@@ -138,7 +142,7 @@ const Header = () => {
                                 <ShieldCheck size={18} />
                                 Login
                             </button>
-                            <button className='btn-primary' onClick={signup}>
+                            <button className='btn-primary festive-register' onClick={signup}>
                                 <UserPlus size={18} />
                                 Register
                             </button>

@@ -23,8 +23,13 @@ interface ThemeRow {
 const THEMES: ThemeRow[] = [
     {
         key: 'christmas',
-        label: 'Christmas theme',
-        note: 'Applies to the home page, the dashboard and the bot screens.',
+        label: 'Christmas theme — site',
+        note: 'The home page: header, hero, trees and snow.',
+    },
+    {
+        key: 'christmasApp',
+        label: 'Christmas theme — app',
+        note: 'Behind the login: the dashboard, the bot screens and pricing.',
     },
 ];
 

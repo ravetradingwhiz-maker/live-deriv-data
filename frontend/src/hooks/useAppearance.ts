@@ -17,6 +17,7 @@ const ENDPOINT = `${(process.env.API_URL || '').replace(/\/$/, '')}/api/settings
 /** The class each flag adds. Nothing else here knows these names. */
 const CLASSES: Record<string, string> = {
     christmas: 'festive',
+    christmasApp: 'festive-app',
 };
 
 /**
@@ -36,6 +37,15 @@ export const useAppearance = (): void => {
                 if (cancelled || !flags) return;
                 for (const [flag, className] of Object.entries(CLASSES)) {
                     document.documentElement.classList.toggle(className, Boolean(flags[flag]));
+                }
+                /* Remembered so the next load can paint the right theme
+                   before React exists. index.html reads this synchronously;
+                   without it every visit starts plain and then jumps. */
+                try {
+                    localStorage.setItem('nx_festive', flags.christmas ? '1' : '0');
+                } catch {
+                    /* private mode, blocked storage — the page still works,
+                       it just flashes once per visit */
                 }
             })
             .catch(() => {

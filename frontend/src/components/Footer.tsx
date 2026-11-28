@@ -64,6 +64,38 @@ const Footer = () => {
                         Trading involves risk. This product is not an official Deriv product and is provided for
                         educational purposes. © {new Date().getFullYear()} Live Deriv Data Analysis.
                     </p>
+
+                    {/* Required by the licence the wreath is used under, so it
+                        appears whenever the wreath does — on the page, not only
+                        in the repository. */}
+                    <p className='festive-any-only mt-2'>
+                        <a
+                            href='https://iconscout.com/3d-icons/christmas-wreath'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='underline hover:text-slate-400'
+                        >
+                            Christmas Wreath
+                        </a>{' '}
+                        by{' '}
+                        <a
+                            href='https://iconscout.com/contributors/nayzha-design'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='underline hover:text-slate-400'
+                        >
+                            Nay Design
+                        </a>{' '}
+                        on{' '}
+                        <a
+                            href='https://iconscout.com'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='underline hover:text-slate-400'
+                        >
+                            IconScout
+                        </a>
+                    </p>
                 </div>
             </div>
 

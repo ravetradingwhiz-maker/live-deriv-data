@@ -23,6 +23,7 @@ import { useAdminOptional } from '@/context/AdminContext';
 import { getActiveCurrency } from '@/services/trade-api';
 import type { Tier } from '@/services/payments-api';
 import { useNexoraBot, type NexoraStrategy, type RiskLevel } from '@/hooks/useNexoraBot';
+import FestiveWreaths from '@/components/home/FestiveWreaths';
 
 const TIER_LABEL: Record<Tier, string> = { alpha: 'Alpha', quantum: 'Quantum', apex: 'Apex' };
 
@@ -141,7 +142,8 @@ const TradePilotPremium = () => {
                 : 'text-cyan-200';
 
     return (
-        <div className='card flex w-full flex-col gap-3.5 border-amber-400/20'>
+        <div className='card relative flex w-full flex-col gap-3.5 border-amber-400/20'>
+            <FestiveWreaths scope='app' corners='one' />
             {/* Header */}
             <div className='flex flex-wrap items-center gap-2.5'>
                 <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-violet-500 shadow-[0_0_16px_rgba(245,158,11,0.5)]'>

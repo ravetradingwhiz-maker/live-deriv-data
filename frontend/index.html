@@ -10,6 +10,18 @@
                     if (t !== 'light' && t !== 'dark') t = 'dark';
                     document.documentElement.classList.remove('light', 'dark');
                     document.documentElement.classList.add(t);
+
+                    /* The seasonal theme, from the last answer the server
+                       gave. Applied here, before paint, for the same reason
+                       the colour theme is: deciding it after React mounts
+                       means the page renders plain and then jumps.
+
+                       The server is still asked on every load — this only
+                       says what to draw until it answers, and a stale answer
+                       is at worst one load behind. */
+                    if (localStorage.getItem('nx_festive') === '1') {
+                        document.documentElement.classList.add('festive');
+                    }
                 } catch (e) {}
             })();
         </script>
@@ -68,7 +80,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&family=Mountains+of+Christmas:wght@700&display=swap"
             rel="stylesheet"
         />
     </head>

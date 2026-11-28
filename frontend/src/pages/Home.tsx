@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/Header';
+import FestiveScene from '@/components/home/FestiveScene';
+import FestiveWreaths from '@/components/home/FestiveWreaths';
 import Footer from '@/components/Footer';
 import LiveMarkets from '@/components/home/LiveMarkets';
 import CandleBackdrop from '@/components/home/CandleBackdrop';
@@ -144,9 +146,16 @@ const Home = () => {
             <Header />
 
             {/* Hero */}
-            <section className='border-b border-line'>
-                <div className='container-page grid gap-12 pb-16 pt-8 sm:py-20 lg:grid-cols-2 lg:items-center lg:py-28'>
+            <section className='relative overflow-hidden border-b border-line'>
+                {/* December only, and behind everything — `relative` on the
+                    content below is what keeps the headline in front of it. */}
+                <FestiveScene />
+
+                <div className='container-page relative grid gap-12 pb-28 pt-8 sm:py-20 sm:pb-32 lg:grid-cols-2 lg:items-center lg:py-28 lg:pb-36'>
                     <div>
+                        <p className='festive-only font-christmas hero-rise mb-1 text-3xl leading-none text-[rgb(var(--festive-snow))] sm:text-4xl lg:text-5xl'>
+                            Merry Christmas
+                        </p>
                         <h1 className='hero-rise text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl'>
                             Trade Deriv options on <span className='text-cyan-400'>autopilot</span>
                         </h1>
@@ -188,6 +197,12 @@ const Home = () => {
                             </button>
                         )}
                     </div>
+
+                    {/* Wrapped so the wreaths can break the card's edge: the
+                        card clips its own overflow for the candles, and
+                        anything hung inside it would be cut off at the border. */}
+                    <div className='relative'>
+                        <FestiveWreaths />
 
                     {/* Nexora AI card — cyan glow, over a candlestick field */}
                     <div
@@ -264,6 +279,7 @@ const Home = () => {
                         <p className='mt-2 text-center text-xs text-slate-500'>
                             Authorize with Deriv to activate
                         </p>
+                    </div>
                     </div>
                 </div>
             </section>

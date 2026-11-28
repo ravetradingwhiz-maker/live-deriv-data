@@ -341,6 +341,12 @@ const PricingPlans = () => {
                                     <span className='rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-400'>
                                         Save {original - Number(price)} {plan.unit}
                                     </span>
+                                    {/* Shown on either side of the login: this
+                                        same component is the public pricing
+                                        page and the in-app pricing tab. */}
+                                    <span className='festive-any-only rounded-full bg-[rgb(var(--festive-pine))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white'>
+                                        Christmas offer
+                                    </span>
                                 </div>
                             )}
                             <div className='flex flex-wrap items-baseline gap-x-2'>

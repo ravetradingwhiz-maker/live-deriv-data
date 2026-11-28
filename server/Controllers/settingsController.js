@@ -21,6 +21,7 @@ const KEY = 'appearance';
  */
 const DEFAULTS = {
     christmas: false,
+    christmasApp: false,
 };
 
 const read = async () => {
